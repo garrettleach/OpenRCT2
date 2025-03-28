@@ -49,8 +49,8 @@
 // The name of the mutex used to prevent multiple instances of the game from running
 static constexpr wchar_t SINGLE_INSTANCE_MUTEX_NAME[] = L"RollerCoaster Tycoon 2_GSKMUTEX";
 
-    #define SOFTWARE_CLASSES L"Software\\Classes"
-    #define MUI_CACHE L"Local Settings\\Software\\Microsoft\\Windows\\Shell\\MuiCache"
+static constexpr wchar_t SoftwareClasses[] = L"Software\\Classes";
+static constexpr wchar_t MuiCache[] = L"Local Settings\\Software\\Microsoft\\Windows\\Shell\\MuiCache";
 
 namespace OpenRCT2::Platform
 {
@@ -386,7 +386,7 @@ namespace OpenRCT2::Platform
         HKEY hRootKey = nullptr;
 
         // [HKEY_CURRENT_USER\Software\Classes]
-        if (RegOpenKeyW(HKEY_CURRENT_USER, SOFTWARE_CLASSES, &hRootKey) != ERROR_SUCCESS)
+        if (RegOpenKeyW(HKEY_CURRENT_USER, SoftwareClasses, &hRootKey) != ERROR_SUCCESS)
         {
             RegCloseKey(hRootKey);
             return false;
@@ -453,7 +453,7 @@ namespace OpenRCT2::Platform
     {
         // [HKEY_CURRENT_USER\Software\Classes]
         HKEY hRootKey;
-        if (RegOpenKeyW(HKEY_CURRENT_USER, SOFTWARE_CLASSES, &hRootKey) == ERROR_SUCCESS)
+        if (RegOpenKeyW(HKEY_CURRENT_USER, SoftwareClasses, &hRootKey) == ERROR_SUCCESS)
         {
             // [hRootKey\.ext]
             RegDeleteTreeW(hRootKey, String::toWideChar(extension).c_str());
@@ -846,7 +846,7 @@ namespace OpenRCT2::Platform
 
         // [HKEY_CURRENT_USER\Software\Classes]
         HKEY hRootKey;
-        if (RegOpenKeyW(HKEY_CURRENT_USER, SOFTWARE_CLASSES, &hRootKey) == ERROR_SUCCESS)
+        if (RegOpenKeyW(HKEY_CURRENT_USER, SoftwareClasses, &hRootKey) == ERROR_SUCCESS)
         {
             // [hRootKey\openrct2]
             HKEY hClassKey;
@@ -865,7 +865,7 @@ namespace OpenRCT2::Platform
                             // Not compulsory, but gives the application a nicer name
                             // [HKEY_CURRENT_USER\SOFTWARE\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache]
                             HKEY hMuiCacheKey;
-                            if (RegCreateKeyW(hRootKey, MUI_CACHE, &hMuiCacheKey) == ERROR_SUCCESS)
+                            if (RegCreateKeyW(hRootKey, MuiCache, &hMuiCacheKey) == ERROR_SUCCESS)
                             {
                                 const std::wstring friendly_apl_name = std::format(L"{}.FriendlyAppName", exePathW);
                                 // mingw-w64 used to define RegSetKeyValueW's signature incorrectly
