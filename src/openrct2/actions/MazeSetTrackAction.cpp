@@ -130,6 +130,12 @@ GameActions::Result MazeSetTrackAction::Query() const
         heightDifference /= kCoordsZPerTinyZ;
 
         auto* ride = GetRide(_rideIndex);
+        if (ride == nullptr)
+        {
+            res.Error = GameActions::Status::Unknown;
+            res.ErrorMessage = STR_ERR_RIDE_NOT_FOUND;
+            return res;
+        }
         const auto& rtd = ride->getRideTypeDescriptor();
         if (heightDifference > rtd.Heights.MaxHeight)
         {
