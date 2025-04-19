@@ -1075,20 +1075,20 @@ namespace OpenRCT2
         {
             os.ReadWriteChunk(ParkFileChunkType::RESEARCH, [&gameState](OrcaStream::ChunkStream& cs) {
                 // Research status
-                cs.ReadWrite(gameState.researchFundingLevel);
-                cs.ReadWrite(gameState.researchPriorities);
-                cs.ReadWrite(gameState.researchProgressStage);
-                cs.ReadWrite(gameState.researchProgress);
-                cs.ReadWrite(gameState.researchExpectedMonth);
-                cs.ReadWrite(gameState.researchExpectedDay);
-                ReadWriteResearchItem(cs, gameState.researchLastItem);
-                ReadWriteResearchItem(cs, gameState.researchNextItem);
+                cs.ReadWrite(gameState.research.fundingLevel);
+                cs.ReadWrite(gameState.research.priorities);
+                cs.ReadWrite(gameState.research.progressStage);
+                cs.ReadWrite(gameState.research.progress);
+                cs.ReadWrite(gameState.research.expectedMonth);
+                cs.ReadWrite(gameState.research.expectedDay);
+                ReadWriteResearchItem(cs, gameState.research.lastItem);
+                ReadWriteResearchItem(cs, gameState.research.nextItem);
 
                 // Invention list
                 cs.ReadWriteVector(
-                    gameState.researchItemsUninvented, [&cs](ResearchItem& item) { ReadWriteResearchItem(cs, item); });
+                    gameState.research.itemsUninvented, [&cs](ResearchItem& item) { ReadWriteResearchItem(cs, item); });
                 cs.ReadWriteVector(
-                    gameState.researchItemsInvented, [&cs](ResearchItem& item) { ReadWriteResearchItem(cs, item); });
+                    gameState.research.itemsInvented, [&cs](ResearchItem& item) { ReadWriteResearchItem(cs, item); });
             });
         }
 

@@ -289,7 +289,7 @@ namespace OpenRCT2::Park
         gameState.guestGenerationProbability = 0;
         gameState.totalRideValueForMoney = 0;
         gameState.suggestedGuestMaximum = 0;
-        gameState.researchLastItem = std::nullopt;
+        gameState.research.lastItem = std::nullopt;
         gameState.marketingCampaigns.clear();
 
         ResearchResetItems(gameState);
@@ -304,10 +304,10 @@ namespace OpenRCT2::Park
         gameState.peepSpawns.clear();
         ParkEntranceReset();
 
-        gameState.researchPriorities = EnumsToFlags(
+        gameState.research.priorities = EnumsToFlags(
             ResearchCategory::Transport, ResearchCategory::Gentle, ResearchCategory::Rollercoaster, ResearchCategory::Thrill,
             ResearchCategory::Water, ResearchCategory::Shop, ResearchCategory::SceneryGroup);
-        gameState.researchFundingLevel = RESEARCH_FUNDING_NORMAL;
+        gameState.research.fundingLevel = RESEARCH_FUNDING_NORMAL;
 
         gameState.guestInitialCash = 50.00_GBP;
         gameState.guestInitialHappiness = Park::CalculateGuestInitialHappiness(50);

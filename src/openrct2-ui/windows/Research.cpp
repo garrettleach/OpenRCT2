@@ -320,7 +320,7 @@ namespace OpenRCT2::Ui::Windows
 
         if (widgetIndex == (WIDX_LAST_DEVELOPMENT_BUTTON + widgetOffset))
         {
-            News::OpenSubject(News::ItemType::Research, gameState.researchLastItem->rawValue);
+            News::OpenSubject(News::ItemType::Research, gameState.research.lastItem->rawValue);
         }
     }
 
@@ -332,9 +332,9 @@ namespace OpenRCT2::Ui::Windows
         w->widgets[WIDX_LAST_DEVELOPMENT_BUTTON + widgetOffset].type = WindowWidgetType::Empty;
 
         // Display button to link to the last development, if there is one
-        if (gameState.researchLastItem.has_value())
+        if (gameState.research.lastItem.has_value())
         {
-            auto type = gameState.researchLastItem->type;
+            auto type = gameState.research.lastItem->type;
             w->widgets[WIDX_LAST_DEVELOPMENT_BUTTON + widgetOffset].type = WindowWidgetType::FlatBtn;
             const auto image = type == Research::EntryType::Ride ? SPR_NEW_RIDE : SPR_NEW_SCENERY;
             w->widgets[WIDX_LAST_DEVELOPMENT_BUTTON + widgetOffset].image = ImageId(image);
@@ -349,7 +349,7 @@ namespace OpenRCT2::Ui::Windows
         auto screenCoords = w->windowPos
             + ScreenCoordsXY{ 10, w->widgets[WIDX_CURRENTLY_IN_DEVELOPMENT_GROUP + widgetOffset].top + 12 };
 
-        if (gameState.researchProgressStage == RESEARCH_STAGE_FINISHED_ALL)
+        if (gameState.research.progressStage == RESEARCH_STAGE_FINISHED_ALL)
         {
             // Research type
             auto ft = Formatter();
@@ -373,53 +373,53 @@ namespace OpenRCT2::Ui::Windows
             // Research type
             auto ft = Formatter();
             StringId label = STR_RESEARCH_TYPE_LABEL;
-            if (gameState.researchProgressStage == RESEARCH_STAGE_INITIAL_RESEARCH)
+            if (gameState.research.progressStage == RESEARCH_STAGE_INITIAL_RESEARCH)
             {
                 ft.Add<StringId>(STR_RESEARCH_UNKNOWN);
             }
-            else if (gameState.researchProgressStage == RESEARCH_STAGE_DESIGNING)
+            else if (gameState.research.progressStage == RESEARCH_STAGE_DESIGNING)
             {
-                ft.Add<StringId>(gameState.researchNextItem->GetCategoryName());
+                ft.Add<StringId>(gameState.research.nextItem->GetCategoryName());
             }
-            else if (gameState.researchNextItem->type == Research::EntryType::Ride)
+            else if (gameState.research.nextItem->type == Research::EntryType::Ride)
             {
-                const auto& rtd = GetRideTypeDescriptor(gameState.researchNextItem->baseRideType);
+                const auto& rtd = GetRideTypeDescriptor(gameState.research.nextItem->baseRideType);
                 if (rtd.HasFlag(RtdFlag::listVehiclesSeparately))
                 {
-                    ft.Add<StringId>(gameState.researchNextItem->GetName());
+                    ft.Add<StringId>(gameState.research.nextItem->GetName());
                 }
-                else if (gameState.researchNextItem->flags & RESEARCH_ENTRY_FLAG_FIRST_OF_TYPE)
+                else if (gameState.research.nextItem->flags & RESEARCH_ENTRY_FLAG_FIRST_OF_TYPE)
                 {
                     ft.Add<StringId>(rtd.Naming.Name);
                 }
                 else
                 {
-                    ft.Add<StringId>(gameState.researchNextItem->GetName());
+                    ft.Add<StringId>(gameState.research.nextItem->GetName());
                     ft.Add<StringId>(rtd.Naming.Name);
                     label = STR_RESEARCH_TYPE_LABEL_VEHICLE;
                 }
             }
             else
             {
-                ft.Add<StringId>(gameState.researchNextItem->GetName());
+                ft.Add<StringId>(gameState.research.nextItem->GetName());
             }
             DrawTextWrapped(dpi, screenCoords, 296, label, ft);
             screenCoords.y += 25;
 
             // Progress
             ft = Formatter();
-            ft.Add<StringId>(ResearchStageNames[gameState.researchProgressStage]);
+            ft.Add<StringId>(ResearchStageNames[gameState.research.progressStage]);
             DrawTextWrapped(dpi, screenCoords, 296, STR_RESEARCH_PROGRESS_LABEL, ft);
             screenCoords.y += 15;
 
             // Expected
             ft = Formatter();
-            if (gameState.researchProgressStage != RESEARCH_STAGE_INITIAL_RESEARCH && gameState.researchExpectedDay != 255)
+            if (gameState.research.progressStage != RESEARCH_STAGE_INITIAL_RESEARCH && gameState.research.expectedDay != 255)
             {
                 // TODO: Should probably use game date format setting
                 ft.Add<StringId>(STR_RESEARCH_EXPECTED_FORMAT);
-                ft.Add<StringId>(DateDayNames[gameState.researchExpectedDay]);
-                ft.Add<StringId>(DateGameMonthNames[gameState.researchExpectedMonth]);
+                ft.Add<StringId>(DateDayNames[gameState.research.expectedDay]);
+                ft.Add<StringId>(DateGameMonthNames[gameState.research.expectedMonth]);
             }
             else
             {
@@ -431,30 +431,30 @@ namespace OpenRCT2::Ui::Windows
         // Last development
         screenCoords = w->windowPos + ScreenCoordsXY{ 10, w->widgets[WIDX_LAST_DEVELOPMENT_GROUP + widgetOffset].top + 12 };
 
-        if (gameState.researchLastItem.has_value())
+        if (gameState.research.lastItem.has_value())
         {
             StringId lastDevelopmentFormat = kStringIdEmpty;
             auto ft = Formatter();
-            if (gameState.researchLastItem->type == Research::EntryType::Scenery)
+            if (gameState.research.lastItem->type == Research::EntryType::Scenery)
             {
                 lastDevelopmentFormat = STR_RESEARCH_SCENERY_LABEL;
-                ft.Add<StringId>(gameState.researchLastItem->GetName());
+                ft.Add<StringId>(gameState.research.lastItem->GetName());
             }
             else
             {
                 lastDevelopmentFormat = STR_RESEARCH_RIDE_LABEL;
-                const auto& rtd = GetRideTypeDescriptor(gameState.researchLastItem->baseRideType);
+                const auto& rtd = GetRideTypeDescriptor(gameState.research.lastItem->baseRideType);
                 if (rtd.HasFlag(RtdFlag::listVehiclesSeparately))
                 {
-                    ft.Add<StringId>(gameState.researchLastItem->GetName());
+                    ft.Add<StringId>(gameState.research.lastItem->GetName());
                 }
-                else if (gameState.researchLastItem->flags & RESEARCH_ENTRY_FLAG_FIRST_OF_TYPE)
+                else if (gameState.research.lastItem->flags & RESEARCH_ENTRY_FLAG_FIRST_OF_TYPE)
                 {
                     ft.Add<StringId>(rtd.Naming.Name);
                 }
                 else
                 {
-                    ft.Add<StringId>(gameState.researchLastItem->GetName());
+                    ft.Add<StringId>(gameState.research.lastItem->GetName());
                     ft.Add<StringId>(rtd.Naming.Name);
                     lastDevelopmentFormat = STR_RESEARCH_VEHICLE_LABEL;
                 }
@@ -487,7 +487,7 @@ namespace OpenRCT2::Ui::Windows
             { w->windowPos.x + dropdownWidget->left, w->windowPos.y + dropdownWidget->top }, dropdownWidget->height() + 1,
             w->colours[1], 0, Dropdown::Flag::StayOpen, 4, dropdownWidget->width() - 3);
 
-        int32_t currentResearchLevel = gameState.researchFundingLevel;
+        int32_t currentResearchLevel = gameState.research.fundingLevel;
         Dropdown::SetChecked(currentResearchLevel, true);
     }
 
@@ -506,9 +506,9 @@ namespace OpenRCT2::Ui::Windows
             case WIDX_SHOPS_AND_STALLS:
             case WIDX_SCENERY_AND_THEMING:
             {
-                auto activeResearchTypes = gameState.researchPriorities;
+                auto activeResearchTypes = gameState.research.priorities;
                 activeResearchTypes ^= 1uLL << (widgetIndex - (WIDX_TRANSPORT_RIDES + widgetOffset));
-                auto gameAction = ParkSetResearchFundingAction(activeResearchTypes, gameState.researchFundingLevel);
+                auto gameAction = ParkSetResearchFundingAction(activeResearchTypes, gameState.research.fundingLevel);
                 GameActions::Execute(&gameAction);
                 break;
             }
@@ -523,7 +523,7 @@ namespace OpenRCT2::Ui::Windows
         if (widgetIndex != (WIDX_RESEARCH_FUNDING_DROPDOWN_BUTTON + widgetOffset) || selectedIndex == -1)
             return;
 
-        auto gameAction = ParkSetResearchFundingAction(gameState.researchPriorities, selectedIndex);
+        auto gameAction = ParkSetResearchFundingAction(gameState.research.priorities, selectedIndex);
         GameActions::Execute(&gameAction);
     }
 
@@ -532,7 +532,7 @@ namespace OpenRCT2::Ui::Windows
         const auto& gameState = getGameState();
         auto widgetOffset = GetWidgetIndexOffset(baseWidgetIndex, WIDX_RESEARCH_FUNDING);
 
-        if ((gameState.park.Flags & PARK_FLAGS_NO_MONEY) || gameState.researchProgressStage == RESEARCH_STAGE_FINISHED_ALL)
+        if ((gameState.park.Flags & PARK_FLAGS_NO_MONEY) || gameState.research.progressStage == RESEARCH_STAGE_FINISHED_ALL)
         {
             w->widgets[WIDX_RESEARCH_FUNDING + widgetOffset].type = WindowWidgetType::Empty;
             w->widgets[WIDX_RESEARCH_FUNDING_DROPDOWN_BUTTON + widgetOffset].type = WindowWidgetType::Empty;
@@ -544,12 +544,12 @@ namespace OpenRCT2::Ui::Windows
         }
 
         // Current funding
-        int32_t currentResearchLevel = gameState.researchFundingLevel;
+        int32_t currentResearchLevel = gameState.research.fundingLevel;
         w->widgets[WIDX_RESEARCH_FUNDING + widgetOffset].text = kResearchFundingLevelNames[currentResearchLevel];
 
         // Checkboxes
-        uint8_t activeResearchTypes = gameState.researchPriorities;
-        int32_t uncompletedResearchTypes = gameState.researchUncompletedCategories;
+        uint8_t activeResearchTypes = gameState.research.priorities;
+        int32_t uncompletedResearchTypes = gameState.research.uncompletedCategories;
         for (int32_t i = 0; i < 7; i++)
         {
             int32_t mask = 1 << i;
@@ -580,7 +580,7 @@ namespace OpenRCT2::Ui::Windows
         if (gameState.park.Flags & PARK_FLAGS_NO_MONEY)
             return;
 
-        int32_t currentResearchLevel = gameState.researchFundingLevel;
+        int32_t currentResearchLevel = gameState.research.fundingLevel;
         auto ft = Formatter();
         ft.Add<money64>(research_cost_table[currentResearchLevel]);
         DrawTextBasic(

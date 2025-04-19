@@ -14,6 +14,7 @@
 #include "../ride/RideTypes.h"
 
 #include <optional>
+#include <vector>
 
 struct RideObjectEntry;
 struct ScenerySelection;
@@ -116,6 +117,22 @@ enum
 extern bool gSilentResearch;
 
 extern const StringId kResearchFundingLevelNames[4];
+
+struct ResearchState
+{
+    uint8_t fundingLevel;
+    uint8_t priorities;
+    uint16_t progress;
+    uint8_t progressStage;
+    uint8_t expectedMonth;
+    uint8_t expectedDay;
+    std::optional<ResearchItem> lastItem;
+    std::optional<ResearchItem> nextItem;
+
+    std::vector<ResearchItem> itemsUninvented;
+    std::vector<ResearchItem> itemsInvented;
+    uint8_t uncompletedCategories;
+};
 
 void ResearchResetItems(OpenRCT2::GameState_t& gameState);
 void ResearchUpdateUncompletedTypes();

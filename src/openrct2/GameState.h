@@ -20,6 +20,7 @@
 #include "management/Finance.h"
 #include "management/Marketing.h"
 #include "management/NewsItem.h"
+#include "management/Research.h"
 #include "ride/Ride.h"
 #include "ride/RideRatings.h"
 #include "scenario/Scenario.h"
@@ -112,18 +113,7 @@ namespace OpenRCT2
         colour_t staffSecurityColour;
         uint64_t samePriceThroughoutPark{};
 
-        uint8_t researchFundingLevel;
-        uint8_t researchPriorities;
-        uint16_t researchProgress;
-        uint8_t researchProgressStage;
-        uint8_t researchExpectedMonth;
-        uint8_t researchExpectedDay;
-        std::optional<ResearchItem> researchLastItem;
-        std::optional<ResearchItem> researchNextItem;
-
-        std::vector<ResearchItem> researchItemsUninvented;
-        std::vector<ResearchItem> researchItemsInvented;
-        uint8_t researchUncompletedCategories;
+        ResearchState research;
 
         ScreenCoordsXY savedView;
         uint8_t savedViewRotation;

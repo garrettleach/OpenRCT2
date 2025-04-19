@@ -57,8 +57,8 @@ GameActions::Result ParkSetResearchFundingAction::Query() const
 GameActions::Result ParkSetResearchFundingAction::Execute() const
 {
     auto& gameState = getGameState();
-    gameState.researchPriorities = _priorities;
-    gameState.researchFundingLevel = _fundingAmount;
+    gameState.research.priorities = _priorities;
+    gameState.research.fundingLevel = _fundingAmount;
 
     auto windowManager = OpenRCT2::Ui::GetWindowManager();
     windowManager->BroadcastIntent(Intent(INTENT_ACTION_UPDATE_RESEARCH));

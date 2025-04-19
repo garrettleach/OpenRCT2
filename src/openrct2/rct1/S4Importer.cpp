@@ -2095,41 +2095,41 @@ namespace OpenRCT2::RCT1
             {
                 activeResearchTypes |= EnumToFlag(ResearchCategory::SceneryGroup);
             }
-            gameState.researchPriorities = activeResearchTypes;
-            gameState.researchFundingLevel = _s4.ResearchLevel;
+            gameState.research.priorities = activeResearchTypes;
+            gameState.research.fundingLevel = _s4.ResearchLevel;
 
             // This will mark items as researched/unresearched according to the research list.
             // This needs to be called before importing progress, as it will reset it.
             ResearchResetCurrentItem();
 
             // Research history
-            gameState.researchProgress = _s4.ResearchProgress;
-            gameState.researchProgressStage = _s4.ResearchProgressStage;
-            gameState.researchExpectedDay = _s4.NextResearchExpectedDay;
-            gameState.researchExpectedMonth = _s4.NextResearchExpectedMonth;
+            gameState.research.progress = _s4.ResearchProgress;
+            gameState.research.progressStage = _s4.ResearchProgressStage;
+            gameState.research.expectedDay = _s4.NextResearchExpectedDay;
+            gameState.research.expectedMonth = _s4.NextResearchExpectedMonth;
 
             if (_s4.LastResearchFlags == 0xFF)
             {
-                gameState.researchLastItem = std::nullopt;
+                gameState.research.lastItem = std::nullopt;
             }
             else
             {
                 ::ResearchItem researchItem = {};
                 ConvertResearchEntry(&researchItem, _s4.LastResearchItem, _s4.LastResearchType);
-                gameState.researchLastItem = researchItem;
+                gameState.research.lastItem = researchItem;
             }
 
             if (_s4.NextResearchFlags == 0xFF)
             {
-                gameState.researchNextItem = std::nullopt;
-                gameState.researchProgressStage = RESEARCH_STAGE_INITIAL_RESEARCH;
-                gameState.researchProgress = 0;
+                gameState.research.nextItem = std::nullopt;
+                gameState.research.progressStage = RESEARCH_STAGE_INITIAL_RESEARCH;
+                gameState.research.progress = 0;
             }
             else
             {
                 ::ResearchItem researchItem = {};
                 ConvertResearchEntry(&researchItem, _s4.NextResearchItem, _s4.NextResearchType);
-                gameState.researchNextItem = researchItem;
+                gameState.research.nextItem = researchItem;
             }
         }
 

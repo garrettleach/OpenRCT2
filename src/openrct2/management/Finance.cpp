@@ -122,7 +122,7 @@ void FinancePayResearch()
         return;
     }
 
-    const uint8_t level = gameState.researchFundingLevel;
+    const uint8_t level = gameState.research.fundingLevel;
     FinancePayment(research_cost_table[level] / 4, ExpenditureType::Research);
 }
 
@@ -261,7 +261,7 @@ void FinanceUpdateDailyProfit()
         }
 
         // Research costs
-        uint8_t level = gameState.researchFundingLevel;
+        uint8_t level = gameState.research.fundingLevel;
         current_profit -= research_cost_table[level];
 
         // Loan costs
