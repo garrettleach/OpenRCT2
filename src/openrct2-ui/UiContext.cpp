@@ -800,6 +800,10 @@ private:
         {
             flags |= SDL_WINDOW_OPENGL;
         }
+        else if (Config::Get().general.DrawingEngine == DrawingEngine::Vulkan)
+        {
+            flags |= SDL_WINDOW_VULKAN;
+        }
 
         _window = SDL_CreateWindow(OPENRCT2_NAME, windowPos.x, windowPos.y, width, height, flags);
         if (_window == nullptr)
