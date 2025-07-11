@@ -2,6 +2,11 @@
 
 #include "../DrawingEngineFactory.hpp"
 
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_vulkan.h>
+#include <openrct2/drawing/IDrawingContext.h>
+#include <openrct2/ui/UiContext.h>
+
 using OpenRCT2::Drawing::IDrawingContext;
 using OpenRCT2::Drawing::GamePalette;
 
@@ -19,6 +24,7 @@ namespace OpenRCT2::Ui
         {
 
         }
+        ~VulkanDrawingContext() override = default;
 
         void Clear(RenderTarget& rt, uint8_t paletteIndex) override
         {
@@ -55,6 +61,7 @@ namespace OpenRCT2::Ui
     class VulkanDrawingEngine final : public OpenRCT2::Drawing::IDrawingEngine
     {
         IUiContext& _uiContext;
+        SDL_Window* _window;
         std::unique_ptr<VulkanDrawingContext> _drawingContext;
 
         RenderTarget _mainRT = {};
@@ -62,9 +69,10 @@ namespace OpenRCT2::Ui
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext)
             : _uiContext(uiContext)
+            , _window(static_cast<SDL_Window*>(_uiContext.GetWindow()))
             , _drawingContext(std::make_unique<VulkanDrawingContext>(*this))
         {
-
+            _mainRT.DrawingEngine = this;
         }
         ~VulkanDrawingEngine() override = default;
 
