@@ -1,4 +1,5 @@
-#include "../../../../openrct2/drawing/IDrawingContext.h"
+#ifndef DISABLE_VULKAN
+
 #include "../DrawingEngineFactory.hpp"
 
 using OpenRCT2::Drawing::IDrawingContext;
@@ -139,3 +140,5 @@ namespace OpenRCT2::Ui
         return std::make_unique<VulkanDrawingEngine>(uiContext);
     }
 }
+
+#endif
