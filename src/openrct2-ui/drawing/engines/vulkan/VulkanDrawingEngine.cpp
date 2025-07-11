@@ -6,6 +6,7 @@
 #include <SDL2/SDL_vulkan.h>
 #include <openrct2/drawing/IDrawingContext.h>
 #include <openrct2/ui/UiContext.h>
+#include <vulkan/vulkan_raii.hpp>
 
 using OpenRCT2::Drawing::IDrawingContext;
 using OpenRCT2::Drawing::GamePalette;
@@ -66,6 +67,9 @@ namespace OpenRCT2::Ui
 
         RenderTarget _mainRT = {};
 
+        vk::raii::Context _vulkanContext;
+        vk::raii::Instance _instance = nullptr;
+
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext)
             : _uiContext(uiContext)
@@ -76,9 +80,13 @@ namespace OpenRCT2::Ui
         }
         ~VulkanDrawingEngine() override = default;
 
+        void CreateInstance();
+
         void Initialise() override
         {
             SDL_Vulkan_LoadLibrary(nullptr);
+
+            CreateInstance();
         }
         void Resize(uint32_t width, uint32_t height) override
         {
@@ -147,6 +155,17 @@ namespace OpenRCT2::Ui
     {
         return std::make_unique<VulkanDrawingEngine>(uiContext);
     }
-}
+
+    void VulkanDrawingEngine::CreateInstance()
+    {
+        const uint32_t applicationVersion = 1;
+
+        vk::ApplicationInfo applicationInfo{ "OpenRCT2", applicationVersion, "No Engine", 0, vk::ApiVersion12 };
+
+        vk::InstanceCreateInfo instanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo };
+
+        _instance = _vulkanContext.createInstance(instanceCreateInfo);
+    }
+} // namespace OpenRCT2::Ui
 
 #endif
