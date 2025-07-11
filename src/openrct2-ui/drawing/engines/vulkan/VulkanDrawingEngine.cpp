@@ -86,6 +86,7 @@ namespace OpenRCT2::Ui
         vk::raii::Context _vulkanContext;
         vk::raii::Instance _instance = nullptr;
         vk::raii::DebugUtilsMessengerEXT _debugMessanger = nullptr;
+        vk::raii::SurfaceKHR _surface = nullptr;
 
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext)
@@ -98,12 +99,14 @@ namespace OpenRCT2::Ui
         ~VulkanDrawingEngine() override = default;
 
         void CreateInstance();
+        void CreateSurface();
 
         void Initialise() override
         {
             SDL_Vulkan_LoadLibrary(nullptr);
 
             CreateInstance();
+            CreateSurface();
         }
         void Resize(uint32_t width, uint32_t height) override
         {
@@ -236,22 +239,42 @@ namespace OpenRCT2::Ui
         "Debug function does not match prototype");
 #endif
 
+    static std::vector<const char*> GetRequiredExtensions(SDL_Window* window)
+    {
+        unsigned int extensionCount = 0;
+        if (!SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, nullptr))
+        {
+            throw std::runtime_error("Failed to get number of required SDL extensions for Vulkan engine");
+        }
+
+        std::vector<const char*> extensions;
+        extensions.resize(extensionCount, nullptr);
+
+        if (!SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, extensions.data()))
+        {
+            throw std::runtime_error("Failed to get list of required SDL extensions for Vulkan engine");
+        }
+
+        return extensions;
+    }
+
     void VulkanDrawingEngine::CreateInstance()
     {
         const uint32_t applicationVersion = 1;
 
         vk::ApplicationInfo applicationInfo{ "OpenRCT2", applicationVersion, "No Engine", 0, vk::ApiVersion12 };
 
+        std::vector<const char*> enabledExtensions = GetRequiredExtensions(_window);
+
         if (!kDebugVulkan)
         {
-            vk::InstanceCreateInfo instanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo };
+            vk::InstanceCreateInfo instanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo, {}, enabledExtensions };
 
             _instance = _vulkanContext.createInstance(instanceCreateInfo);
             return;
         }
 
         std::vector<const char*> enabledLayers;
-        std::vector<const char*> enabledExtensions;
 
         enabledLayers.push_back(khronosValidationLayerName);
 
@@ -284,6 +307,17 @@ namespace OpenRCT2::Ui
         _instance = _vulkanContext.createInstance(instanceCreateInfo);
 
         _debugMessanger = _instance.createDebugUtilsMessengerEXT(debugCreateInfo);
+    }
+
+    void VulkanDrawingEngine::CreateSurface()
+    {
+        VkSurfaceKHR surfaceTemp{};
+        if (!SDL_Vulkan_CreateSurface(_window, (vk::Instance)_instance, &surfaceTemp))
+        {
+            throw std::runtime_error("Failed to create SDL Vulkan surface");
+        }
+
+        _surface = vk::raii::SurfaceKHR{ _instance, surfaceTemp };
     }
 } // namespace OpenRCT2::Ui
 
