@@ -78,7 +78,7 @@ namespace OpenRCT2::Ui
 
         void Initialise() override
         {
-
+            SDL_Vulkan_LoadLibrary(nullptr);
         }
         void Resize(uint32_t width, uint32_t height) override
         {
