@@ -85,6 +85,7 @@ namespace OpenRCT2::Ui
 
         vk::raii::Context _vulkanContext;
         vk::raii::Instance _instance = nullptr;
+        vk::raii::DebugUtilsMessengerEXT _debugMessanger = nullptr;
 
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext)
@@ -273,14 +274,16 @@ namespace OpenRCT2::Ui
         auto debugMessageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral
             | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
 
-        vk::StructureChain<vk::InstanceCreateInfo,
-            vk::DebugUtilsMessengerCreateInfoEXT> instanceCreateInfo{
-            vk::InstanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo, enabledLayers, enabledExtensions },
-            { vk::DebugUtilsMessengerCreateFlagsEXT{}, debugMessageSeverity, debugMessageType, &VulkanDebugCallback,
-                static_cast<void*>(this) }
-        };
+        vk::DebugUtilsMessengerCreateInfoEXT debugCreateInfo{ vk::DebugUtilsMessengerCreateFlagsEXT{}, debugMessageSeverity,
+                                                              debugMessageType, &VulkanDebugCallback,
+                                                              static_cast<void*>(this) };
 
-        _instance = _vulkanContext.createInstance(instanceCreateInfo.get());
+        vk::InstanceCreateInfo instanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo, enabledLayers,
+                                                   enabledExtensions, &debugCreateInfo };
+
+        _instance = _vulkanContext.createInstance(instanceCreateInfo);
+
+        _debugMessanger = _instance.createDebugUtilsMessengerEXT(debugCreateInfo);
     }
 } // namespace OpenRCT2::Ui
 
