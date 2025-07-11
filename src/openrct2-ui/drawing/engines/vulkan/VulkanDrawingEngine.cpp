@@ -8,11 +8,27 @@
 #include <openrct2/ui/UiContext.h>
 #include <vulkan/vulkan_raii.hpp>
 
+#if DEBUG_VULKAN
+#if _WIN32
+#include <windows.h>
+#endif
+#include <debugapi.h>
+#endif
+
 using OpenRCT2::Drawing::IDrawingContext;
 using OpenRCT2::Drawing::GamePalette;
 
 namespace OpenRCT2::Ui
 {
+#if DEBUG_VULKAN
+    constexpr bool kDebugVulkan = true;
+
+    constexpr const char* khronosValidationLayerName = "VK_LAYER_KHRONOS_validation";
+    constexpr const char* lunargMonitorLayerName = "VK_LAYER_LUNARG_monitor"; // FPS display on some platforms
+#else
+    constexpr bool kDebugVulkan = false;
+#endif
+
     class VulkanDrawingEngine;
 
     class VulkanDrawingContext final : public IDrawingContext
@@ -156,15 +172,115 @@ namespace OpenRCT2::Ui
         return std::make_unique<VulkanDrawingEngine>(uiContext);
     }
 
+#if DEBUG_VULKAN
+    static VKAPI_ATTR vk::Bool32 VKAPI_CALL VulkanDebugCallback(
+        vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::DebugUtilsMessageTypeFlagsEXT messageType,
+        const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
+    {
+        std::string msg;
+
+        vk::DebugUtilsMessageSeverityFlagsEXT sev(severity);
+        if (vk::DebugUtilsMessageSeverityFlagBitsEXT::eError & sev)
+        {
+            msg += "[ERR]";
+        }
+        if (vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning & sev)
+        {
+            msg += "[WAR]";
+        }
+        if (vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose & sev)
+        {
+            msg += "[VER]";
+        }
+        if (vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo & sev)
+        {
+            msg += "[INF]";
+        }
+
+        vk::DebugUtilsMessageTypeFlagsEXT msgType(messageType);
+
+        if (vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral & msgType)
+        {
+            msg += "[gen]";
+        }
+        if (vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation & msgType)
+        {
+            msg += "[val]";
+        }
+        if (vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance & msgType)
+        {
+            msg += "[per]";
+        }
+        if (vk::DebugUtilsMessageTypeFlagBitsEXT::eDeviceAddressBinding & msgType)
+        {
+            msg += "[dab]";
+        }
+
+        if (pCallbackData && pCallbackData->pMessage)
+        {
+            msg += pCallbackData->pMessage;
+        }
+
+        msg += "\n";
+
+    #if __WINDOWS__
+        OutputDebugStringA(msg.c_str());
+    #endif
+
+        return vk::False;
+    }
+
+    static_assert(
+        std::is_same_v<decltype(&VulkanDebugCallback), vk::PFN_DebugUtilsMessengerCallbackEXT>,
+        "Debug function does not match prototype");
+#endif
+
     void VulkanDrawingEngine::CreateInstance()
     {
         const uint32_t applicationVersion = 1;
 
         vk::ApplicationInfo applicationInfo{ "OpenRCT2", applicationVersion, "No Engine", 0, vk::ApiVersion12 };
 
-        vk::InstanceCreateInfo instanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo };
+        if (!kDebugVulkan)
+        {
+            vk::InstanceCreateInfo instanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo };
 
-        _instance = _vulkanContext.createInstance(instanceCreateInfo);
+            _instance = _vulkanContext.createInstance(instanceCreateInfo);
+            return;
+        }
+
+        std::vector<const char*> enabledLayers;
+        std::vector<const char*> enabledExtensions;
+
+        enabledLayers.push_back(khronosValidationLayerName);
+
+        enabledExtensions.push_back(vk::EXTDebugUtilsExtensionName);
+
+        auto instanceLayerProps = vk::enumerateInstanceLayerProperties();
+
+        // Add the FPS display if it is available
+        for (auto& layer : instanceLayerProps)
+        {
+            if (std::strcmp(lunargMonitorLayerName, layer.layerName) == 0)
+            {
+                enabledLayers.push_back(lunargMonitorLayerName);
+            }
+        }
+
+        auto debugMessageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eError
+            | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning /* | vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose*/;
+
+        auto debugMessageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral
+            | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
+
+        vk::StructureChain<vk::InstanceCreateInfo,
+            vk::DebugUtilsMessengerCreateInfoEXT> instanceCreateInfo{
+            vk::InstanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo, enabledLayers, enabledExtensions },
+            { vk::DebugUtilsMessengerCreateFlagsEXT{}, debugMessageSeverity, debugMessageType, &VulkanDebugCallback,
+                static_cast<void*>(this) }
+        };
+
+        _instance = _vulkanContext.createInstance(instanceCreateInfo.get());
     }
 } // namespace OpenRCT2::Ui
 
