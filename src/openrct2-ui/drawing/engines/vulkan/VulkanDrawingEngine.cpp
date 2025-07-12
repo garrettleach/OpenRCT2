@@ -117,7 +117,7 @@ namespace OpenRCT2::Ui
         vk::raii::Queue _presentationQueue = nullptr;
         vk::SurfaceCapabilitiesKHR _surfaceCapabilities{};
         vk::SurfaceFormatKHR _surfaceFormat{};
-        vk::Extent2D _swapChainExtent{};
+        vk::Extent2D _swapchainExtent{};
         vk::PresentModeKHR _presentationMode{};
         vk::raii::SwapchainKHR _swapchain = nullptr;
 
@@ -136,10 +136,10 @@ namespace OpenRCT2::Ui
         void PickPhysicalDevice();
         void CreateLogicalDevice();
         void CreateQueues();
-        void ChooseSwapChainImageFormat();
-        void ChooseSwapChainExtent();
+        void ChooseSwapchainImageFormat();
+        void ChooseSwapchainExtent();
         void ChoosePresentMode();
-        void CreateSwapChain();
+        void CreateSwapchain();
 
         void Initialise() override
         {
@@ -151,10 +151,10 @@ namespace OpenRCT2::Ui
             CreateLogicalDevice();
             CreateQueues();
             _surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(_surface);
-            ChooseSwapChainImageFormat();
-            ChooseSwapChainExtent();
+            ChooseSwapchainImageFormat();
+            ChooseSwapchainExtent();
             ChoosePresentMode();
-            CreateSwapChain();
+            CreateSwapchain();
         }
         void Resize(uint32_t width, uint32_t height) override
         {
@@ -522,7 +522,7 @@ namespace OpenRCT2::Ui
         _presentationQueue = _device.getQueue(_queueIndicies.presentation, 0);
     }
 
-    void VulkanDrawingEngine::ChooseSwapChainImageFormat()
+    void VulkanDrawingEngine::ChooseSwapchainImageFormat()
     {
         auto availableFormats = _physicalDevice.getSurfaceFormatsKHR(_surface);
 
@@ -540,11 +540,11 @@ namespace OpenRCT2::Ui
         _surfaceFormat = *findFormat;
     }
 
-    void VulkanDrawingEngine::ChooseSwapChainExtent()
+    void VulkanDrawingEngine::ChooseSwapchainExtent()
     {
         if (_surfaceCapabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
         {
-            _swapChainExtent = _surfaceCapabilities.currentExtent;
+            _swapchainExtent = _surfaceCapabilities.currentExtent;
         }
         else
         {
@@ -553,7 +553,7 @@ namespace OpenRCT2::Ui
 
             SDL_Vulkan_GetDrawableSize(_window, &width, &height);
 
-            _swapChainExtent = vk::Extent2D{
+            _swapchainExtent = vk::Extent2D{
                 clamp((uint32_t)width, _surfaceCapabilities.minImageExtent.width, _surfaceCapabilities.maxImageExtent.width),
                 clamp(
                     (uint32_t)height, _surfaceCapabilities.minImageExtent.height, _surfaceCapabilities.maxImageExtent.height)
@@ -575,7 +575,7 @@ namespace OpenRCT2::Ui
         }
     }
 
-    void VulkanDrawingEngine::CreateSwapChain()
+    void VulkanDrawingEngine::CreateSwapchain()
     {
         auto maxImageCount = _surfaceCapabilities.maxImageCount;
         if (maxImageCount == 0)
@@ -597,7 +597,7 @@ namespace OpenRCT2::Ui
 
         vk::SwapchainCreateInfoKHR createInfo(
             vk::SwapchainCreateFlagsKHR(), _surface, imageCount, _surfaceFormat.format, _surfaceFormat.colorSpace,
-            _swapChainExtent,
+            _swapchainExtent,
             1, vk::ImageUsageFlagBits::eColorAttachment, sharingMode, swapQueueFamilyIndices,
             _surfaceCapabilities.currentTransform, vk::CompositeAlphaFlagBitsKHR::eOpaque, _presentationMode, true, {});
 
