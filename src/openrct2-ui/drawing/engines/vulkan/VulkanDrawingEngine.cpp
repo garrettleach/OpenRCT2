@@ -29,6 +29,11 @@ namespace OpenRCT2::Ui
     constexpr bool kDebugVulkan = false;
 #endif
 
+    namespace
+    {
+        std::vector<const char*> kRequiredExtensions{ vk::KHRSwapchainExtensionName, vk::EXTDescriptorIndexingExtensionName };
+    }
+
     class VulkanDrawingEngine;
 
     class VulkanDrawingContext final : public IDrawingContext
@@ -75,6 +80,15 @@ namespace OpenRCT2::Ui
         }
     };
 
+    namespace
+    {
+        struct QueueIndicies
+        {
+            uint32_t graphics;
+            uint32_t presentation;
+        };
+    } // namespace
+
     class VulkanDrawingEngine final : public OpenRCT2::Drawing::IDrawingEngine
     {
         IUiContext& _uiContext;
@@ -87,6 +101,8 @@ namespace OpenRCT2::Ui
         vk::raii::Instance _instance = nullptr;
         vk::raii::DebugUtilsMessengerEXT _debugMessanger = nullptr;
         vk::raii::SurfaceKHR _surface = nullptr;
+        vk::raii::PhysicalDevice _physicalDevice = nullptr;
+        QueueIndicies _queueIndicies{};
 
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext)
@@ -100,6 +116,7 @@ namespace OpenRCT2::Ui
 
         void CreateInstance();
         void CreateSurface();
+        void PickPhysicalDevice();
 
         void Initialise() override
         {
@@ -107,6 +124,7 @@ namespace OpenRCT2::Ui
 
             CreateInstance();
             CreateSurface();
+            PickPhysicalDevice();
         }
         void Resize(uint32_t width, uint32_t height) override
         {
@@ -318,6 +336,107 @@ namespace OpenRCT2::Ui
         }
 
         _surface = vk::raii::SurfaceKHR{ _instance, surfaceTemp };
+    }
+
+    void VulkanDrawingEngine::PickPhysicalDevice()
+    {
+        vk::raii::PhysicalDevice chosenDevice = nullptr;
+        int chosenRating = 0;
+        QueueIndicies chosenIndicies{};
+
+        for (auto& physicalDevice : _instance.enumeratePhysicalDevices())
+        {
+            auto queueFamilyProps = physicalDevice.getQueueFamilyProperties();
+            std::optional<size_t> graphicsQueueIndex;
+            std::optional<size_t> presentationQueueIndex;
+
+            for (size_t i = 0; i < queueFamilyProps.size(); i++)
+            {
+                if (!graphicsQueueIndex.has_value() && (queueFamilyProps[i].queueFlags & vk::QueueFlagBits::eGraphics))
+                {
+                    graphicsQueueIndex = i;
+                }
+
+                if (!presentationQueueIndex.has_value() && physicalDevice.getSurfaceSupportKHR(static_cast<uint32_t>(i), _surface))
+                {
+                    presentationQueueIndex = i;
+                }
+            }
+
+            if (!graphicsQueueIndex.has_value() && !presentationQueueIndex.has_value())
+            {
+                continue;
+            }
+
+            auto extensionProperties = physicalDevice.enumerateDeviceExtensionProperties();
+
+            auto missingExtensions = kRequiredExtensions;
+
+            for (auto& extensionProps : extensionProperties)
+            {
+                missingExtensions.erase(
+                    std::remove_if(
+                        missingExtensions.begin(), missingExtensions.end(),
+                        [&extensionProps](const char* extension) {
+                            return std::strcmp(extensionProps.extensionName, extension) == 0;
+                        }),
+                    missingExtensions.end());
+            }
+
+            if (!missingExtensions.empty())
+            {
+                continue;
+            }
+
+            if (physicalDevice.getSurfaceFormatsKHR(_surface).size() == 0)
+            {
+                continue;
+            }
+            if (physicalDevice.getSurfacePresentModesKHR(_surface).size() == 0)
+            {
+                continue;
+            }
+
+            int rating = 1;
+
+            switch (physicalDevice.getProperties().deviceType)
+            {
+                case vk::PhysicalDeviceType::eOther:
+                    rating += 0;
+                    break;
+                case vk::PhysicalDeviceType::eIntegratedGpu:
+                    rating += 2;
+                    break;
+                case vk::PhysicalDeviceType::eDiscreteGpu:
+                    rating += 5;
+                    break;
+                case vk::PhysicalDeviceType::eVirtualGpu:
+                    rating += 1;
+                    break;
+                case vk::PhysicalDeviceType::eCpu:
+                    rating += 1;
+                    break;
+                default:
+                    rating += 0;
+                    break;
+            }
+
+            if (rating > chosenRating)
+            {
+                chosenDevice = physicalDevice;
+                chosenRating = rating;
+                chosenIndicies.graphics = static_cast<uint32_t>(graphicsQueueIndex.value());
+                chosenIndicies.presentation = static_cast<uint32_t>(presentationQueueIndex.value());
+            }
+        }
+
+        if (chosenRating == 0)
+        {
+            throw std::runtime_error("No suitable physical device");
+        }
+
+        _physicalDevice = chosenDevice;
+        _queueIndicies = chosenIndicies;
     }
 } // namespace OpenRCT2::Ui
 
