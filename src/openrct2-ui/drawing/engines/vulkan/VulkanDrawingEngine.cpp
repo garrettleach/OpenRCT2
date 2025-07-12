@@ -118,6 +118,11 @@ namespace OpenRCT2::Ui
                 };
             }
         };
+
+        struct UniformBufferObject
+        {
+
+        };
     } // namespace
 
     class VulkanDrawingEngine final : public OpenRCT2::Drawing::IDrawingEngine
@@ -135,6 +140,7 @@ namespace OpenRCT2::Ui
         vk::raii::SurfaceKHR _surface = nullptr;
         vk::raii::PhysicalDevice _physicalDevice = nullptr;
         QueueIndicies _queueIndicies{};
+        vk::PhysicalDeviceMemoryProperties _physicalDeviceMemoryProps{};
         vk::raii::Device _device = nullptr;
         vk::raii::Queue _graphicsQueue = nullptr;
         vk::raii::Queue _presentationQueue = nullptr;
@@ -151,6 +157,9 @@ namespace OpenRCT2::Ui
         vk::raii::Pipeline _pipeline = nullptr;
         vector<vk::raii::Framebuffer> _swapchainFramebuffers{};
         vk::raii::CommandPool _commandPool = nullptr;
+        vector<vk::raii::Buffer> _uniformBufferObjectBuffer;
+        vector<vk::raii::DeviceMemory> _uniformBufferObjectMemory;
+        vector<void*> _uniformBufferObjectMappedMemory;
 
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext)
@@ -179,6 +188,7 @@ namespace OpenRCT2::Ui
         void CreateGraphicsPipeline();
         void CreateFramebuffers();
         void CreateCommandPool();
+        void CreateUniformBuffer();
 
         void Initialise() override
         {
@@ -202,6 +212,7 @@ namespace OpenRCT2::Ui
             CreateGraphicsPipeline();
             CreateFramebuffers();
             CreateCommandPool();
+            CreateUniformBuffer();
         }
         void Resize(uint32_t width, uint32_t height) override
         {
@@ -515,6 +526,7 @@ namespace OpenRCT2::Ui
 
         _physicalDevice = chosenDevice;
         _queueIndicies = chosenIndicies;
+        _physicalDeviceMemoryProps = _physicalDevice.getMemoryProperties();
     }
 
     void VulkanDrawingEngine::CreateLogicalDevice()
@@ -831,6 +843,60 @@ namespace OpenRCT2::Ui
             vk::CommandPoolCreateFlagBits::eResetCommandBuffer, _queueIndicies.graphics);
 
         _commandPool = _device.createCommandPool(commandPoolCreate);
+    }
+
+    static uint32_t GetBufferMemoryType(
+        const vk::MemoryRequirements& memoryRequirements, const vk::PhysicalDeviceMemoryProperties& physicalDeviceMemoryProps)
+    {
+        optional<uint32_t> memoryType;
+        for (uint32_t i = 0; i < physicalDeviceMemoryProps.memoryTypeCount; i++)
+        {
+            if ((memoryRequirements.memoryTypeBits & (1 << i))
+                && ((physicalDeviceMemoryProps.memoryTypes[i].propertyFlags
+                     & (vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent))
+                    == (vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent)))
+            {
+                memoryType = i;
+                break;
+            }
+        }
+
+        if (!memoryType.has_value())
+        {
+            throw runtime_error("No suitable memory type for uniform buffer");
+        }
+
+        return memoryType.value();
+    }
+
+    void VulkanDrawingEngine::CreateUniformBuffer()
+    {
+        vk::DeviceSize uniformBufferSize = sizeof(UniformBufferObject);
+
+        for (size_t i = 0; i < _swapchainImages.size(); i++)
+        {
+            vk::BufferCreateInfo bufferInfo(
+                vk::BufferCreateFlags{}, uniformBufferSize, vk::BufferUsageFlagBits::eUniformBuffer,
+                vk::SharingMode::eExclusive, {});
+
+            auto buffer = _device.createBuffer(bufferInfo);
+
+            auto memRequirements = buffer.getMemoryRequirements();
+
+            auto memoryType = GetBufferMemoryType(memRequirements, _physicalDeviceMemoryProps);
+
+            vk::MemoryAllocateInfo memAllocInfo(memRequirements.size, memoryType);
+
+            auto bufferMemory = _device.allocateMemory(memAllocInfo);
+
+            buffer.bindMemory(bufferMemory, 0);
+
+            auto mappedBuffer = bufferMemory.mapMemory(0, uniformBufferSize, vk::MemoryMapFlags());
+
+            _uniformBufferObjectBuffer.push_back(std::move(buffer));
+            _uniformBufferObjectMemory.push_back(std::move(bufferMemory));
+            _uniformBufferObjectMappedMemory.push_back(mappedBuffer);
+        }
     }
 } // namespace OpenRCT2::Ui
 
