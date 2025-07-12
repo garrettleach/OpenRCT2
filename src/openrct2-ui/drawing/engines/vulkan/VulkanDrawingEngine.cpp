@@ -116,6 +116,7 @@ namespace OpenRCT2::Ui
         vk::raii::Queue _presentationQueue = nullptr;
         vk::SurfaceCapabilitiesKHR _surfaceCapabilities{};
         vk::SurfaceFormatKHR _surfaceFormat{};
+        vk::Extent2D _swapChainExtent{};
 
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext)
@@ -133,6 +134,7 @@ namespace OpenRCT2::Ui
         void CreateLogicalDevice();
         void CreateQueues();
         void ChooseSwapChainImageFormat();
+        void ChooseSwapChainExtent();
 
         void Initialise() override
         {
@@ -145,6 +147,7 @@ namespace OpenRCT2::Ui
             CreateQueues();
             _surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(_surface);
             ChooseSwapChainImageFormat();
+            ChooseSwapChainExtent();
         }
         void Resize(uint32_t width, uint32_t height) override
         {
@@ -528,6 +531,27 @@ namespace OpenRCT2::Ui
         }
 
         _surfaceFormat = *findFormat;
+    }
+
+    void VulkanDrawingEngine::ChooseSwapChainExtent()
+    {
+        if (_surfaceCapabilities.currentExtent.width != std::numeric_limits<uint32_t>::max())
+        {
+            _swapChainExtent = _surfaceCapabilities.currentExtent;
+        }
+        else
+        {
+            int width;
+            int height;
+
+            SDL_Vulkan_GetDrawableSize(_window, &width, &height);
+
+            _swapChainExtent = vk::Extent2D{
+                clamp((uint32_t)width, _surfaceCapabilities.minImageExtent.width, _surfaceCapabilities.maxImageExtent.width),
+                clamp(
+                    (uint32_t)height, _surfaceCapabilities.minImageExtent.height, _surfaceCapabilities.maxImageExtent.height)
+            };
+        }
     }
 } // namespace OpenRCT2::Ui
 
