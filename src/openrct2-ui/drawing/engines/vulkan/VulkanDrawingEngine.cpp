@@ -163,6 +163,9 @@ namespace OpenRCT2::Ui
         vk::raii::DescriptorPool _uniformBufferDescriptorPool = nullptr;
         vector<vk::raii::DescriptorSet> _uniformBufferDescriptorSets;
         vector<vk::raii::CommandBuffer> _commandBuffers;
+        vector<vk::raii::Semaphore> _imageAvailableSemaphores;
+        vector<vk::raii::Semaphore> _renderFinishedSemaphores;
+        vector<vk::raii::Fence> _inFlightFences;
 
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext)
@@ -195,6 +198,7 @@ namespace OpenRCT2::Ui
         void CreateDescriptorPool();
         void CreateDescriptorSets();
         void CreateCommandBuffers();
+        void CreateSyncObjects();
 
         void Initialise() override
         {
@@ -222,6 +226,7 @@ namespace OpenRCT2::Ui
             CreateDescriptorPool();
             CreateDescriptorSets();
             CreateCommandBuffers();
+            CreateSyncObjects();
         }
         void Resize(uint32_t width, uint32_t height) override
         {
@@ -943,6 +948,20 @@ namespace OpenRCT2::Ui
             _commandPool, vk::CommandBufferLevel::ePrimary, static_cast<uint32_t>(_swapchainImages.size()));
 
         _commandBuffers = _device.allocateCommandBuffers(allocInfo);
+    }
+
+    void VulkanDrawingEngine::CreateSyncObjects()
+    {
+        vk::SemaphoreCreateInfo semaphorInfo{ vk::SemaphoreCreateFlags() };
+
+        vk::FenceCreateInfo fenceInfo(vk::FenceCreateFlagBits::eSignaled);
+
+        for (size_t i=0;i<_swapchainImages.size();i++)
+        {
+            _imageAvailableSemaphores.push_back(_device.createSemaphore(semaphorInfo));
+            _renderFinishedSemaphores.push_back(_device.createSemaphore(semaphorInfo));
+            _inFlightFences.push_back(_device.createFence(fenceInfo));
+        }
     }
 } // namespace OpenRCT2::Ui
 
