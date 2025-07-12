@@ -122,6 +122,7 @@ namespace OpenRCT2::Ui
         vk::raii::SwapchainKHR _swapchain = nullptr;
         vector<vk::Image> _swapchainImages{};
         vector<vk::ImageView> _swapchainImageViews{};
+        vk::raii::RenderPass _renderPass = nullptr;
 
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext)
@@ -144,6 +145,7 @@ namespace OpenRCT2::Ui
         void CreateSwapchain();
         void CreateSwapchainImages();
         void CreateSwapchainImageViews();
+        void CreateRenderPass();
 
         void Initialise() override
         {
@@ -161,6 +163,7 @@ namespace OpenRCT2::Ui
             CreateSwapchain();
             CreateSwapchainImages();
             CreateSwapchainImageViews();
+            CreateRenderPass();
         }
         void Resize(uint32_t width, uint32_t height) override
         {
@@ -627,6 +630,27 @@ namespace OpenRCT2::Ui
 
             _swapchainImageViews.push_back(_device.createImageView(createInfo));
         }
+    }
+
+    void VulkanDrawingEngine::CreateRenderPass()
+    {
+        vk::AttachmentDescription colorAttachment(
+            vk::AttachmentDescriptionFlags(), _surfaceFormat.format, vk::SampleCountFlagBits::e1, vk::AttachmentLoadOp::eClear,
+            vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare,
+            vk::ImageLayout::eUndefined, vk::ImageLayout::ePresentSrcKHR);
+
+        vk::AttachmentReference colorAttachmentRef(0, vk::ImageLayout::eColorAttachmentOptimal);
+
+        vk::SubpassDescription subpass(
+            vk::SubpassDescriptionFlags(), vk::PipelineBindPoint::eGraphics, {}, { colorAttachmentRef }, {}, nullptr);
+
+        vk::SubpassDependency dependency(
+            vk::SubpassExternal, 0, vk::PipelineStageFlagBits::eColorAttachmentOutput,
+            vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlags(), vk::AccessFlagBits::eColorAttachmentWrite);
+
+        vk::RenderPassCreateInfo renderPassInfo(vk::RenderPassCreateFlags(), { colorAttachment }, { subpass }, { dependency });
+
+        _renderPass = _device.createRenderPass(renderPassInfo);
     }
 } // namespace OpenRCT2::Ui
 
