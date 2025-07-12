@@ -32,7 +32,7 @@ namespace OpenRCT2::Ui
 
     namespace
     {
-        std::vector<const char*> kRequiredExtensions{ vk::KHRSwapchainExtensionName, vk::EXTDescriptorIndexingExtensionName };
+        vector<const char*> kRequiredExtensions{ vk::KHRSwapchainExtensionName, vk::EXTDescriptorIndexingExtensionName };
     }
 
     class VulkanDrawingEngine;
@@ -100,7 +100,7 @@ namespace OpenRCT2::Ui
     {
         IUiContext& _uiContext;
         SDL_Window* _window;
-        std::unique_ptr<VulkanDrawingContext> _drawingContext;
+        unique_ptr<VulkanDrawingContext> _drawingContext;
 
         RenderTarget _mainRT = {};
 
@@ -117,7 +117,7 @@ namespace OpenRCT2::Ui
         explicit VulkanDrawingEngine(IUiContext& uiContext)
             : _uiContext(uiContext)
             , _window(static_cast<SDL_Window*>(_uiContext.GetWindow()))
-            , _drawingContext(std::make_unique<VulkanDrawingContext>(*this))
+            , _drawingContext(make_unique<VulkanDrawingContext>(*this))
         {
             _mainRT.DrawingEngine = this;
         }
@@ -175,7 +175,7 @@ namespace OpenRCT2::Ui
         {
 
         }
-        std::string Screenshot() override
+        string Screenshot() override
         {
             return "";
         }
@@ -200,9 +200,9 @@ namespace OpenRCT2::Ui
         }
     };
 
-    std::unique_ptr<Drawing::IDrawingEngine> CreateVulkanDrawingEngine(IUiContext& uiContext)
+    unique_ptr<Drawing::IDrawingEngine> CreateVulkanDrawingEngine(IUiContext& uiContext)
     {
-        return std::make_unique<VulkanDrawingEngine>(uiContext);
+        return make_unique<VulkanDrawingEngine>(uiContext);
     }
 
 #if DEBUG_VULKAN
@@ -210,7 +210,7 @@ namespace OpenRCT2::Ui
         vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::DebugUtilsMessageTypeFlagsEXT messageType,
         const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
     {
-        std::string msg;
+        string msg;
 
         vk::DebugUtilsMessageSeverityFlagsEXT sev(severity);
         if (vk::DebugUtilsMessageSeverityFlagBitsEXT::eError & sev)
@@ -264,24 +264,24 @@ namespace OpenRCT2::Ui
     }
 
     static_assert(
-        std::is_same_v<decltype(&VulkanDebugCallback), vk::PFN_DebugUtilsMessengerCallbackEXT>,
+        is_same_v<decltype(&VulkanDebugCallback), vk::PFN_DebugUtilsMessengerCallbackEXT>,
         "Debug function does not match prototype");
 #endif
 
-    static std::vector<const char*> GetRequiredExtensions(SDL_Window* window)
+    static vector<const char*> GetRequiredExtensions(SDL_Window* window)
     {
         unsigned int extensionCount = 0;
         if (!SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, nullptr))
         {
-            throw std::runtime_error("Failed to get number of required SDL extensions for Vulkan engine");
+            throw runtime_error("Failed to get number of required SDL extensions for Vulkan engine");
         }
 
-        std::vector<const char*> extensions;
+        vector<const char*> extensions;
         extensions.resize(extensionCount, nullptr);
 
         if (!SDL_Vulkan_GetInstanceExtensions(window, &extensionCount, extensions.data()))
         {
-            throw std::runtime_error("Failed to get list of required SDL extensions for Vulkan engine");
+            throw runtime_error("Failed to get list of required SDL extensions for Vulkan engine");
         }
 
         return extensions;
@@ -293,7 +293,7 @@ namespace OpenRCT2::Ui
 
         vk::ApplicationInfo applicationInfo{ "OpenRCT2", applicationVersion, "No Engine", 0, vk::ApiVersion13 };
 
-        std::vector<const char*> enabledExtensions = GetRequiredExtensions(_window);
+        vector<const char*> enabledExtensions = GetRequiredExtensions(_window);
 
         if (!kDebugVulkan)
         {
@@ -303,7 +303,7 @@ namespace OpenRCT2::Ui
             return;
         }
 
-        std::vector<const char*> enabledLayers;
+        vector<const char*> enabledLayers;
 
         enabledLayers.push_back(khronosValidationLayerName);
 
@@ -314,7 +314,7 @@ namespace OpenRCT2::Ui
         // Add the FPS display if it is available
         for (auto& layer : instanceLayerProps)
         {
-            if (std::strcmp(lunargMonitorLayerName, layer.layerName) == 0)
+            if (strcmp(lunargMonitorLayerName, layer.layerName) == 0)
             {
                 enabledLayers.push_back(lunargMonitorLayerName);
                 _instanceLayers.debugMonitorPresent = true;
@@ -344,7 +344,7 @@ namespace OpenRCT2::Ui
         VkSurfaceKHR surfaceTemp{};
         if (!SDL_Vulkan_CreateSurface(_window, (vk::Instance)_instance, &surfaceTemp))
         {
-            throw std::runtime_error("Failed to create SDL Vulkan surface");
+            throw runtime_error("Failed to create SDL Vulkan surface");
         }
 
         _surface = vk::raii::SurfaceKHR{ _instance, surfaceTemp };
@@ -359,8 +359,8 @@ namespace OpenRCT2::Ui
         for (auto& physicalDevice : _instance.enumeratePhysicalDevices())
         {
             auto queueFamilyProps = physicalDevice.getQueueFamilyProperties();
-            std::optional<size_t> graphicsQueueIndex;
-            std::optional<size_t> presentationQueueIndex;
+            optional<size_t> graphicsQueueIndex;
+            optional<size_t> presentationQueueIndex;
 
             for (size_t i = 0; i < queueFamilyProps.size(); i++)
             {
@@ -387,10 +387,10 @@ namespace OpenRCT2::Ui
             for (auto& extensionProps : extensionProperties)
             {
                 missingExtensions.erase(
-                    std::remove_if(
+                    remove_if(
                         missingExtensions.begin(), missingExtensions.end(),
                         [&extensionProps](const char* extension) {
-                            return std::strcmp(extensionProps.extensionName, extension) == 0;
+                            return strcmp(extensionProps.extensionName, extension) == 0;
                         }),
                     missingExtensions.end());
             }
@@ -444,7 +444,7 @@ namespace OpenRCT2::Ui
 
         if (chosenRating == 0)
         {
-            throw std::runtime_error("No suitable physical device");
+            throw runtime_error("No suitable physical device");
         }
 
         _physicalDevice = chosenDevice;
@@ -453,7 +453,7 @@ namespace OpenRCT2::Ui
 
     void VulkanDrawingEngine::CreateLogicalDevice()
     {
-        std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
+        vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
 
         vector<float> priorities = { 1.0f };
         queueCreateInfos.emplace_back(vk::DeviceQueueCreateFlags(), _queueIndicies.graphics, priorities);
@@ -463,7 +463,7 @@ namespace OpenRCT2::Ui
             queueCreateInfos.emplace_back(vk::DeviceQueueCreateFlags(), _queueIndicies.presentation, priorities);
         }
 
-        std::vector<const char*> layers;
+        vector<const char*> layers;
         if (kDebugVulkan)
         {
             layers.push_back(khronosValidationLayerName);
