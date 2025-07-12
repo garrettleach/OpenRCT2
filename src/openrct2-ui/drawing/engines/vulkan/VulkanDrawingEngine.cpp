@@ -117,6 +117,7 @@ namespace OpenRCT2::Ui
         vk::SurfaceCapabilitiesKHR _surfaceCapabilities{};
         vk::SurfaceFormatKHR _surfaceFormat{};
         vk::Extent2D _swapChainExtent{};
+        vk::PresentModeKHR _presentationMode{};
 
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext)
@@ -135,6 +136,7 @@ namespace OpenRCT2::Ui
         void CreateQueues();
         void ChooseSwapChainImageFormat();
         void ChooseSwapChainExtent();
+        void ChoosePresentMode();
 
         void Initialise() override
         {
@@ -148,6 +150,7 @@ namespace OpenRCT2::Ui
             _surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(_surface);
             ChooseSwapChainImageFormat();
             ChooseSwapChainExtent();
+            ChoosePresentMode();
         }
         void Resize(uint32_t width, uint32_t height) override
         {
@@ -551,6 +554,19 @@ namespace OpenRCT2::Ui
                 clamp(
                     (uint32_t)height, _surfaceCapabilities.minImageExtent.height, _surfaceCapabilities.maxImageExtent.height)
             };
+        }
+    }
+    void VulkanDrawingEngine::ChoosePresentMode()
+    {
+        auto availablePresentModes = _physicalDevice.getSurfacePresentModesKHR(_surface);
+
+        if (std::find(availablePresentModes.begin(), availablePresentModes.end(), vk::PresentModeKHR::eMailbox) != availablePresentModes.end())
+        {
+            _presentationMode = vk::PresentModeKHR::eMailbox;
+        }
+        else
+        {
+            _presentationMode = vk::PresentModeKHR::eFifo;
         }
     }
 } // namespace OpenRCT2::Ui
