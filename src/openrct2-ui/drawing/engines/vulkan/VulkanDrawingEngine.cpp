@@ -123,6 +123,7 @@ namespace OpenRCT2::Ui
         vector<vk::Image> _swapchainImages{};
         vector<vk::ImageView> _swapchainImageViews{};
         vk::raii::RenderPass _renderPass = nullptr;
+        vk::raii::DescriptorSetLayout _descriptorSetLayout = nullptr;
 
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext)
@@ -146,6 +147,7 @@ namespace OpenRCT2::Ui
         void CreateSwapchainImages();
         void CreateSwapchainImageViews();
         void CreateRenderPass();
+        void CreateDescriptorSetLayout();
 
         void Initialise() override
         {
@@ -164,6 +166,7 @@ namespace OpenRCT2::Ui
             CreateSwapchainImages();
             CreateSwapchainImageViews();
             CreateRenderPass();
+            CreateDescriptorSetLayout();
         }
         void Resize(uint32_t width, uint32_t height) override
         {
@@ -651,6 +654,16 @@ namespace OpenRCT2::Ui
         vk::RenderPassCreateInfo renderPassInfo(vk::RenderPassCreateFlags(), { colorAttachment }, { subpass }, { dependency });
 
         _renderPass = _device.createRenderPass(renderPassInfo);
+    }
+
+    void VulkanDrawingEngine::CreateDescriptorSetLayout()
+    {
+        vk::DescriptorSetLayoutBinding uboLayoutBinding(
+            0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex);
+
+        vk::DescriptorSetLayoutCreateInfo layoutInfo(vk::DescriptorSetLayoutCreateFlags(), { uboLayoutBinding });
+
+        _descriptorSetLayout = _device.createDescriptorSetLayout(layoutInfo);
     }
 } // namespace OpenRCT2::Ui
 
