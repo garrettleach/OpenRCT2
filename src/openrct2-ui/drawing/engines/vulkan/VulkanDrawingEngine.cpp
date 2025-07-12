@@ -115,6 +115,7 @@ namespace OpenRCT2::Ui
         vk::raii::Queue _graphicsQueue = nullptr;
         vk::raii::Queue _presentationQueue = nullptr;
         vk::SurfaceCapabilitiesKHR _surfaceCapabilities{};
+        vk::SurfaceFormatKHR _surfaceFormat{};
 
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext)
@@ -131,6 +132,7 @@ namespace OpenRCT2::Ui
         void PickPhysicalDevice();
         void CreateLogicalDevice();
         void CreateQueues();
+        void ChooseSwapChainImageFormat();
 
         void Initialise() override
         {
@@ -142,6 +144,7 @@ namespace OpenRCT2::Ui
             CreateLogicalDevice();
             CreateQueues();
             _surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(_surface);
+            ChooseSwapChainImageFormat();
         }
         void Resize(uint32_t width, uint32_t height) override
         {
@@ -507,6 +510,24 @@ namespace OpenRCT2::Ui
     {
         _graphicsQueue = _device.getQueue(_queueIndicies.graphics, 0);
         _presentationQueue = _device.getQueue(_queueIndicies.presentation, 0);
+    }
+
+    void VulkanDrawingEngine::ChooseSwapChainImageFormat()
+    {
+        auto availableFormats = _physicalDevice.getSurfaceFormatsKHR(_surface);
+
+        auto findFormat = std::find_if(
+            availableFormats.begin(), availableFormats.end(), [](vk::SurfaceFormatKHR& surfaceFormat) {
+                return surfaceFormat.format == vk::Format::eB8G8R8A8Srgb
+                    && surfaceFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear;
+            });
+
+        if (findFormat == availableFormats.end())
+        {
+            throw std::runtime_error("Could not find compatible surface format");
+        }
+
+        _surfaceFormat = *findFormat;
     }
 } // namespace OpenRCT2::Ui
 
