@@ -5,7 +5,11 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
 #include <algorithm>
+#include <glm/gtc/matrix_transform.hpp>
+#include <openrct2/core/FileStream.h>
+#include <openrct2/core/Path.hpp>
 #include <openrct2/drawing/IDrawingContext.h>
+#include <openrct2/PlatformEnvironment.h>
 #include <openrct2/ui/UiContext.h>
 #include <vulkan/vulkan_raii.hpp>
 
@@ -95,6 +99,25 @@ namespace OpenRCT2::Ui
             bool debugMonitorPresent = false;
 
         };
+
+        struct Vertex
+        {
+            glm::vec2 pos;
+            glm::vec3 color;
+
+            static vk::VertexInputBindingDescription GetBindingDescription()
+            {
+                return { 0, sizeof(Vertex), vk::VertexInputRate::eVertex };
+            }
+
+            static std::array<vk::VertexInputAttributeDescription, 2> GetAttributeDescriptions()
+            {
+                return {
+                    vk::VertexInputAttributeDescription{ 0, 0, vk::Format::eR32G32Sfloat, offsetof(Vertex, pos) },
+                    vk::VertexInputAttributeDescription{ 1, 0, vk::Format::eR32G32B32Sfloat, offsetof(Vertex, color) },
+                };
+            }
+        };
     } // namespace
 
     class VulkanDrawingEngine final : public OpenRCT2::Drawing::IDrawingEngine
@@ -125,6 +148,7 @@ namespace OpenRCT2::Ui
         vk::raii::RenderPass _renderPass = nullptr;
         vk::raii::DescriptorSetLayout _descriptorSetLayout = nullptr;
         vk::raii::PipelineLayout _pipelineLayout = nullptr;
+        vk::raii::Pipeline _pipeline = nullptr;
 
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext)
@@ -150,6 +174,7 @@ namespace OpenRCT2::Ui
         void CreateRenderPass();
         void CreateDescriptorSetLayout();
         void CreateGraphicsPipelineLayout();
+        void CreateGraphicsPipeline();
 
         void Initialise() override
         {
@@ -170,6 +195,7 @@ namespace OpenRCT2::Ui
             CreateRenderPass();
             CreateDescriptorSetLayout();
             CreateGraphicsPipelineLayout();
+            CreateGraphicsPipeline();
         }
         void Resize(uint32_t width, uint32_t height) override
         {
@@ -676,6 +702,108 @@ namespace OpenRCT2::Ui
         vk::PipelineLayoutCreateInfo pipelineLayoutInfo(vk::PipelineLayoutCreateFlags(), descriptorSetLayouts);
 
         _pipelineLayout = _device.createPipelineLayout(pipelineLayoutInfo);
+    }
+
+    static vector<uint32_t> ReadSpirVFile(const string& filename)
+    {
+        auto& env = OpenRCT2::GetContext()->GetPlatformEnvironment();
+        auto shadersPath = env.GetDirectoryPath(OpenRCT2::DirBase::openrct2, OpenRCT2::DirId::shaders);
+
+        auto path = OpenRCT2::Path::Combine(shadersPath, filename);
+
+        auto fs = OpenRCT2::FileStream(path, OpenRCT2::FileMode::open);
+
+        uint64_t fileLength = fs.GetLength();
+
+        // limit to 1MB for now
+        if (fileLength > (1 << 20))
+        {
+            throw IOException("Spir-V shader file too large");
+        }
+
+        if (fileLength % sizeof(uint32_t) != 0)
+        {
+            throw IOException("Spir-V shader file is not in correct format, only glslc outputs are supported");
+        }
+
+        auto fileData = std::vector<uint32_t>(fileLength / sizeof(uint32_t), 0);
+        fs.Read(static_cast<void*>(fileData.data()), fileLength);
+        return fileData;
+    }
+
+    void VulkanDrawingEngine::CreateGraphicsPipeline()
+    {
+        auto vertexShaderSpirV = ReadSpirVFile("vertex.spirv");
+        auto fragmentShaderSpirV = ReadSpirVFile("fragment.spirv");
+
+        vk::ShaderModuleCreateInfo createVertexShaderInfo(vk::ShaderModuleCreateFlags(), vertexShaderSpirV);
+        vk::ShaderModuleCreateInfo createFragmentShaderInfo(vk::ShaderModuleCreateFlags(), fragmentShaderSpirV);
+
+        auto vertexShaderModule = _device.createShaderModule(createVertexShaderInfo);
+        auto fragmentShaderModule = _device.createShaderModule(createFragmentShaderInfo);
+
+        vk::PipelineShaderStageCreateInfo vertexShaderStageInfo(
+            vk::PipelineShaderStageCreateFlags(), vk::ShaderStageFlagBits::eVertex, vertexShaderModule, "main");
+        vk::PipelineShaderStageCreateInfo fragmentShaderStageInfo(
+            vk::PipelineShaderStageCreateFlags(), vk::ShaderStageFlagBits::eFragment, fragmentShaderModule, "main");
+
+        std::vector<vk::PipelineShaderStageCreateInfo> shaderStages = { vertexShaderStageInfo, fragmentShaderStageInfo };
+
+        auto bindingDesc = Vertex::GetBindingDescription();
+        auto attrDesc = Vertex::GetAttributeDescriptions();
+
+        vk::PipelineVertexInputStateCreateInfo pipelineVertexInputStateCreate(
+            vk::PipelineVertexInputStateCreateFlags(), { bindingDesc }, attrDesc);
+
+        vk::PipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreate(
+            vk::PipelineInputAssemblyStateCreateFlags(), vk::PrimitiveTopology::eTriangleList, false);
+
+        vk::PipelineViewportStateCreateInfo pipelineViewportStateCreate(
+            vk::PipelineViewportStateCreateFlags(), 1, nullptr, 1, nullptr);
+
+        vk::PipelineRasterizationStateCreateInfo pipelineRasterizationStateCreate(
+            vk::PipelineRasterizationStateCreateFlags(), false, false, vk::PolygonMode::eFill, vk::CullModeFlagBits::eBack,
+            vk::FrontFace::eCounterClockwise, false, 0.0f, 0.0f, 0.0f, 1.0f);
+
+        vk::PipelineMultisampleStateCreateInfo pipelineMultisampleStateCreate(
+            vk::PipelineMultisampleStateCreateFlags(), vk::SampleCountFlagBits::e1, false);
+
+        vk::PipelineColorBlendAttachmentState pipelineColorBlendAttachment(
+            false, vk::BlendFactor::eZero, vk::BlendFactor::eZero, vk::BlendOp::eAdd, vk::BlendFactor::eZero,
+            vk::BlendFactor::eZero, vk::BlendOp::eAdd,
+            vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB
+                | vk::ColorComponentFlagBits::eA);
+
+        vk::PipelineColorBlendStateCreateInfo pipelineColorBlendStateCreate(
+            vk::PipelineColorBlendStateCreateFlags(), false, vk::LogicOp::eCopy, { pipelineColorBlendAttachment },
+            { 0.0f, 0.0f, 0.0f, 0.0f });
+
+        std::vector<vk::DynamicState> dynamicStates = { vk::DynamicState::eViewport, vk::DynamicState::eScissor };
+
+        vk::PipelineDynamicStateCreateInfo pipelineDynamicStateCreate(vk::PipelineDynamicStateCreateFlags(), dynamicStates);
+
+        vector<vk::DescriptorSetLayout> descriptorSetLayouts{ _descriptorSetLayout };
+
+        vk::PipelineLayoutCreateInfo pipelineLayoutCreate(vk::PipelineLayoutCreateFlags(), descriptorSetLayouts);
+
+        vk::GraphicsPipelineCreateInfo graphicsPipelineCreate{ vk::PipelineCreateFlags{},
+                                                               shaderStages,
+                                                               &pipelineVertexInputStateCreate,
+                                                               &pipelineInputAssemblyStateCreate,
+                                                               nullptr,
+                                                               &pipelineViewportStateCreate,
+                                                               &pipelineRasterizationStateCreate,
+                                                               &pipelineMultisampleStateCreate,
+                                                               nullptr,
+                                                               &pipelineColorBlendStateCreate,
+                                                               &pipelineDynamicStateCreate,
+                                                               _pipelineLayout,
+                                                               _renderPass,
+                                                               0,
+                                                               vk::Pipeline{},
+                                                               int32_t{} };
+
+        _pipeline = _device.createGraphicsPipeline(nullptr, graphicsPipelineCreate);
     }
 } // namespace OpenRCT2::Ui
 
