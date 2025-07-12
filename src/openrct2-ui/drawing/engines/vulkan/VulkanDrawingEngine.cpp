@@ -120,6 +120,7 @@ namespace OpenRCT2::Ui
         vk::Extent2D _swapchainExtent{};
         vk::PresentModeKHR _presentationMode{};
         vk::raii::SwapchainKHR _swapchain = nullptr;
+        vector<vk::Image> _swapchainImages{};
 
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext)
@@ -140,6 +141,7 @@ namespace OpenRCT2::Ui
         void ChooseSwapchainExtent();
         void ChoosePresentMode();
         void CreateSwapchain();
+        void CreateSwapchainImages();
 
         void Initialise() override
         {
@@ -155,6 +157,7 @@ namespace OpenRCT2::Ui
             ChooseSwapchainExtent();
             ChoosePresentMode();
             CreateSwapchain();
+            CreateSwapchainImages();
         }
         void Resize(uint32_t width, uint32_t height) override
         {
@@ -602,6 +605,11 @@ namespace OpenRCT2::Ui
             _surfaceCapabilities.currentTransform, vk::CompositeAlphaFlagBitsKHR::eOpaque, _presentationMode, true, {});
 
         _swapchain = _device.createSwapchainKHR(createInfo);
+    }
+
+    void VulkanDrawingEngine::CreateSwapchainImages()
+    {
+        _swapchainImages = _swapchain.getImages();
     }
 } // namespace OpenRCT2::Ui
 
