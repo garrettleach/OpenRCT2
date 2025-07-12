@@ -121,6 +121,7 @@ namespace OpenRCT2::Ui
         vk::PresentModeKHR _presentationMode{};
         vk::raii::SwapchainKHR _swapchain = nullptr;
         vector<vk::Image> _swapchainImages{};
+        vector<vk::ImageView> _swapchainImageViews{};
 
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext)
@@ -142,6 +143,7 @@ namespace OpenRCT2::Ui
         void ChoosePresentMode();
         void CreateSwapchain();
         void CreateSwapchainImages();
+        void CreateSwapchainImageViews();
 
         void Initialise() override
         {
@@ -158,6 +160,7 @@ namespace OpenRCT2::Ui
             ChoosePresentMode();
             CreateSwapchain();
             CreateSwapchainImages();
+            CreateSwapchainImageViews();
         }
         void Resize(uint32_t width, uint32_t height) override
         {
@@ -610,6 +613,20 @@ namespace OpenRCT2::Ui
     void VulkanDrawingEngine::CreateSwapchainImages()
     {
         _swapchainImages = _swapchain.getImages();
+    }
+
+    void VulkanDrawingEngine::CreateSwapchainImageViews()
+    {
+        for (auto& swapchainImage : _swapchainImages)
+        {
+            vk::ImageViewCreateInfo createInfo(
+                vk::ImageViewCreateFlags(), swapchainImage, vk::ImageViewType::e2D, _surfaceFormat.format,
+                { vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity,
+                  vk::ComponentSwizzle::eIdentity },
+                vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
+
+            _swapchainImageViews.push_back(_device.createImageView(createInfo));
+        }
     }
 } // namespace OpenRCT2::Ui
 
