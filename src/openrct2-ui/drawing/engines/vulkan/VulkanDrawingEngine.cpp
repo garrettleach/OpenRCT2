@@ -161,6 +161,7 @@ namespace OpenRCT2::Ui
         vector<vk::raii::DeviceMemory> _uniformBufferObjectMemory;
         vector<void*> _uniformBufferObjectMappedMemory;
         vk::raii::DescriptorPool _uniformBufferDescriptorPool = nullptr;
+        vector<vk::raii::DescriptorSet> _uniformBufferDescriptorSets;
 
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext)
@@ -191,6 +192,7 @@ namespace OpenRCT2::Ui
         void CreateCommandPool();
         void CreateUniformBuffer();
         void CreateDescriptorPool();
+        void CreateDescriptorSets();
 
         void Initialise() override
         {
@@ -216,6 +218,7 @@ namespace OpenRCT2::Ui
             CreateCommandPool();
             CreateUniformBuffer();
             CreateDescriptorPool();
+            CreateDescriptorSets();
         }
         void Resize(uint32_t width, uint32_t height) override
         {
@@ -910,6 +913,25 @@ namespace OpenRCT2::Ui
             vk::DescriptorPoolCreateFlags(), static_cast<uint32_t>(_swapchainImages.size()), { poolSize });
 
         _uniformBufferDescriptorPool = _device.createDescriptorPool(poolInfo);
+    }
+
+    void VulkanDrawingEngine::CreateDescriptorSets()
+    {
+        std::vector<vk::DescriptorSetLayout> layouts(_swapchainImages.size(), _descriptorSetLayout);
+
+        vk::DescriptorSetAllocateInfo allocInfo(_uniformBufferDescriptorPool, layouts);
+
+        _uniformBufferDescriptorSets = _device.allocateDescriptorSets(allocInfo);
+
+        for (size_t i = 0; i < _uniformBufferDescriptorSets.size(); i++)
+        {
+            vk::DescriptorBufferInfo bufferInfo(_uniformBufferObjectBuffer[i], 0, sizeof(UniformBufferObject));
+
+            vk::WriteDescriptorSet descriptorWrite(
+                _uniformBufferDescriptorSets[i], 0, 0, vk::DescriptorType::eUniformBuffer, {}, { bufferInfo }, {});
+
+            _device.updateDescriptorSets({ descriptorWrite }, {});
+        }
     }
 } // namespace OpenRCT2::Ui
 
