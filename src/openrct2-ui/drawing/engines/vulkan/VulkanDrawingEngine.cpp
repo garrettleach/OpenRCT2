@@ -15,6 +15,7 @@
 #include <debugapi.h>
 #endif
 
+using namespace std;
 using OpenRCT2::Drawing::IDrawingContext;
 using OpenRCT2::Drawing::GamePalette;
 
@@ -87,6 +88,12 @@ namespace OpenRCT2::Ui
             uint32_t graphics;
             uint32_t presentation;
         };
+
+        struct InstanceLayers
+        {
+            bool debugMonitorPresent = false;
+
+        };
     } // namespace
 
     class VulkanDrawingEngine final : public OpenRCT2::Drawing::IDrawingEngine
@@ -98,11 +105,13 @@ namespace OpenRCT2::Ui
         RenderTarget _mainRT = {};
 
         vk::raii::Context _vulkanContext;
+        InstanceLayers _instanceLayers{};
         vk::raii::Instance _instance = nullptr;
         vk::raii::DebugUtilsMessengerEXT _debugMessanger = nullptr;
         vk::raii::SurfaceKHR _surface = nullptr;
         vk::raii::PhysicalDevice _physicalDevice = nullptr;
         QueueIndicies _queueIndicies{};
+        vk::raii::Device _device = nullptr;
 
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext)
@@ -117,6 +126,7 @@ namespace OpenRCT2::Ui
         void CreateInstance();
         void CreateSurface();
         void PickPhysicalDevice();
+        void CreateLogicalDevice();
 
         void Initialise() override
         {
@@ -125,6 +135,7 @@ namespace OpenRCT2::Ui
             CreateInstance();
             CreateSurface();
             PickPhysicalDevice();
+            CreateLogicalDevice();
         }
         void Resize(uint32_t width, uint32_t height) override
         {
@@ -280,7 +291,7 @@ namespace OpenRCT2::Ui
     {
         const uint32_t applicationVersion = 1;
 
-        vk::ApplicationInfo applicationInfo{ "OpenRCT2", applicationVersion, "No Engine", 0, vk::ApiVersion12 };
+        vk::ApplicationInfo applicationInfo{ "OpenRCT2", applicationVersion, "No Engine", 0, vk::ApiVersion13 };
 
         std::vector<const char*> enabledExtensions = GetRequiredExtensions(_window);
 
@@ -306,6 +317,7 @@ namespace OpenRCT2::Ui
             if (std::strcmp(lunargMonitorLayerName, layer.layerName) == 0)
             {
                 enabledLayers.push_back(lunargMonitorLayerName);
+                _instanceLayers.debugMonitorPresent = true;
             }
         }
 
@@ -437,6 +449,52 @@ namespace OpenRCT2::Ui
 
         _physicalDevice = chosenDevice;
         _queueIndicies = chosenIndicies;
+    }
+
+    void VulkanDrawingEngine::CreateLogicalDevice()
+    {
+        std::vector<vk::DeviceQueueCreateInfo> queueCreateInfos;
+
+        vector<float> priorities = { 1.0f };
+        queueCreateInfos.emplace_back(vk::DeviceQueueCreateFlags(), _queueIndicies.graphics, priorities);
+
+        if (_queueIndicies.graphics != _queueIndicies.presentation)
+        {
+            queueCreateInfos.emplace_back(vk::DeviceQueueCreateFlags(), _queueIndicies.presentation, priorities);
+        }
+
+        std::vector<const char*> layers;
+        if (kDebugVulkan)
+        {
+            layers.push_back(khronosValidationLayerName);
+            if (_instanceLayers.debugMonitorPresent)
+            {
+                layers.push_back(lunargMonitorLayerName);
+            }
+        }
+
+        vk::StructureChain<
+            vk::DeviceCreateInfo, vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features,
+            vk::PhysicalDeviceVulkan12Features, vk::PhysicalDeviceRobustness2FeaturesEXT>
+            deviceCreateInfo(
+                vk::DeviceCreateInfo{ vk::DeviceCreateFlags{}, queueCreateInfos, layers, kRequiredExtensions },
+                vk::PhysicalDeviceFeatures2{}, vk::PhysicalDeviceVulkan13Features{}, vk::PhysicalDeviceVulkan12Features{},
+                vk::PhysicalDeviceRobustness2FeaturesEXT{ false, false, true });
+
+        deviceCreateInfo.get<vk::PhysicalDeviceVulkan13Features>().synchronization2 = true;
+
+        deviceCreateInfo.get<vk::PhysicalDeviceVulkan12Features>().descriptorIndexing = true;
+        deviceCreateInfo.get<vk::PhysicalDeviceVulkan12Features>().descriptorBindingVariableDescriptorCount = true;
+
+        if (kDebugVulkan)
+        {
+            deviceCreateInfo.get<vk::PhysicalDeviceFeatures2>().features.robustBufferAccess = true;
+
+            deviceCreateInfo.get<vk::PhysicalDeviceRobustness2FeaturesEXT>().robustBufferAccess2 = true;
+            deviceCreateInfo.get<vk::PhysicalDeviceRobustness2FeaturesEXT>().robustImageAccess2 = true;
+        }
+
+        _device = _physicalDevice.createDevice(deviceCreateInfo.get());
     }
 } // namespace OpenRCT2::Ui
 
