@@ -4,6 +4,7 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
+#include <algorithm>
 #include <openrct2/drawing/IDrawingContext.h>
 #include <openrct2/ui/UiContext.h>
 #include <vulkan/vulkan_raii.hpp>
@@ -118,6 +119,7 @@ namespace OpenRCT2::Ui
         vk::SurfaceFormatKHR _surfaceFormat{};
         vk::Extent2D _swapChainExtent{};
         vk::PresentModeKHR _presentationMode{};
+        vk::raii::SwapchainKHR _swapchain = nullptr;
 
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext)
@@ -137,6 +139,7 @@ namespace OpenRCT2::Ui
         void ChooseSwapChainImageFormat();
         void ChooseSwapChainExtent();
         void ChoosePresentMode();
+        void CreateSwapChain();
 
         void Initialise() override
         {
@@ -151,6 +154,7 @@ namespace OpenRCT2::Ui
             ChooseSwapChainImageFormat();
             ChooseSwapChainExtent();
             ChoosePresentMode();
+            CreateSwapChain();
         }
         void Resize(uint32_t width, uint32_t height) override
         {
@@ -556,6 +560,7 @@ namespace OpenRCT2::Ui
             };
         }
     }
+
     void VulkanDrawingEngine::ChoosePresentMode()
     {
         auto availablePresentModes = _physicalDevice.getSurfacePresentModesKHR(_surface);
@@ -568,6 +573,35 @@ namespace OpenRCT2::Ui
         {
             _presentationMode = vk::PresentModeKHR::eFifo;
         }
+    }
+
+    void VulkanDrawingEngine::CreateSwapChain()
+    {
+        auto maxImageCount = _surfaceCapabilities.maxImageCount;
+        if (maxImageCount == 0)
+        {
+            maxImageCount = std::numeric_limits<uint32_t>::max();
+        }
+
+        uint32_t imageCount = clamp<uint32_t>(2, _surfaceCapabilities.minImageCount, maxImageCount);
+
+        vk::SharingMode sharingMode = vk::SharingMode::eExclusive;
+        vector<uint32_t> swapQueueFamilyIndices;
+
+        if (_queueIndicies.graphics != _queueIndicies.presentation)
+        {
+            sharingMode = vk::SharingMode::eConcurrent;
+            swapQueueFamilyIndices.push_back(_queueIndicies.graphics);
+            swapQueueFamilyIndices.push_back(_queueIndicies.presentation);
+        }
+
+        vk::SwapchainCreateInfoKHR createInfo(
+            vk::SwapchainCreateFlagsKHR(), _surface, imageCount, _surfaceFormat.format, _surfaceFormat.colorSpace,
+            _swapChainExtent,
+            1, vk::ImageUsageFlagBits::eColorAttachment, sharingMode, swapQueueFamilyIndices,
+            _surfaceCapabilities.currentTransform, vk::CompositeAlphaFlagBitsKHR::eOpaque, _presentationMode, true, {});
+
+        _swapchain = _device.createSwapchainKHR(createInfo);
     }
 } // namespace OpenRCT2::Ui
 
