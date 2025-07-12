@@ -112,6 +112,8 @@ namespace OpenRCT2::Ui
         vk::raii::PhysicalDevice _physicalDevice = nullptr;
         QueueIndicies _queueIndicies{};
         vk::raii::Device _device = nullptr;
+        vk::raii::Queue _graphicsQueue = nullptr;
+        vk::raii::Queue _presentationQueue = nullptr;
 
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext)
@@ -127,6 +129,7 @@ namespace OpenRCT2::Ui
         void CreateSurface();
         void PickPhysicalDevice();
         void CreateLogicalDevice();
+        void CreateQueues();
 
         void Initialise() override
         {
@@ -136,6 +139,7 @@ namespace OpenRCT2::Ui
             CreateSurface();
             PickPhysicalDevice();
             CreateLogicalDevice();
+            CreateQueues();
         }
         void Resize(uint32_t width, uint32_t height) override
         {
@@ -495,6 +499,12 @@ namespace OpenRCT2::Ui
         }
 
         _device = _physicalDevice.createDevice(deviceCreateInfo.get());
+    }
+
+    void VulkanDrawingEngine::CreateQueues()
+    {
+        _graphicsQueue = _device.getQueue(_queueIndicies.graphics, 0);
+        _presentationQueue = _device.getQueue(_queueIndicies.presentation, 0);
     }
 } // namespace OpenRCT2::Ui
 
