@@ -144,7 +144,7 @@ namespace OpenRCT2::Ui
         vk::PresentModeKHR _presentationMode{};
         vk::raii::SwapchainKHR _swapchain = nullptr;
         vector<vk::Image> _swapchainImages{};
-        vector<vk::ImageView> _swapchainImageViews{};
+        vector<vk::raii::ImageView> _swapchainImageViews{};
         vk::raii::RenderPass _renderPass = nullptr;
         vk::raii::DescriptorSetLayout _descriptorSetLayout = nullptr;
         vk::raii::PipelineLayout _pipelineLayout = nullptr;
