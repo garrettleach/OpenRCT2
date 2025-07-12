@@ -150,6 +150,7 @@ namespace OpenRCT2::Ui
         vk::raii::PipelineLayout _pipelineLayout = nullptr;
         vk::raii::Pipeline _pipeline = nullptr;
         vector<vk::raii::Framebuffer> _swapchainFramebuffers{};
+        vk::raii::CommandPool _commandPool = nullptr;
 
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext)
@@ -177,6 +178,7 @@ namespace OpenRCT2::Ui
         void CreateGraphicsPipelineLayout();
         void CreateGraphicsPipeline();
         void CreateFramebuffers();
+        void CreateCommandPool();
 
         void Initialise() override
         {
@@ -199,6 +201,7 @@ namespace OpenRCT2::Ui
             CreateGraphicsPipelineLayout();
             CreateGraphicsPipeline();
             CreateFramebuffers();
+            CreateCommandPool();
         }
         void Resize(uint32_t width, uint32_t height) override
         {
@@ -820,6 +823,14 @@ namespace OpenRCT2::Ui
 
             _swapchainFramebuffers.push_back(_device.createFramebuffer(framebufferCreate));
         }
+    }
+
+    void VulkanDrawingEngine::CreateCommandPool()
+    {
+        vk::CommandPoolCreateInfo commandPoolCreate(
+            vk::CommandPoolCreateFlagBits::eResetCommandBuffer, _queueIndicies.graphics);
+
+        _commandPool = _device.createCommandPool(commandPoolCreate);
     }
 } // namespace OpenRCT2::Ui
 
