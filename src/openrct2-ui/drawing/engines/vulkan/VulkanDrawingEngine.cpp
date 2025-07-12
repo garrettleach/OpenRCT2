@@ -162,6 +162,7 @@ namespace OpenRCT2::Ui
         vector<void*> _uniformBufferObjectMappedMemory;
         vk::raii::DescriptorPool _uniformBufferDescriptorPool = nullptr;
         vector<vk::raii::DescriptorSet> _uniformBufferDescriptorSets;
+        vector<vk::raii::CommandBuffer> _commandBuffers;
 
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext)
@@ -193,6 +194,7 @@ namespace OpenRCT2::Ui
         void CreateUniformBuffer();
         void CreateDescriptorPool();
         void CreateDescriptorSets();
+        void CreateCommandBuffers();
 
         void Initialise() override
         {
@@ -219,6 +221,7 @@ namespace OpenRCT2::Ui
             CreateUniformBuffer();
             CreateDescriptorPool();
             CreateDescriptorSets();
+            CreateCommandBuffers();
         }
         void Resize(uint32_t width, uint32_t height) override
         {
@@ -932,6 +935,14 @@ namespace OpenRCT2::Ui
 
             _device.updateDescriptorSets({ descriptorWrite }, {});
         }
+    }
+
+    void VulkanDrawingEngine::CreateCommandBuffers()
+    {
+        vk::CommandBufferAllocateInfo allocInfo(
+            _commandPool, vk::CommandBufferLevel::ePrimary, static_cast<uint32_t>(_swapchainImages.size()));
+
+        _commandBuffers = _device.allocateCommandBuffers(allocInfo);
     }
 } // namespace OpenRCT2::Ui
 
