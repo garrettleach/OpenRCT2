@@ -149,6 +149,7 @@ namespace OpenRCT2::Ui
         vk::raii::DescriptorSetLayout _descriptorSetLayout = nullptr;
         vk::raii::PipelineLayout _pipelineLayout = nullptr;
         vk::raii::Pipeline _pipeline = nullptr;
+        vector<vk::raii::Framebuffer> _swapchainFramebuffers{};
 
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext)
@@ -175,6 +176,7 @@ namespace OpenRCT2::Ui
         void CreateDescriptorSetLayout();
         void CreateGraphicsPipelineLayout();
         void CreateGraphicsPipeline();
+        void CreateFramebuffers();
 
         void Initialise() override
         {
@@ -196,6 +198,7 @@ namespace OpenRCT2::Ui
             CreateDescriptorSetLayout();
             CreateGraphicsPipelineLayout();
             CreateGraphicsPipeline();
+            CreateFramebuffers();
         }
         void Resize(uint32_t width, uint32_t height) override
         {
@@ -804,6 +807,19 @@ namespace OpenRCT2::Ui
                                                                int32_t{} };
 
         _pipeline = _device.createGraphicsPipeline(nullptr, graphicsPipelineCreate);
+    }
+
+    void VulkanDrawingEngine::CreateFramebuffers()
+    {
+        for (auto& imageView : _swapchainImageViews)
+        {
+            std::vector<vk::ImageView> attachments{ imageView };
+
+            vk::FramebufferCreateInfo framebufferCreate(
+                vk::FramebufferCreateFlags(), _renderPass, attachments, _swapchainExtent.width, _swapchainExtent.height, 1);
+
+            _swapchainFramebuffers.push_back(_device.createFramebuffer(framebufferCreate));
+        }
     }
 } // namespace OpenRCT2::Ui
 
