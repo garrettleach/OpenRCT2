@@ -167,8 +167,8 @@ namespace OpenRCT2::Ui
         vk::raii::Pipeline _pipeline = nullptr;
         vector<vk::raii::Framebuffer> _swapchainFramebuffers{};
         vk::raii::CommandPool _commandPool = nullptr;
-        vector<vk::raii::Buffer> _uniformBufferObjectBuffer;
         vector<vk::raii::DeviceMemory> _uniformBufferObjectMemory;
+        vector<vk::raii::Buffer> _uniformBufferObjectBuffer;
         vector<void*> _uniformBufferObjectMappedMemory;
         vk::raii::DescriptorPool _uniformBufferDescriptorPool = nullptr;
         vector<vk::DescriptorSet> _uniformBufferDescriptorSets;
