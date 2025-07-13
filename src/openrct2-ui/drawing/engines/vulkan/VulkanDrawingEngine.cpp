@@ -315,12 +315,12 @@ namespace OpenRCT2::Ui
         void EndDraw() override
         {
             // testing: include 6 verts (2 triagles)
-            _inProgressVerts.push_back(Vertex{ .pos = { 1.0f, 0.0f }, .color = {0.0f,1.0f,0.0f} });     // up  right
-            _inProgressVerts.push_back(Vertex{ .pos = { 0.0f, 0.0f }, .color = { 1.0f, 1.0f, 1.0f } }); // up  left
-            _inProgressVerts.push_back(Vertex{ .pos = { 1.0f, 1.0f }, .color = {1.0f,0.0f,0.0f} });     //down right
+            _inProgressVerts.push_back(Vertex{ .pos = { 1.0f, 0.0f }, .color = { 0.0f, 1.0f, 0.0f } }); // up  right
+            _inProgressVerts.push_back(Vertex{ .pos = { 0.0f, 0.0f }, .color = { 0.0f, 0.0f, 1.0f } }); // up  left
             _inProgressVerts.push_back(Vertex{ .pos = { 1.0f, 1.0f }, .color = { 1.0f, 1.0f, 1.0f } }); //down right
-            _inProgressVerts.push_back(Vertex{ .pos = { 0.0f, 0.0f}, .color = {0.0f,0.0f,1.0f} });      // up  left
-            _inProgressVerts.push_back(Vertex{ .pos = { 0.0f, 1.0f}, .color = {0.0f,0.0f,0.0f} });      //down left
+            _inProgressVerts.push_back(Vertex{ .pos = { 1.0f, 1.0f }, .color = { 1.0f, 1.0f, 1.0f } }); //down right
+            _inProgressVerts.push_back(Vertex{ .pos = { 0.0f, 0.0f }, .color = { 0.0f, 0.0f, 1.0f } }); // up  left
+            _inProgressVerts.push_back(Vertex{ .pos = { 0.0f, 1.0f }, .color = { 0.0f, 1.0f, 0.0f } }); //down left
 
             // TODO: upload textures if needed
 
