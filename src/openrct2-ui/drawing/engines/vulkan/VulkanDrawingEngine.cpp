@@ -626,7 +626,6 @@ namespace OpenRCT2::Ui
         if (kDebugUtils)
         {
             debugCreateInfo.messageSeverity &= ~(vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose);
-            debugCreateInfo.messageType |= vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral;
 
         _debugMessanger = _instance.createDebugUtilsMessengerEXT(debugCreateInfo);
     }
