@@ -319,13 +319,31 @@ namespace OpenRCT2::Ui
     }
 
 #if DEBUG_VULKAN
+    std::array<int32_t, 8> messageIdsToIgnore{
+        1424876368, // "BestPractices-vkCreateSwapchainKHR-suboptimal-swapchain-image-count": we are intentionally only double
+                    // buffering
+        -40745094,  // "BestPractices-vkAllocateMemory-small-allocation": for testing
+        280337739,  // "BestPractices-vkBindBufferMemory-small-dedicated-allocation": for testing
+        141128897,  // "BestPractices-vkCreateCommandPool-command-buffer-reset": resolve for better efficiency
+
+        2132353751, // "VALIDATION-SETTINGS": we expect lots of debug messages
+        1734198062, // "BestPractices-specialuse-extension": we know we are using debug tools
+        601872502,  // "WARNING-CreateInstance-status-message"
+        615892639,  // "WARNING-GPU-Assisted-Validation": Some options are forced on when GPUAV is on
+    };
+
     static VKAPI_ATTR vk::Bool32 VKAPI_CALL VulkanDebugCallback(
         vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::DebugUtilsMessageTypeFlagsEXT messageType,
         const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
     {
-        string msg;
+        if (pCallbackData->messageIdNumber == 0 && pCallbackData->pMessageIdName
+            && std::strcmp("Loader Message", pCallbackData->pMessageIdName) == 0)
+        {
+            return vk::False;
+        }
 
-        if (pCallbackData->pMessageIdName && std::strcmp("Loader Message", pCallbackData->pMessageIdName) == 0)
+        if (std::find(messageIdsToIgnore.begin(), messageIdsToIgnore.end(), pCallbackData->messageIdNumber)
+            != messageIdsToIgnore.end())
         {
             return vk::False;
         }
@@ -335,6 +353,7 @@ namespace OpenRCT2::Ui
             return vk::False;
         }
 
+        string msg;
         vk::DebugUtilsMessageSeverityFlagsEXT sev(severity);
         if (vk::DebugUtilsMessageSeverityFlagBitsEXT::eError & sev)
         {
@@ -446,7 +465,8 @@ namespace OpenRCT2::Ui
         }
 
         auto debugMessageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eError
-            | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning /* | vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose*/;
+            | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose
+            | vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo;
 
         auto debugMessageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral
             | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
