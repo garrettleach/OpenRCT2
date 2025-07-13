@@ -325,6 +325,16 @@ namespace OpenRCT2::Ui
     {
         string msg;
 
+        if (pCallbackData->pMessageIdName && std::strcmp("Loader Message", pCallbackData->pMessageIdName) == 0)
+        {
+            return vk::False;
+        }
+
+        if (pCallbackData->messageIdNumber == 0x4fe1fef9)
+        {
+            return vk::False;
+        }
+
         vk::DebugUtilsMessageSeverityFlagsEXT sev(severity);
         if (vk::DebugUtilsMessageSeverityFlagBitsEXT::eError & sev)
         {
