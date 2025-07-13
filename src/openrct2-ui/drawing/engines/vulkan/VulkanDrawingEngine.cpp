@@ -181,6 +181,8 @@ namespace OpenRCT2::Ui
         vector<vk::raii::Buffer> _vertexBuffers;
         vector<void*> _vertexMappedMemory;
         vector<vk::DeviceSize> _vertexDeviceMemorySize;
+
+        bool _framebufferResized = false;
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext)
             : _uiContext(uiContext)
@@ -252,7 +254,7 @@ namespace OpenRCT2::Ui
         }
         void Resize(uint32_t width, uint32_t height) override
         {
-
+            _framebufferResized = true;
         }
         void SetPalette(const GamePalette& colours) override
         {
