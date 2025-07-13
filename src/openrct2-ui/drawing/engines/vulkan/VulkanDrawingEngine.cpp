@@ -189,7 +189,13 @@ namespace OpenRCT2::Ui
         {
             _mainRT.DrawingEngine = this;
         }
-        ~VulkanDrawingEngine() override = default;
+        ~VulkanDrawingEngine() override
+        {
+            if (static_cast<vk::Device>(_device))
+            {
+                _device.waitIdle();
+            }
+        }
 
         void CreateInstance();
         void CreateSurface();
