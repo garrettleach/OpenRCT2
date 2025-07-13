@@ -1,4 +1,5 @@
 #version 450
+//#extension GL_EXT_debug_printf : enable
 #pragma shader_stage(vertex)
 
 layout(binding = 0) uniform UniformBufferObject {
@@ -13,6 +14,9 @@ layout(location = 1) in vec3 inColor;
 layout(location = 0) out vec3 fragColor;
 
 void main() {
+    //if (gl_VertexIndex == 0) {
+    //    debugPrintfEXT("v");
+    //}
     gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 0.0, 1.0);
     fragColor = inColor;
 }
