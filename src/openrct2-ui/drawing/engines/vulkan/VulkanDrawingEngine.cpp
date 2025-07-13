@@ -322,12 +322,12 @@ namespace OpenRCT2::Ui
         void EndDraw() override
         {
             // testing: include 6 verts (2 triagles)
-            _inProgressVerts.push_back(Vertex{ .pos = { 1.0f, 0.0f }, .color = { 0.0f, 1.0f, 0.0f } }); // up  right
-            _inProgressVerts.push_back(Vertex{ .pos = { 0.0f, 0.0f }, .color = { 0.0f, 0.0f, 1.0f } }); // up  left
-            _inProgressVerts.push_back(Vertex{ .pos = { 1.0f, 1.0f }, .color = { 1.0f, 1.0f, 1.0f } }); //down right
-            _inProgressVerts.push_back(Vertex{ .pos = { 1.0f, 1.0f }, .color = { 1.0f, 1.0f, 1.0f } }); //down right
-            _inProgressVerts.push_back(Vertex{ .pos = { 0.0f, 0.0f }, .color = { 0.0f, 0.0f, 1.0f } }); // up  left
-            _inProgressVerts.push_back(Vertex{ .pos = { 0.0f, 1.0f }, .color = { 0.0f, 1.0f, 0.0f } }); //down left
+            _inProgressVerts.push_back(Vertex{ .pos = { 1.0f, 0.0f }, .color = { 0.0f, 1.0f, 0.0f } }); // up   right
+            _inProgressVerts.push_back(Vertex{ .pos = { 0.0f, 0.0f }, .color = { 0.0f, 0.0f, 1.0f } }); // up   left
+            _inProgressVerts.push_back(Vertex{ .pos = { 1.0f, 1.0f }, .color = { 1.0f, 1.0f, 1.0f } }); // down right
+            _inProgressVerts.push_back(Vertex{ .pos = { 1.0f, 1.0f }, .color = { 1.0f, 1.0f, 1.0f } }); // down right
+            _inProgressVerts.push_back(Vertex{ .pos = { 0.0f, 0.0f }, .color = { 0.0f, 0.0f, 1.0f } }); // up   left
+            _inProgressVerts.push_back(Vertex{ .pos = { 0.0f, 1.0f }, .color = { 0.0f, 1.0f, 0.0f } }); // down left
 
             // TODO: upload textures if needed
 
@@ -354,8 +354,7 @@ namespace OpenRCT2::Ui
             vk::ClearValue clearColor({ 1.0f, 1.0f, 1.0f, 1.0f });
 
             vk::RenderPassBeginInfo renderPassInfo(
-                _renderPass, _swapchainFramebuffers[_imageIndex],
-                { { 0, 0 }, _swapchainExtent }, clearColor);
+                _renderPass, _swapchainFramebuffers[_imageIndex], { { 0, 0 }, _swapchainExtent }, clearColor);
 
             auto& currentFrameCommandBuffer = _commandBuffers[_currentFrame];
 
@@ -1209,7 +1208,7 @@ namespace OpenRCT2::Ui
 
         vk::FenceCreateInfo fenceInfo(vk::FenceCreateFlagBits::eSignaled);
 
-        for (size_t i=0;i<_swapchainImages.size();i++)
+        for (size_t i = 0; i < _swapchainImages.size(); i++)
         {
             _imageAvailableSemaphores.push_back(_device.createSemaphore(semaphorInfo));
             _renderFinishedSemaphores.push_back(_device.createSemaphore(semaphorInfo));
