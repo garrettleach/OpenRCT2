@@ -184,6 +184,9 @@ namespace OpenRCT2::Ui
 
         bool _framebufferResized = false;
 
+        uint32_t _currentFrame = 0;
+        uint32_t _imageIndex = 0;
+
         std::vector<Vertex> _inProgressVerts;
 
     public:
@@ -225,6 +228,8 @@ namespace OpenRCT2::Ui
         void CreateDescriptorSets();
         void CreateCommandBuffers();
         void CreateSyncObjects();
+
+        void RecreateSwapChain();
 
         void Initialise() override
         {
@@ -275,6 +280,36 @@ namespace OpenRCT2::Ui
         }
         void BeginDraw() override
         {
+            std::ignore = _device.waitForFences({ _inFlightFences[_currentFrame] }, true, std::numeric_limits<uint64_t>::max());
+
+            auto nextImageResult = _swapchain.acquireNextImage(
+                std::numeric_limits<uint64_t>::max(), _imageAvailableSemaphores[_currentFrame], {});
+
+            if (nextImageResult.first == vk::Result::eErrorOutOfDateKHR)
+            {
+                _framebufferResized = false;
+
+                _surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(_surface);
+                ChooseSwapchainImageFormat();
+                ChooseSwapchainExtent();
+
+                RecreateSwapChain();
+
+                nextImageResult = _swapchain.acquireNextImage(
+                    std::numeric_limits<uint64_t>::max(), _imageAvailableSemaphores[_currentFrame], {});
+
+                if (nextImageResult.first != vk::Result::eSuccess)
+                {
+                    throw runtime_error("Failed to update swap chain");
+                }
+            }
+            else if (nextImageResult.first != vk::Result::eSuccess && nextImageResult.first != vk::Result::eSuboptimalKHR)
+            {
+                throw runtime_error("Failed to get next image");
+            }
+
+            _imageIndex = nextImageResult.second;
+
             _inProgressVerts.clear();
         }
         void EndDraw() override
@@ -286,6 +321,103 @@ namespace OpenRCT2::Ui
             _inProgressVerts.push_back(Vertex{ .pos = { 1.0f, 1.0f }, .color = { 1.0f, 1.0f, 1.0f } }); //down right
             _inProgressVerts.push_back(Vertex{ .pos = { 0.0f, 0.0f}, .color = {0.0f,0.0f,1.0f} });      // up  left
             _inProgressVerts.push_back(Vertex{ .pos = { 0.0f, 1.0f}, .color = {0.0f,0.0f,0.0f} });      //down left
+
+            // TODO: upload textures if needed
+
+            // upload Vertex objects (_inProgressVerts)
+            // testing: using a host buffer
+            std::memcpy(
+                _vertexMappedMemory[_currentFrame], _inProgressVerts.data(),
+                _inProgressVerts.size() * sizeof(decltype(_inProgressVerts)::value_type));
+
+            UniformBufferObject ubo{ .model = glm::identity<glm::mat4>(),
+                                     .view = glm::lookAt(
+                                         glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+                                     .proj = glm::ortho(0.0f, 1.0f, 0.00f, 1.0f, -10.0f, 10.0f) };
+
+            std::memcpy(_uniformBufferObjectMappedMemory[_currentFrame], &ubo, sizeof(ubo));
+
+            _device.resetFences({ _inFlightFences[_currentFrame] });
+
+            _commandBuffers[_currentFrame].reset(vk::CommandBufferResetFlags{});
+
+            vk::CommandBufferBeginInfo beginInfo{};
+            _commandBuffers[_currentFrame].begin(beginInfo);
+
+            vk::ClearValue clearColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+
+            vk::RenderPassBeginInfo renderPassInfo(
+                _renderPass, _swapchainFramebuffers[_imageIndex],
+                { { 0, 0 }, _swapchainExtent }, clearColor);
+
+            auto& currentFrameCommandBuffer = _commandBuffers[_currentFrame];
+
+            currentFrameCommandBuffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
+
+            currentFrameCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, _pipeline);
+
+            vk::Viewport viewport(0.0f, 0.0f, _swapchainExtent.width, _swapchainExtent.height, 0.0f, 1.0f);
+
+            currentFrameCommandBuffer.setViewport(0, { viewport });
+
+            vk::Rect2D scissor({ 0, 0 }, _swapchainExtent);
+
+            currentFrameCommandBuffer.setScissor(0, scissor);
+
+            currentFrameCommandBuffer.bindVertexBuffers(0, { _vertexBuffers[_currentFrame] }, { 0 });
+
+            currentFrameCommandBuffer.bindDescriptorSets(
+                vk::PipelineBindPoint::eGraphics, _pipelineLayout, 0, { _uniformBufferDescriptorSets[_currentFrame] }, {});
+
+            currentFrameCommandBuffer.draw(static_cast<uint32_t>(_inProgressVerts.size()), 1, 0, 0);
+
+            currentFrameCommandBuffer.endRenderPass();
+
+            currentFrameCommandBuffer.end();
+
+            std::vector<vk::Semaphore> imageAvailableSemaphores = { _imageAvailableSemaphores[_currentFrame] };
+            std::vector<vk::PipelineStageFlags> pipelineStageFlags{ (
+                vk::PipelineStageFlags)vk::PipelineStageFlagBits::eColorAttachmentOutput };
+            std::vector<vk::CommandBuffer> commandBuffers = { currentFrameCommandBuffer };
+            std::vector<vk::Semaphore> recordFinishedSemaphores = { _renderFinishedSemaphores[_currentFrame] };
+
+            vk::SubmitInfo submitInfo(imageAvailableSemaphores, pipelineStageFlags, commandBuffers, recordFinishedSemaphores);
+
+            _graphicsQueue.submit(submitInfo, _inFlightFences[_currentFrame]);
+
+            std::vector<uint32_t> imageIndicies = { _imageIndex };
+
+            std::vector<vk::Semaphore> renderFinishedSemaphores = { _renderFinishedSemaphores[_currentFrame] };
+            std::vector<vk::SwapchainKHR> swapChains = { _swapchain };
+
+            vk::PresentInfoKHR presentInfo(renderFinishedSemaphores, swapChains, imageIndicies, {});
+
+            vk::Result result;
+            try
+            {
+                result = _presentationQueue.presentKHR(presentInfo);
+            }
+            catch (vk::OutOfDateKHRError&)
+            {
+                result = vk::Result::eErrorOutOfDateKHR;
+            }
+
+            if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || _framebufferResized)
+            {
+                _framebufferResized = false;
+
+                _surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(_surface);
+                ChooseSwapchainImageFormat();
+                ChooseSwapchainExtent();
+
+                RecreateSwapChain();
+            }
+            else if (result != vk::Result::eSuccess)
+            {
+                throw std::runtime_error("Failed to present rendered frame");
+            }
+
+            _currentFrame = (_currentFrame + 1) % _swapchainImages.size();
         }
         void PaintWindows() override
         {
@@ -1076,6 +1208,22 @@ namespace OpenRCT2::Ui
             _renderFinishedSemaphores.push_back(_device.createSemaphore(semaphorInfo));
             _inFlightFences.push_back(_device.createFence(fenceInfo));
         }
+    }
+
+    void VulkanDrawingEngine::RecreateSwapChain()
+    {
+        _device.waitIdle();
+
+        _swapchainFramebuffers.clear();
+        _swapchainImageViews.clear();
+        _swapchainImages.clear();
+
+        _swapchain.clear();
+
+        CreateSwapchain();
+        CreateSwapchainImages();
+        CreateSwapchainImageViews();
+        CreateFramebuffers();
     }
 } // namespace OpenRCT2::Ui
 
