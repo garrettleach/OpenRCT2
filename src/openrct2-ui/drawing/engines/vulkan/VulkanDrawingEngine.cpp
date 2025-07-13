@@ -1,7 +1,7 @@
 #ifndef DISABLE_VULKAN
 
     #include "../DrawingEngineFactory.hpp"
-    
+
     #include <SDL2/SDL.h>
     #include <SDL2/SDL_vulkan.h>
     #include <algorithm>
@@ -14,8 +14,8 @@
     #include <vulkan/vulkan_raii.hpp>
 
     #if DEBUG_VULKAN && _WIN32
-        #include <windows.h>
         #include <debugapi.h>
+        #include <windows.h>
     #endif
 
 using namespace std;
