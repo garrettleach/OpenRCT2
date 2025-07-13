@@ -584,27 +584,27 @@ namespace OpenRCT2::Ui
 
         if (kValidationLayer)
         {
-        enabledLayers.push_back(khronosValidationLayerName);
+            enabledLayers.push_back(khronosValidationLayerName);
         }
 
         if (kDebugUtils)
         {
-        enabledExtensions.push_back(vk::EXTDebugUtilsExtensionName);
+            enabledExtensions.push_back(vk::EXTDebugUtilsExtensionName);
         }
 
         if (kMonitorIfPresent)
         {
-        auto instanceLayerProps = vk::enumerateInstanceLayerProperties();
+            auto instanceLayerProps = vk::enumerateInstanceLayerProperties();
 
-        // Add the FPS display if it is available
-        for (auto& layer : instanceLayerProps)
-        {
-            if (strcmp(lunargMonitorLayerName, layer.layerName) == 0)
+            // Add the FPS display if it is available
+            for (auto& layer : instanceLayerProps)
             {
-                enabledLayers.push_back(lunargMonitorLayerName);
-                _instanceLayers.debugMonitorPresent = true;
+                if (strcmp(lunargMonitorLayerName, layer.layerName) == 0)
+                {
+                    enabledLayers.push_back(lunargMonitorLayerName);
+                    _instanceLayers.debugMonitorPresent = true;
+                }
             }
-        }
         }
 
         auto debugMessageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eError
@@ -627,8 +627,8 @@ namespace OpenRCT2::Ui
         {
             debugCreateInfo.messageSeverity &= ~(vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose);
 
-        _debugMessanger = _instance.createDebugUtilsMessengerEXT(debugCreateInfo);
-    }
+            _debugMessanger = _instance.createDebugUtilsMessengerEXT(debugCreateInfo);
+        }
     }
 
     void VulkanDrawingEngine::CreateSurface()
@@ -762,10 +762,10 @@ namespace OpenRCT2::Ui
             layers.push_back(khronosValidationLayerName);
         }
 
-            if (_instanceLayers.debugMonitorPresent)
-            {
-                layers.push_back(lunargMonitorLayerName);
-            }
+        if (_instanceLayers.debugMonitorPresent)
+        {
+            layers.push_back(lunargMonitorLayerName);
+        }
 
         std::vector<const char*> extensions = kRequiredExtensions;
         if (kDebugPrintfShader)
