@@ -45,7 +45,7 @@ namespace OpenRCT2::Ui
 
     namespace
     {
-        vector<const char*> kRequiredExtensions{ vk::KHRSwapchainExtensionName, vk::EXTDescriptorIndexingExtensionName };
+        vector<const char*> kRequiredExtensions{ vk::KHRSwapchainExtensionName };
     }
 
     class VulkanDrawingEngine;
