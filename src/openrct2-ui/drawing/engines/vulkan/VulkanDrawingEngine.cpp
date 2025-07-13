@@ -171,7 +171,7 @@ namespace OpenRCT2::Ui
         vector<vk::raii::DeviceMemory> _uniformBufferObjectMemory;
         vector<void*> _uniformBufferObjectMappedMemory;
         vk::raii::DescriptorPool _uniformBufferDescriptorPool = nullptr;
-        vector<vk::raii::DescriptorSet> _uniformBufferDescriptorSets;
+        vector<vk::DescriptorSet> _uniformBufferDescriptorSets;
         vector<vk::raii::CommandBuffer> _commandBuffers;
         vector<vk::raii::Semaphore> _imageAvailableSemaphores;
         vector<vk::raii::Semaphore> _renderFinishedSemaphores;
@@ -953,7 +953,13 @@ namespace OpenRCT2::Ui
 
         vk::DescriptorSetAllocateInfo allocInfo(_uniformBufferDescriptorPool, layouts);
 
-        _uniformBufferDescriptorSets = _device.allocateDescriptorSets(allocInfo);
+        auto descriptorSets = _device.allocateDescriptorSets(allocInfo);
+
+        // We don't want free to be called on these as they are part of a pool (that will release them)
+        for (auto& descriptorSet : descriptorSets)
+        {
+            _uniformBufferDescriptorSets.push_back(descriptorSet.release());
+        }
 
         for (size_t i = 0; i < _uniformBufferDescriptorSets.size(); i++)
         {
