@@ -27,12 +27,20 @@ using OpenRCT2::Drawing::GamePalette;
 namespace OpenRCT2::Ui
 {
 #if DEBUG_VULKAN
-    constexpr bool kDebugVulkan = true;
+    constexpr bool kDebugUtils = true;
+    constexpr bool kValidationLayer = true;
+    constexpr bool kMonitorIfPresent = true;
+    constexpr bool kDebugPrintfShader = true;
+    constexpr bool kRobustAccess = true;
 
     constexpr const char* khronosValidationLayerName = "VK_LAYER_KHRONOS_validation";
     constexpr const char* lunargMonitorLayerName = "VK_LAYER_LUNARG_monitor"; // FPS display on some platforms
 #else
-    constexpr bool kDebugVulkan = false;
+    constexpr bool kDebugUtils = false;
+    constexpr bool kValidationLayer = false;
+    constexpr bool kMonitorIfPresent = false;
+    constexpr bool kDebugPrintfShader = false;
+    constexpr bool kRobustAccess = false;
 #endif
 
     namespace
@@ -388,20 +396,20 @@ namespace OpenRCT2::Ui
 
         vector<const char*> enabledExtensions = GetRequiredExtensions(_window);
 
-        if (!kDebugVulkan)
-        {
-            vk::InstanceCreateInfo instanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo, {}, enabledExtensions };
-
-            _instance = _vulkanContext.createInstance(instanceCreateInfo);
-            return;
-        }
-
         vector<const char*> enabledLayers;
 
+        if (kValidationLayer)
+        {
         enabledLayers.push_back(khronosValidationLayerName);
+        }
 
+        if (kDebugUtils)
+        {
         enabledExtensions.push_back(vk::EXTDebugUtilsExtensionName);
+        }
 
+        if (kMonitorIfPresent)
+        {
         auto instanceLayerProps = vk::enumerateInstanceLayerProperties();
 
         // Add the FPS display if it is available
@@ -412,6 +420,7 @@ namespace OpenRCT2::Ui
                 enabledLayers.push_back(lunargMonitorLayerName);
                 _instanceLayers.debugMonitorPresent = true;
             }
+        }
         }
 
         auto debugMessageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eError
@@ -425,11 +434,17 @@ namespace OpenRCT2::Ui
                                                               static_cast<void*>(this) };
 
         vk::InstanceCreateInfo instanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo, enabledLayers,
-                                                   enabledExtensions, &debugCreateInfo };
+                                                   enabledExtensions, kDebugUtils ? &debugCreateInfo : nullptr };
 
         _instance = _vulkanContext.createInstance(instanceCreateInfo);
 
+        if (kDebugUtils)
+        {
+            debugCreateInfo.messageSeverity &= ~(vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose);
+            debugCreateInfo.messageType |= vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral;
+
         _debugMessanger = _instance.createDebugUtilsMessengerEXT(debugCreateInfo);
+    }
     }
 
     void VulkanDrawingEngine::CreateSurface()
@@ -558,13 +573,20 @@ namespace OpenRCT2::Ui
         }
 
         vector<const char*> layers;
-        if (kDebugVulkan)
+        if (kValidationLayer)
         {
             layers.push_back(khronosValidationLayerName);
+        }
+
             if (_instanceLayers.debugMonitorPresent)
             {
                 layers.push_back(lunargMonitorLayerName);
             }
+
+        std::vector<const char*> extensions = kRequiredExtensions;
+        if (kDebugPrintfShader)
+        {
+            extensions.push_back(vk::KHRShaderNonSemanticInfoExtensionName);
         }
 
         vk::StructureChain<
@@ -580,7 +602,7 @@ namespace OpenRCT2::Ui
         deviceCreateInfo.get<vk::PhysicalDeviceVulkan12Features>().descriptorIndexing = true;
         deviceCreateInfo.get<vk::PhysicalDeviceVulkan12Features>().descriptorBindingVariableDescriptorCount = true;
 
-        if (kDebugVulkan)
+        if (kRobustAccess)
         {
             deviceCreateInfo.get<vk::PhysicalDeviceFeatures2>().features.robustBufferAccess = true;
 
