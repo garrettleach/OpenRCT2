@@ -1,32 +1,30 @@
 #ifndef DISABLE_VULKAN
 
-#include "../DrawingEngineFactory.hpp"
+    #include "../DrawingEngineFactory.hpp"
+    
+    #include <SDL2/SDL.h>
+    #include <SDL2/SDL_vulkan.h>
+    #include <algorithm>
+    #include <glm/gtc/matrix_transform.hpp>
+    #include <openrct2/PlatformEnvironment.h>
+    #include <openrct2/core/FileStream.h>
+    #include <openrct2/core/Path.hpp>
+    #include <openrct2/drawing/IDrawingContext.h>
+    #include <openrct2/ui/UiContext.h>
+    #include <vulkan/vulkan_raii.hpp>
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_vulkan.h>
-#include <algorithm>
-#include <glm/gtc/matrix_transform.hpp>
-#include <openrct2/core/FileStream.h>
-#include <openrct2/core/Path.hpp>
-#include <openrct2/drawing/IDrawingContext.h>
-#include <openrct2/PlatformEnvironment.h>
-#include <openrct2/ui/UiContext.h>
-#include <vulkan/vulkan_raii.hpp>
-
-#if DEBUG_VULKAN
-#if _WIN32
-#include <windows.h>
-#endif
-#include <debugapi.h>
-#endif
+    #if DEBUG_VULKAN && _WIN32
+        #include <windows.h>
+        #include <debugapi.h>
+    #endif
 
 using namespace std;
-using OpenRCT2::Drawing::IDrawingContext;
 using OpenRCT2::Drawing::GamePalette;
+using OpenRCT2::Drawing::IDrawingContext;
 
 namespace OpenRCT2::Ui
 {
-#if DEBUG_VULKAN
+    #if DEBUG_VULKAN
     constexpr bool kDebugUtils = true;
     constexpr bool kValidationLayer = true;
     constexpr bool kMonitorIfPresent = true;
@@ -35,13 +33,13 @@ namespace OpenRCT2::Ui
 
     constexpr const char* khronosValidationLayerName = "VK_LAYER_KHRONOS_validation";
     constexpr const char* lunargMonitorLayerName = "VK_LAYER_LUNARG_monitor"; // FPS display on some platforms
-#else
+    #else
     constexpr bool kDebugUtils = false;
     constexpr bool kValidationLayer = false;
     constexpr bool kMonitorIfPresent = false;
     constexpr bool kDebugPrintfShader = false;
     constexpr bool kRobustAccess = false;
-#endif
+    #endif
 
     namespace
     {
@@ -58,36 +56,44 @@ namespace OpenRCT2::Ui
         explicit VulkanDrawingContext(VulkanDrawingEngine& engine)
             : _engine(engine)
         {
-
         }
+
         ~VulkanDrawingContext() override = default;
 
         void Clear(RenderTarget& rt, uint8_t paletteIndex) override
         {
         }
+
         void FillRect(RenderTarget& rt, uint32_t colour, int32_t left, int32_t top, int32_t right, int32_t bottom) override
         {
         }
+
         void FilterRect(
             RenderTarget& rt, FilterPaletteID palette, int32_t left, int32_t top, int32_t right, int32_t bottom) override
         {
         }
+
         void DrawLine(RenderTarget& rt, uint32_t colour, const ScreenLine& line) override
         {
         }
+
         void DrawSprite(RenderTarget& rt, const ImageId image, int32_t x, int32_t y) override
         {
         }
+
         void DrawSpriteRawMasked(
             RenderTarget& rt, int32_t x, int32_t y, const ImageId maskImage, const ImageId colourImage) override
         {
         }
+
         void DrawSpriteSolid(RenderTarget& rt, const ImageId image, int32_t x, int32_t y, uint8_t colour) override
         {
         }
+
         void DrawGlyph(RenderTarget& rt, const ImageId image, int32_t x, int32_t y, const PaletteMap& palette) override
         {
         }
+
         void DrawTTFBitmap(
             RenderTarget& rt, TextDrawInfo* info, TTFSurface* surface, int32_t x, int32_t y, uint8_t hintingThreshold) override
         {
@@ -105,7 +111,6 @@ namespace OpenRCT2::Ui
         struct InstanceLayers
         {
             bool debugMonitorPresent = false;
-
         };
 
         struct Vertex
@@ -197,6 +202,7 @@ namespace OpenRCT2::Ui
         {
             _mainRT.DrawingEngine = this;
         }
+
         ~VulkanDrawingEngine() override
         {
             if (static_cast<vk::Device>(_device))
@@ -260,24 +266,24 @@ namespace OpenRCT2::Ui
             CreateCommandBuffers();
             CreateSyncObjects();
         }
+
         void Resize(uint32_t width, uint32_t height) override
         {
             _framebufferResized = true;
         }
+
         void SetPalette(const GamePalette& colours) override
         {
-
         }
 
         void SetVSync(bool vsync) override
         {
-
         }
 
         void Invalidate(int32_t left, int32_t top, int32_t right, int32_t bottom) override
         {
-
         }
+
         void BeginDraw() override
         {
             std::ignore = _device.waitForFences({ _inFlightFences[_currentFrame] }, true, std::numeric_limits<uint64_t>::max());
@@ -312,6 +318,7 @@ namespace OpenRCT2::Ui
 
             _inProgressVerts.clear();
         }
+
         void EndDraw() override
         {
             // testing: include 6 verts (2 triagles)
@@ -419,18 +426,19 @@ namespace OpenRCT2::Ui
 
             _currentFrame = (_currentFrame + 1) % _swapchainImages.size();
         }
+
         void PaintWindows() override
         {
-
         }
+
         void PaintWeather() override
         {
-
         }
+
         void CopyRect(int32_t x, int32_t y, int32_t width, int32_t height, int32_t dx, int32_t dy) override
         {
-
         }
+
         string Screenshot() override
         {
             return "";
@@ -440,6 +448,7 @@ namespace OpenRCT2::Ui
         {
             return _drawingContext.get();
         }
+
         RenderTarget* GetDrawingPixelInfo() override
         {
             return &_mainRT;
@@ -452,7 +461,6 @@ namespace OpenRCT2::Ui
 
         void InvalidateImage(uint32_t image) override
         {
-
         }
     };
 
@@ -461,7 +469,7 @@ namespace OpenRCT2::Ui
         return make_unique<VulkanDrawingEngine>(uiContext);
     }
 
-#if DEBUG_VULKAN
+    #if DEBUG_VULKAN
     std::array<int32_t, 8> messageIdsToIgnore{
         1424876368, // "BestPractices-vkCreateSwapchainKHR-suboptimal-swapchain-image-count": we are intentionally only double
                     // buffering
@@ -541,9 +549,9 @@ namespace OpenRCT2::Ui
 
         msg += "\n";
 
-    #if __WINDOWS__
+        #if __WINDOWS__
         OutputDebugStringA(msg.c_str());
-    #endif
+        #endif
 
         return vk::False;
     }
@@ -551,7 +559,7 @@ namespace OpenRCT2::Ui
     static_assert(
         is_same_v<decltype(&VulkanDebugCallback), vk::PFN_DebugUtilsMessengerCallbackEXT>,
         "Debug function does not match prototype");
-#endif
+    #endif
 
     static vector<const char*> GetRequiredExtensions(SDL_Window* window)
     {
@@ -661,7 +669,8 @@ namespace OpenRCT2::Ui
                     graphicsQueueIndex = i;
                 }
 
-                if (!presentationQueueIndex.has_value() && physicalDevice.getSurfaceSupportKHR(static_cast<uint32_t>(i), _surface))
+                if (!presentationQueueIndex.has_value()
+                    && physicalDevice.getSurfaceSupportKHR(static_cast<uint32_t>(i), _surface))
                 {
                     presentationQueueIndex = i;
                 }
@@ -836,8 +845,7 @@ namespace OpenRCT2::Ui
 
             _swapchainExtent = vk::Extent2D{
                 clamp((uint32_t)width, _surfaceCapabilities.minImageExtent.width, _surfaceCapabilities.maxImageExtent.width),
-                clamp(
-                    (uint32_t)height, _surfaceCapabilities.minImageExtent.height, _surfaceCapabilities.maxImageExtent.height)
+                clamp((uint32_t)height, _surfaceCapabilities.minImageExtent.height, _surfaceCapabilities.maxImageExtent.height)
             };
         }
     }
@@ -846,7 +854,8 @@ namespace OpenRCT2::Ui
     {
         auto availablePresentModes = _physicalDevice.getSurfacePresentModesKHR(_surface);
 
-        if (std::find(availablePresentModes.begin(), availablePresentModes.end(), vk::PresentModeKHR::eMailbox) != availablePresentModes.end())
+        if (std::find(availablePresentModes.begin(), availablePresentModes.end(), vk::PresentModeKHR::eMailbox)
+            != availablePresentModes.end())
         {
             _presentationMode = vk::PresentModeKHR::eMailbox;
         }
@@ -878,8 +887,7 @@ namespace OpenRCT2::Ui
 
         vk::SwapchainCreateInfoKHR createInfo(
             vk::SwapchainCreateFlagsKHR(), _surface, imageCount, _surfaceFormat.format, _surfaceFormat.colorSpace,
-            _swapchainExtent,
-            1, vk::ImageUsageFlagBits::eColorAttachment, sharingMode, swapQueueFamilyIndices,
+            _swapchainExtent, 1, vk::ImageUsageFlagBits::eColorAttachment, sharingMode, swapQueueFamilyIndices,
             _surfaceCapabilities.currentTransform, vk::CompositeAlphaFlagBitsKHR::eOpaque, _presentationMode, true, {});
 
         _swapchain = _device.createSwapchainKHR(createInfo);
