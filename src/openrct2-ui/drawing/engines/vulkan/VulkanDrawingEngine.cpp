@@ -183,6 +183,9 @@ namespace OpenRCT2::Ui
         vector<vk::DeviceSize> _vertexDeviceMemorySize;
 
         bool _framebufferResized = false;
+
+        std::vector<Vertex> _inProgressVerts;
+
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext)
             : _uiContext(uiContext)
