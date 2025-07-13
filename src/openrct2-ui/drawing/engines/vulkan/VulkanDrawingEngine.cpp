@@ -177,6 +177,10 @@ namespace OpenRCT2::Ui
         vector<vk::raii::Semaphore> _renderFinishedSemaphores;
         vector<vk::raii::Fence> _inFlightFences;
 
+        vector<vk::raii::DeviceMemory> _vertexDeviceMemory;
+        vector<vk::raii::Buffer> _vertexBuffers;
+        vector<void*> _vertexMappedMemory;
+        vector<vk::DeviceSize> _vertexDeviceMemorySize;
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext)
             : _uiContext(uiContext)
@@ -205,6 +209,7 @@ namespace OpenRCT2::Ui
         void CreateFramebuffers();
         void CreateCommandPool();
         void CreateUniformBuffer();
+        void CreateVertexBuffers();
         void CreateDescriptorPool();
         void CreateDescriptorSets();
         void CreateCommandBuffers();
@@ -233,6 +238,7 @@ namespace OpenRCT2::Ui
             CreateFramebuffers();
             CreateCommandPool();
             CreateUniformBuffer();
+            CreateVertexBuffers();
             CreateDescriptorPool();
             CreateDescriptorSets();
             CreateCommandBuffers();
@@ -934,6 +940,37 @@ namespace OpenRCT2::Ui
             _uniformBufferObjectBuffer.push_back(std::move(buffer));
             _uniformBufferObjectMemory.push_back(std::move(bufferMemory));
             _uniformBufferObjectMappedMemory.push_back(mappedBuffer);
+        }
+    }
+
+    void VulkanDrawingEngine::CreateVertexBuffers()
+    {
+        vk::DeviceSize initialVertexBufferSize = sizeof(Vertex) * 6;
+        for (size_t i = 0; i < _swapchainImages.size(); i++)
+        {
+            vk::BufferCreateInfo bufferInfo(
+                vk::BufferCreateFlags{}, initialVertexBufferSize, vk::BufferUsageFlagBits::eVertexBuffer,
+                vk::SharingMode::eExclusive, {});
+
+            auto buffer = _device.createBuffer(bufferInfo);
+
+            auto memRequirements = buffer.getMemoryRequirements();
+
+            auto memoryType = GetBufferMemoryType(memRequirements, _physicalDeviceMemoryProps);
+
+            vk::MemoryAllocateInfo memAllocInfo(memRequirements.size, memoryType);
+
+            auto bufferMemory = _device.allocateMemory(memAllocInfo);
+
+            buffer.bindMemory(bufferMemory, 0);
+
+            auto mappedBuffer = bufferMemory.mapMemory(0, initialVertexBufferSize, vk::MemoryMapFlags());
+
+            // testing: using a host buffer
+            _vertexBuffers.push_back(std::move(buffer));
+            _vertexDeviceMemory.push_back(std::move(bufferMemory));
+            _vertexDeviceMemorySize.push_back(initialVertexBufferSize);
+            _vertexMappedMemory.push_back(mappedBuffer);
         }
     }
 
