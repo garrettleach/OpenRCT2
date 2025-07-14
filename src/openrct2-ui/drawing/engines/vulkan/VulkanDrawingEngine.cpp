@@ -11,12 +11,13 @@
     #include <openrct2/core/Path.hpp>
     #include <openrct2/drawing/IDrawingContext.h>
     #include <openrct2/ui/UiContext.h>
-    #include <vulkan/vulkan_raii.hpp>
 
-    #if DEBUG_VULKAN && _WIN32
-        #include <debugapi.h>
+    #if _WIN32
         #include <windows.h>
+        #include <debugapi.h>
     #endif
+
+    #include <vulkan/vulkan_raii.hpp>
 
 using namespace std;
 using OpenRCT2::Drawing::GamePalette;
@@ -547,7 +548,7 @@ namespace OpenRCT2::Ui
 
         msg += "\n";
 
-    #if __WINDOWS__
+    #if _WIN32
         OutputDebugStringA(msg.c_str());
     #endif
 
