@@ -639,12 +639,14 @@ namespace OpenRCT2::Ui
 
         _instance = _vulkanContext.createInstance(instanceCreateInfo);
 
+    #if VK_HEADER_VERSION >= 304
         if (kDebugUtils)
         {
             debugCreateInfo.messageSeverity &= ~(vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose);
 
             _debugMessanger = _instance.createDebugUtilsMessengerEXT(debugCreateInfo);
         }
+    #endif
     }
 
     void VulkanDrawingEngine::CreateSurface()
