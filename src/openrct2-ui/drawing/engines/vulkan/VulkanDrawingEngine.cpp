@@ -786,12 +786,6 @@ namespace OpenRCT2::Ui
             layers.push_back(lunargMonitorLayerName);
         }
 
-        std::vector<const char*> extensions = kRequiredExtensions;
-        if (kDebugPrintfShader)
-        {
-            extensions.push_back(vk::KHRShaderNonSemanticInfoExtensionName);
-        }
-
         vk::StructureChain<
             vk::DeviceCreateInfo, vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features,
             vk::PhysicalDeviceVulkan12Features, vk::PhysicalDeviceRobustness2FeaturesEXT>
