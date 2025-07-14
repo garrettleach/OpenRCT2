@@ -45,6 +45,19 @@ if (NOT DISABLE_OPENGL AND NOT EMSCRIPTEN)
     endif ()
 endif ()
 
+if (NOT DISABLE_VULKAN)
+    if (APPLE)
+        find_package(VulkanHeaders REQUIRED)
+        find_package(glm REQUIRED)
+    elseif (WIN32)
+        find_package(VulkanHeaders REQUIRED)
+        find_package(glm REQUIRED)
+    else ()
+        PKG_CHECK_MODULES(VulkanHeaders REQUIRED VulkanHeaders)
+        PKG_CHECK_MODULES(glm REQUIRED glm)
+    endif ()
+endif ()
+
 # Sources
 file(GLOB_RECURSE OPENRCT2_UI_SOURCES
     "${CMAKE_CURRENT_LIST_DIR}/*.cpp")
@@ -107,12 +120,24 @@ if (NOT DISABLE_OPENGL)
     endif ()
 endif ()
 
+if (NOT DISABLE_VULKAN)
+    if (WIN32)
+        target_link_libraries(glm glm)
+    elseif (APPLE)
+        target_link_libraries(glm ${GLM_LIBRARY})
+    else ()
+        target_link_libraries(glm ${GLM_LIBRARIES})
+    endif ()
+endif ()
+
 # Includes
 target_include_directories(openrct2 PRIVATE "${CMAKE_CURRENT_LIST_DIR}/.."
                                               ${SPEEX_INCLUDE_DIRS}
                                               ${OGG_INCLUDE_DIRS}
                                               ${VORBIS_INCLUDE_DIRS}
-                                              ${FLAC_INCLUDE_DIRS})
+                                              ${FLAC_INCLUDE_DIRS}
+                                              ${VULKAN_INCLUDE_DIRS}
+                                              ${GLM_INCLUDE_DIRS})
 target_include_directories(openrct2 SYSTEM PRIVATE ${SDL2_INCLUDE_DIRS}
                                                      "${CMAKE_CURRENT_LIST_DIR}/../thirdparty")
 
@@ -150,6 +175,7 @@ endif ()
 target_compile_definitions(openrct2 PUBLIC
     $<$<BOOL:${DISABLE_FLAC}>:DISABLE_FLAC>
     $<$<BOOL:${DISABLE_VORBIS}>:DISABLE_VORBIS>
+    $<$<BOOL:${DISABLE_VULKAN}>:DISABLE_VULKAN>
     # If OpenGL is enabled then we want to dynamically look up symbols.
     # If its disabled and somehow we magically end up linking to OpenGL we don't want look up the OpenGL symbols????
     $<IF:$<BOOL:${DISABLE_OPENGL}>,DISABLE_OPENGL,OPENGL_NO_LINK>
