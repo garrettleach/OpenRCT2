@@ -15,7 +15,7 @@ find_path(VULKAN_HEADERS_INCLUDE_DIR
 )
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(VULKAN_HEADERS
+find_package_handle_standard_args(VulkanHeaders
   REQUIRED_VARS   VULKAN_HEADERS_LIBRARY VULKAN_HEADERS_INCLUDE_DIR
   VERSION_VAR     VULKAN_HEADERS_VERSION)
 

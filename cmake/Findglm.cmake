@@ -23,7 +23,7 @@ find_library(GLM_LIBRARY
 )
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(GLM
+find_package_handle_standard_args(glm
   REQUIRED_VARS   GLM_LIBRARY GLM_INCLUDE_DIR
   VERSION_VAR     GLM_VERSION)
 
