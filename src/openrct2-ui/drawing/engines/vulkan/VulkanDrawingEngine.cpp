@@ -30,9 +30,6 @@ namespace OpenRCT2::Ui
     constexpr bool kMonitorIfPresent = true;
     constexpr bool kDebugPrintfShader = true;
     constexpr bool kRobustAccess = true;
-
-    constexpr const char* khronosValidationLayerName = "VK_LAYER_KHRONOS_validation";
-    constexpr const char* lunargMonitorLayerName = "VK_LAYER_LUNARG_monitor"; // FPS display on some platforms
     #else
     constexpr bool kDebugUtils = false;
     constexpr bool kValidationLayer = false;
@@ -40,6 +37,9 @@ namespace OpenRCT2::Ui
     constexpr bool kDebugPrintfShader = false;
     constexpr bool kRobustAccess = false;
     #endif
+
+    constexpr const char* khronosValidationLayerName = "VK_LAYER_KHRONOS_validation";
+    constexpr const char* lunargMonitorLayerName = "VK_LAYER_LUNARG_monitor"; // FPS display on some platforms
 
     namespace
     {
