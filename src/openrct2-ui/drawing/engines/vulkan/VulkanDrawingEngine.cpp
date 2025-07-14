@@ -547,9 +547,9 @@ namespace OpenRCT2::Ui
 
         msg += "\n";
 
-        #if __WINDOWS__
+    #if __WINDOWS__
         OutputDebugStringA(msg.c_str());
-        #endif
+    #endif
 
         return vk::False;
     }
