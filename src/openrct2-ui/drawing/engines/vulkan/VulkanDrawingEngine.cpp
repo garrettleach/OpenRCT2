@@ -558,9 +558,11 @@ namespace OpenRCT2::Ui
         return vk::False;
     }
 
+    #if VK_HEADER_VERSION >= 304
     static_assert(
         is_same_v<decltype(&VulkanDebugCallback), vk::PFN_DebugUtilsMessengerCallbackEXT>,
         "Debug function does not match prototype");
+    #endif
 
     static vector<const char*> GetRequiredExtensions(SDL_Window* window)
     {
