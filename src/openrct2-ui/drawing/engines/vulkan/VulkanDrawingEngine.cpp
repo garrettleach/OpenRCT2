@@ -485,6 +485,7 @@ namespace OpenRCT2::Ui
         615892639,  // "WARNING-GPU-Assisted-Validation": Some options are forced on when GPUAV is on
     };
 
+    #if VK_HEADER_VERSION >= 304
     static VKAPI_ATTR vk::Bool32 VKAPI_CALL VulkanDebugCallback(
         vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::DebugUtilsMessageTypeFlagsEXT messageType,
         const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
@@ -558,7 +559,6 @@ namespace OpenRCT2::Ui
         return vk::False;
     }
 
-    #if VK_HEADER_VERSION >= 304
     static_assert(
         is_same_v<decltype(&VulkanDebugCallback), vk::PFN_DebugUtilsMessengerCallbackEXT>,
         "Debug function does not match prototype");
@@ -625,12 +625,17 @@ namespace OpenRCT2::Ui
         auto debugMessageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral
             | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
 
+        #if VK_HEADER_VERSION >= 304
         vk::DebugUtilsMessengerCreateInfoEXT debugCreateInfo{ vk::DebugUtilsMessengerCreateFlagsEXT{}, debugMessageSeverity,
                                                               debugMessageType, &VulkanDebugCallback,
                                                               static_cast<void*>(this) };
 
         vk::InstanceCreateInfo instanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo, enabledLayers,
                                                    enabledExtensions, kDebugUtils ? &debugCreateInfo : nullptr };
+        #else
+        vk::InstanceCreateInfo instanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo, enabledLayers,
+                                                   enabledExtensions };
+        #endif
 
         _instance = _vulkanContext.createInstance(instanceCreateInfo);
 
