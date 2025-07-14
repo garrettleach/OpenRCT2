@@ -552,9 +552,9 @@ namespace OpenRCT2::Ui
 
         msg += "\n";
 
-    #if _WIN32
+        #if _WIN32
         OutputDebugStringA(msg.c_str());
-    #endif
+        #endif
 
         return vk::False;
     }
@@ -625,17 +625,17 @@ namespace OpenRCT2::Ui
         auto debugMessageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral
             | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
 
-        #if VK_HEADER_VERSION >= 304
+    #if VK_HEADER_VERSION >= 304
         vk::DebugUtilsMessengerCreateInfoEXT debugCreateInfo{ vk::DebugUtilsMessengerCreateFlagsEXT{}, debugMessageSeverity,
                                                               debugMessageType, &VulkanDebugCallback,
                                                               static_cast<void*>(this) };
 
         vk::InstanceCreateInfo instanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo, enabledLayers,
                                                    enabledExtensions, kDebugUtils ? &debugCreateInfo : nullptr };
-        #else
+    #else
         vk::InstanceCreateInfo instanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo, enabledLayers,
                                                    enabledExtensions };
-        #endif
+    #endif
 
         _instance = _vulkanContext.createInstance(instanceCreateInfo);
 
