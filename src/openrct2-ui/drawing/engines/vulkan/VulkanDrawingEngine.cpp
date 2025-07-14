@@ -14,7 +14,9 @@
 
     #if _WIN32
         #include <windows.h>
+    #endif
 
+    #if _WIN32
         #include <debugapi.h>
     #endif
 
