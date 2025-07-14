@@ -468,7 +468,6 @@ namespace OpenRCT2::Ui
         return make_unique<VulkanDrawingEngine>(uiContext);
     }
 
-    #if DEBUG_VULKAN
     std::array<int32_t, 8> messageIdsToIgnore{
         1424876368, // "BestPractices-vkCreateSwapchainKHR-suboptimal-swapchain-image-count": we are intentionally only double
                     // buffering
@@ -558,7 +557,6 @@ namespace OpenRCT2::Ui
     static_assert(
         is_same_v<decltype(&VulkanDebugCallback), vk::PFN_DebugUtilsMessengerCallbackEXT>,
         "Debug function does not match prototype");
-    #endif
 
     static vector<const char*> GetRequiredExtensions(SDL_Window* window)
     {
