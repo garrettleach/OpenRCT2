@@ -64,6 +64,8 @@
     <ClInclude Include="drawing\engines\opengl\SwapFramebuffer.h" />
     <ClInclude Include="drawing\engines\opengl\TextureCache.h" />
     <ClInclude Include="drawing\engines\opengl\TransparencyDepth.h" />
+    <ClInclude Include="drawing\engines\vulkan\VulkanDrawingContext.h" />
+    <ClInclude Include="drawing\engines\vulkan\VulkanDrawingEngine.h" />
     <ClInclude Include="input\InputManager.h" />
     <ClInclude Include="input\MouseInput.h" />
     <ClInclude Include="input\ShortcutIds.h" />
@@ -130,6 +132,7 @@
     <ClCompile Include="drawing\engines\opengl\SwapFramebuffer.cpp" />
     <ClCompile Include="drawing\engines\opengl\TextureCache.cpp" />
     <ClCompile Include="drawing\engines\opengl\TransparencyDepth.cpp" />
+    <ClCompile Include="drawing\engines\vulkan\VulkanDrawingContext.cpp" />
     <ClCompile Include="drawing\engines\vulkan\VulkanDrawingEngine.cpp" />
     <ClCompile Include="input\InputManager.cpp" />
     <ClCompile Include="input\Shortcuts.cpp" />
