@@ -8,9 +8,22 @@ namespace OpenRCT2::Ui
 {
     class VulkanDrawingEngine;
 
+    namespace VulkanDrawing
+    {
+        struct FillRectData
+        {
+            int32_t left;
+            int32_t top;
+            int32_t right;
+            int32_t bottom;
+            uint8_t colour;
+        };
+    }
+
     class VulkanDrawingContext final : public OpenRCT2::Drawing::IDrawingContext
     {
         VulkanDrawingEngine& _engine;
+        std::vector<VulkanDrawing::FillRectData> _fillRects;
 
     public:
         explicit VulkanDrawingContext(VulkanDrawingEngine& engine)
@@ -19,6 +32,8 @@ namespace OpenRCT2::Ui
         }
 
         ~VulkanDrawingContext() override = default;
+
+        std::vector<VulkanDrawing::FillRectData>&& DumpFillRectData();
 
         void Clear(RenderTarget& rt, uint8_t paletteIndex) override;
 

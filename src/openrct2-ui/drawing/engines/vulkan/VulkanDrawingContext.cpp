@@ -1,6 +1,15 @@
 #ifndef DISABLE_VULKAN
     #include "VulkanDrawingContext.h"
 
+using namespace std;
+using OpenRCT2::Ui::VulkanDrawingContext;
+using namespace OpenRCT2::Ui::VulkanDrawing;
+
+vector<FillRectData>&& VulkanDrawingContext::DumpFillRectData()
+{
+    return move(_fillRects);
+}
+
 void OpenRCT2::Ui::VulkanDrawingContext::Clear(RenderTarget& rt, uint8_t paletteIndex)
 {
 }
@@ -8,6 +17,13 @@ void OpenRCT2::Ui::VulkanDrawingContext::Clear(RenderTarget& rt, uint8_t palette
 void OpenRCT2::Ui::VulkanDrawingContext::FillRect(
     RenderTarget& rt, uint32_t colour, int32_t left, int32_t top, int32_t right, int32_t bottom)
 {
+    _fillRects.push_back(VulkanDrawing::FillRectData{
+        .left = left,
+        .top = top,
+        .right = right,
+        .bottom = bottom,
+        .colour = static_cast<uint8_t>(colour & 0xFF),
+    });
 }
 
 void OpenRCT2::Ui::VulkanDrawingContext::FilterRect(

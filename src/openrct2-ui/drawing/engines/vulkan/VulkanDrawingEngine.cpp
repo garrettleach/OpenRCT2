@@ -18,6 +18,7 @@
     #if _WIN32
         #include <debugapi.h>
     #endif
+#include <openrct2/interface/Window.h>
 
 
 using namespace std;
@@ -905,20 +906,67 @@ namespace OpenRCT2::Ui
     void VulkanDrawingEngine::EndDraw()
     {
         // testing: include 6 verts (2 triagles)
-        _inProgressVerts.push_back(Vertex{ .pos = { 1.0f, 0.0f }, .color = { 0.0f, 1.0f, 0.0f } }); // up   right
-        _inProgressVerts.push_back(Vertex{ .pos = { 0.0f, 0.0f }, .color = { 0.0f, 0.0f, 1.0f } }); // up   left
-        _inProgressVerts.push_back(Vertex{ .pos = { 1.0f, 1.0f }, .color = { 1.0f, 1.0f, 1.0f } }); // down right
-        _inProgressVerts.push_back(Vertex{ .pos = { 1.0f, 1.0f }, .color = { 1.0f, 1.0f, 1.0f } }); // down right
-        _inProgressVerts.push_back(Vertex{ .pos = { 0.0f, 0.0f }, .color = { 0.0f, 0.0f, 1.0f } }); // up   left
-        _inProgressVerts.push_back(Vertex{ .pos = { 0.0f, 1.0f }, .color = { 0.0f, 1.0f, 0.0f } }); // down left
+        auto fillData = _drawingContext->DumpFillRectData();
+
+        for (auto& data : fillData)
+        {
+            auto colour = _palette[data.colour];
+            auto red = (float)colour.Red / 255.0f;
+            auto green = (float)colour.Green / 255.0f;
+            auto blue = (float)colour.Blue / 255.0f;
+
+            auto right = (float)data.right / (float)_mainRT.width;
+            auto left = (float)data.left / (float)_mainRT.width;
+            auto top = (float)data.top / (float)_mainRT.height;
+            auto bottom = (float)data.bottom / (float)_mainRT.height;
+
+            _inProgressVerts.push_back(Vertex{ .pos = { right, top }, .color = { red, green, blue } });
+            _inProgressVerts.push_back(Vertex{ .pos = { left, top }, .color = { red, green, blue } });
+            _inProgressVerts.push_back(Vertex{ .pos = { right, bottom }, .color = { red, green, blue } });
+            _inProgressVerts.push_back(Vertex{ .pos = { right, bottom }, .color = { red, green, blue } });
+            _inProgressVerts.push_back(Vertex{ .pos = { left, top }, .color = { red, green, blue } });
+            _inProgressVerts.push_back(Vertex{ .pos = { left, bottom }, .color = { red, green, blue } });
+        }
 
         // TODO: upload textures if needed
 
         // upload Vertex objects (_inProgressVerts)
         // testing: using a host buffer
+
+        auto neededMem = _inProgressVerts.size() * sizeof(decltype(_inProgressVerts)::value_type);
+
+        if (_vertexDeviceMemorySize[_currentFrame] < neededMem)
+        {
+            _vertexBuffers[_currentFrame].clear();
+            _vertexDeviceMemory[_currentFrame].clear();
+            _vertexDeviceMemorySize[_currentFrame] = neededMem;
+
+            vk::BufferCreateInfo bufferInfo(
+                vk::BufferCreateFlags{}, neededMem, vk::BufferUsageFlagBits::eVertexBuffer,
+                vk::SharingMode::eExclusive, {});
+
+            auto buffer = _device.createBuffer(bufferInfo);
+
+            auto memRequirements = buffer.getMemoryRequirements();
+
+            auto memoryType = GetBufferMemoryType(memRequirements, _physicalDeviceMemoryProps);
+
+            vk::MemoryAllocateInfo memAllocInfo(memRequirements.size, memoryType);
+
+            auto bufferMemory = _device.allocateMemory(memAllocInfo);
+
+            buffer.bindMemory(bufferMemory, 0);
+
+            auto mappedBuffer = bufferMemory.mapMemory(0, neededMem, vk::MemoryMapFlags());
+
+            _vertexBuffers[_currentFrame] = std::move(buffer);
+            _vertexDeviceMemory[_currentFrame] = std::move(bufferMemory);
+            _vertexDeviceMemorySize[_currentFrame] = neededMem;
+            _vertexMappedMemory[_currentFrame] = mappedBuffer;
+        }
+
         std::memcpy(
-            _vertexMappedMemory[_currentFrame], _inProgressVerts.data(),
-            _inProgressVerts.size() * sizeof(decltype(_inProgressVerts)::value_type));
+            _vertexMappedMemory[_currentFrame], _inProgressVerts.data(), neededMem);
 
         UniformBufferObject ubo{ .model = glm::identity<glm::mat4>(),
                                  .view = glm::lookAt(
@@ -1011,6 +1059,8 @@ namespace OpenRCT2::Ui
 
     void VulkanDrawingEngine::PaintWindows()
     {
+        OpenRCT2::WindowUpdateAllViewports();
+        OpenRCT2::WindowDrawAll(_mainRT, 0, 0, static_cast<int32_t>(_mainRT.width), static_cast<int32_t>(_mainRT.height));
     }
 
     void VulkanDrawingEngine::PaintWeather()
