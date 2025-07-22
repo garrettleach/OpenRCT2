@@ -108,13 +108,7 @@ namespace OpenRCT2::Ui
         std::vector<detail::Vertex> _inProgressVerts;
 
     public:
-        explicit VulkanDrawingEngine(IUiContext& uiContext)
-            : _uiContext(uiContext)
-            , _window(static_cast<SDL_Window*>(_uiContext.GetWindow()))
-            , _drawingContext(std::make_unique<VulkanDrawingContext>(*this))
-        {
-            _mainRT.DrawingEngine = this;
-        }
+        explicit VulkanDrawingEngine(IUiContext& uiContext);
 
         ~VulkanDrawingEngine() override
         {

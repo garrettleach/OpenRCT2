@@ -161,6 +161,15 @@ namespace OpenRCT2::Ui
         return extensions;
     }
 
+    inline VulkanDrawingEngine::VulkanDrawingEngine(IUiContext& uiContext)
+        : _uiContext(uiContext)
+        , _window(static_cast<SDL_Window*>(_uiContext.GetWindow()))
+        , _drawingContext(std::make_unique<VulkanDrawingContext>(*this))
+    {
+        _mainRT.DrawingEngine = this;
+        SDL_Vulkan_GetDrawableSize(_window, &_mainRT.width, &_mainRT.height);
+    }
+
     void VulkanDrawingEngine::CreateInstance()
     {
         const uint32_t applicationVersion = 1;
