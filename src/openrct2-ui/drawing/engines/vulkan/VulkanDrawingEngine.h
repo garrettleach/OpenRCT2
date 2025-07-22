@@ -105,6 +105,8 @@ namespace OpenRCT2::Ui
         uint32_t _currentFrame = 0;
         uint32_t _imageIndex = 0;
 
+        OpenRCT2::Drawing::GamePalette _palette;
+
         std::vector<detail::Vertex> _inProgressVerts;
 
     public:

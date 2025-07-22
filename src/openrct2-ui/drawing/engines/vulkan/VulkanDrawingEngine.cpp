@@ -854,6 +854,7 @@ namespace OpenRCT2::Ui
 
     void VulkanDrawingEngine::SetPalette(const OpenRCT2::Drawing::GamePalette& colours)
     {
+        _palette = colours;
     }
 
     void VulkanDrawingEngine::SetVSync(bool vsync)
