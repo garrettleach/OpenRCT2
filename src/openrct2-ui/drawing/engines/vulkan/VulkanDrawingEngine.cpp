@@ -1,15 +1,14 @@
 #ifndef DISABLE_VULKAN
 
-    #include "../DrawingEngineFactory.hpp"
-
-    #include <SDL2/SDL.h>
+    #include "VulkanDrawingContext.h"
+    #include "VulkanDrawingEngine.h"
     #include <SDL2/SDL_vulkan.h>
+
     #include <algorithm>
     #include <glm/gtc/matrix_transform.hpp>
     #include <openrct2/PlatformEnvironment.h>
     #include <openrct2/core/FileStream.h>
     #include <openrct2/core/Path.hpp>
-    #include <openrct2/drawing/IDrawingContext.h>
     #include <openrct2/ui/UiContext.h>
 
     #if _WIN32
@@ -19,12 +18,11 @@
     #if _WIN32
         #include <debugapi.h>
     #endif
+#include <openrct2/interface/Window.h>
 
-    #include <vulkan/vulkan_raii.hpp>
 
 using namespace std;
-using OpenRCT2::Drawing::GamePalette;
-using OpenRCT2::Drawing::IDrawingContext;
+using namespace OpenRCT2::Ui::detail;
 
 namespace OpenRCT2::Ui
 {
@@ -49,423 +47,6 @@ namespace OpenRCT2::Ui
     {
         vector<const char*> kRequiredExtensions{ vk::KHRSwapchainExtensionName };
     }
-
-    class VulkanDrawingEngine;
-
-    class VulkanDrawingContext final : public IDrawingContext
-    {
-        VulkanDrawingEngine& _engine;
-
-    public:
-        explicit VulkanDrawingContext(VulkanDrawingEngine& engine)
-            : _engine(engine)
-        {
-        }
-
-        ~VulkanDrawingContext() override = default;
-
-        void Clear(RenderTarget& rt, uint8_t paletteIndex) override
-        {
-        }
-
-        void FillRect(RenderTarget& rt, uint32_t colour, int32_t left, int32_t top, int32_t right, int32_t bottom) override
-        {
-        }
-
-        void FilterRect(
-            RenderTarget& rt, FilterPaletteID palette, int32_t left, int32_t top, int32_t right, int32_t bottom) override
-        {
-        }
-
-        void DrawLine(RenderTarget& rt, uint32_t colour, const ScreenLine& line) override
-        {
-        }
-
-        void DrawSprite(RenderTarget& rt, const ImageId image, int32_t x, int32_t y) override
-        {
-        }
-
-        void DrawSpriteRawMasked(
-            RenderTarget& rt, int32_t x, int32_t y, const ImageId maskImage, const ImageId colourImage) override
-        {
-        }
-
-        void DrawSpriteSolid(RenderTarget& rt, const ImageId image, int32_t x, int32_t y, uint8_t colour) override
-        {
-        }
-
-        void DrawGlyph(RenderTarget& rt, const ImageId image, int32_t x, int32_t y, const PaletteMap& palette) override
-        {
-        }
-
-        void DrawTTFBitmap(
-            RenderTarget& rt, TextDrawInfo* info, TTFSurface* surface, int32_t x, int32_t y, uint8_t hintingThreshold) override
-        {
-        }
-    };
-
-    namespace
-    {
-        struct QueueIndicies
-        {
-            uint32_t graphics;
-            uint32_t presentation;
-        };
-
-        struct InstanceLayers
-        {
-            bool debugMonitorPresent = false;
-        };
-
-        struct Vertex
-        {
-            glm::vec2 pos;
-            glm::vec3 color;
-
-            static vk::VertexInputBindingDescription GetBindingDescription()
-            {
-                return { 0, sizeof(Vertex), vk::VertexInputRate::eVertex };
-            }
-
-            static std::array<vk::VertexInputAttributeDescription, 2> GetAttributeDescriptions()
-            {
-                return {
-                    vk::VertexInputAttributeDescription{ 0, 0, vk::Format::eR32G32Sfloat, offsetof(Vertex, pos) },
-                    vk::VertexInputAttributeDescription{ 1, 0, vk::Format::eR32G32B32Sfloat, offsetof(Vertex, color) },
-                };
-            }
-        };
-
-        struct UniformBufferObject
-        {
-            alignas(16) glm::mat4 model;
-            alignas(16) glm::mat4 view;
-            alignas(16) glm::mat4 proj;
-        };
-    } // namespace
-
-    class VulkanDrawingEngine final : public OpenRCT2::Drawing::IDrawingEngine
-    {
-        IUiContext& _uiContext;
-        SDL_Window* _window;
-        unique_ptr<VulkanDrawingContext> _drawingContext;
-
-        RenderTarget _mainRT = {};
-
-        vk::raii::Context _vulkanContext;
-        InstanceLayers _instanceLayers{};
-        vk::raii::Instance _instance = nullptr;
-        vk::raii::DebugUtilsMessengerEXT _debugMessanger = nullptr;
-        vk::raii::SurfaceKHR _surface = nullptr;
-        vk::raii::PhysicalDevice _physicalDevice = nullptr;
-        QueueIndicies _queueIndicies{};
-        vk::PhysicalDeviceMemoryProperties _physicalDeviceMemoryProps{};
-        vk::raii::Device _device = nullptr;
-        vk::raii::Queue _graphicsQueue = nullptr;
-        vk::raii::Queue _presentationQueue = nullptr;
-        vk::SurfaceCapabilitiesKHR _surfaceCapabilities{};
-        vk::SurfaceFormatKHR _surfaceFormat{};
-        vk::Extent2D _swapchainExtent{};
-        vk::PresentModeKHR _presentationMode{};
-        vk::raii::SwapchainKHR _swapchain = nullptr;
-        vector<vk::Image> _swapchainImages{};
-        vector<vk::raii::ImageView> _swapchainImageViews{};
-        vk::raii::RenderPass _renderPass = nullptr;
-        vk::raii::DescriptorSetLayout _descriptorSetLayout = nullptr;
-        vk::raii::PipelineLayout _pipelineLayout = nullptr;
-        vk::raii::Pipeline _pipeline = nullptr;
-        vector<vk::raii::Framebuffer> _swapchainFramebuffers{};
-        vk::raii::CommandPool _commandPool = nullptr;
-        vector<vk::raii::DeviceMemory> _uniformBufferObjectMemory;
-        vector<vk::raii::Buffer> _uniformBufferObjectBuffer;
-        vector<void*> _uniformBufferObjectMappedMemory;
-        vk::raii::DescriptorPool _uniformBufferDescriptorPool = nullptr;
-        vector<vk::DescriptorSet> _uniformBufferDescriptorSets;
-        vector<vk::raii::CommandBuffer> _commandBuffers;
-        vector<vk::raii::Semaphore> _imageAvailableSemaphores;
-        vector<vk::raii::Semaphore> _renderFinishedSemaphores;
-        vector<vk::raii::Fence> _inFlightFences;
-
-        vector<vk::raii::DeviceMemory> _vertexDeviceMemory;
-        vector<vk::raii::Buffer> _vertexBuffers;
-        vector<void*> _vertexMappedMemory;
-        vector<vk::DeviceSize> _vertexDeviceMemorySize;
-
-        bool _framebufferResized = false;
-
-        uint32_t _currentFrame = 0;
-        uint32_t _imageIndex = 0;
-
-        std::vector<Vertex> _inProgressVerts;
-
-    public:
-        explicit VulkanDrawingEngine(IUiContext& uiContext)
-            : _uiContext(uiContext)
-            , _window(static_cast<SDL_Window*>(_uiContext.GetWindow()))
-            , _drawingContext(make_unique<VulkanDrawingContext>(*this))
-        {
-            _mainRT.DrawingEngine = this;
-        }
-
-        ~VulkanDrawingEngine() override
-        {
-            if (static_cast<vk::Device>(_device))
-            {
-                _device.waitIdle();
-            }
-        }
-
-        void CreateInstance();
-        void CreateSurface();
-        void PickPhysicalDevice();
-        void CreateLogicalDevice();
-        void CreateQueues();
-        void ChooseSwapchainImageFormat();
-        void ChooseSwapchainExtent();
-        void ChoosePresentMode();
-        void CreateSwapchain();
-        void CreateSwapchainImages();
-        void CreateSwapchainImageViews();
-        void CreateRenderPass();
-        void CreateDescriptorSetLayout();
-        void CreateGraphicsPipelineLayout();
-        void CreateGraphicsPipeline();
-        void CreateFramebuffers();
-        void CreateCommandPool();
-        void CreateUniformBuffer();
-        void CreateVertexBuffers();
-        void CreateDescriptorPool();
-        void CreateDescriptorSets();
-        void CreateCommandBuffers();
-        void CreateSyncObjects();
-
-        void RecreateSwapChain();
-
-        void Initialise() override
-        {
-            SDL_Vulkan_LoadLibrary(nullptr);
-
-            CreateInstance();
-            CreateSurface();
-            PickPhysicalDevice();
-            CreateLogicalDevice();
-            CreateQueues();
-            _surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(_surface);
-            ChooseSwapchainImageFormat();
-            ChooseSwapchainExtent();
-            ChoosePresentMode();
-            CreateSwapchain();
-            CreateSwapchainImages();
-            CreateSwapchainImageViews();
-            CreateRenderPass();
-            CreateDescriptorSetLayout();
-            CreateGraphicsPipelineLayout();
-            CreateGraphicsPipeline();
-            CreateFramebuffers();
-            CreateCommandPool();
-            CreateUniformBuffer();
-            CreateVertexBuffers();
-            CreateDescriptorPool();
-            CreateDescriptorSets();
-            CreateCommandBuffers();
-            CreateSyncObjects();
-        }
-
-        void Resize(uint32_t width, uint32_t height) override
-        {
-            _framebufferResized = true;
-        }
-
-        void SetPalette(const GamePalette& colours) override
-        {
-        }
-
-        void SetVSync(bool vsync) override
-        {
-        }
-
-        void Invalidate(int32_t left, int32_t top, int32_t right, int32_t bottom) override
-        {
-        }
-
-        void BeginDraw() override
-        {
-            std::ignore = _device.waitForFences({ _inFlightFences[_currentFrame] }, true, std::numeric_limits<uint64_t>::max());
-
-            auto nextImageResult = _swapchain.acquireNextImage(
-                std::numeric_limits<uint64_t>::max(), _imageAvailableSemaphores[_currentFrame], {});
-
-            if (nextImageResult.first == vk::Result::eErrorOutOfDateKHR)
-            {
-                _framebufferResized = false;
-
-                _surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(_surface);
-                ChooseSwapchainImageFormat();
-                ChooseSwapchainExtent();
-
-                RecreateSwapChain();
-
-                nextImageResult = _swapchain.acquireNextImage(
-                    std::numeric_limits<uint64_t>::max(), _imageAvailableSemaphores[_currentFrame], {});
-
-                if (nextImageResult.first != vk::Result::eSuccess)
-                {
-                    throw runtime_error("Failed to update swap chain");
-                }
-            }
-            else if (nextImageResult.first != vk::Result::eSuccess && nextImageResult.first != vk::Result::eSuboptimalKHR)
-            {
-                throw runtime_error("Failed to get next image");
-            }
-
-            _imageIndex = nextImageResult.second;
-
-            _inProgressVerts.clear();
-        }
-
-        void EndDraw() override
-        {
-            // testing: include 6 verts (2 triagles)
-            _inProgressVerts.push_back(Vertex{ .pos = { 1.0f, 0.0f }, .color = { 0.0f, 1.0f, 0.0f } }); // up   right
-            _inProgressVerts.push_back(Vertex{ .pos = { 0.0f, 0.0f }, .color = { 0.0f, 0.0f, 1.0f } }); // up   left
-            _inProgressVerts.push_back(Vertex{ .pos = { 1.0f, 1.0f }, .color = { 1.0f, 1.0f, 1.0f } }); // down right
-            _inProgressVerts.push_back(Vertex{ .pos = { 1.0f, 1.0f }, .color = { 1.0f, 1.0f, 1.0f } }); // down right
-            _inProgressVerts.push_back(Vertex{ .pos = { 0.0f, 0.0f }, .color = { 0.0f, 0.0f, 1.0f } }); // up   left
-            _inProgressVerts.push_back(Vertex{ .pos = { 0.0f, 1.0f }, .color = { 0.0f, 1.0f, 0.0f } }); // down left
-
-            // TODO: upload textures if needed
-
-            // upload Vertex objects (_inProgressVerts)
-            // testing: using a host buffer
-            std::memcpy(
-                _vertexMappedMemory[_currentFrame], _inProgressVerts.data(),
-                _inProgressVerts.size() * sizeof(decltype(_inProgressVerts)::value_type));
-
-            UniformBufferObject ubo{ .model = glm::identity<glm::mat4>(),
-                                     .view = glm::lookAt(
-                                         glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-                                     .proj = glm::ortho(0.0f, 1.0f, 0.00f, 1.0f, -10.0f, 10.0f) };
-
-            std::memcpy(_uniformBufferObjectMappedMemory[_currentFrame], &ubo, sizeof(ubo));
-
-            _device.resetFences({ _inFlightFences[_currentFrame] });
-
-            _commandBuffers[_currentFrame].reset(vk::CommandBufferResetFlags{});
-
-            vk::CommandBufferBeginInfo beginInfo{};
-            _commandBuffers[_currentFrame].begin(beginInfo);
-
-            vk::ClearValue clearColor({ 1.0f, 1.0f, 1.0f, 1.0f });
-
-            vk::RenderPassBeginInfo renderPassInfo(
-                _renderPass, _swapchainFramebuffers[_imageIndex], { { 0, 0 }, _swapchainExtent }, clearColor);
-
-            auto& currentFrameCommandBuffer = _commandBuffers[_currentFrame];
-
-            currentFrameCommandBuffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
-
-            currentFrameCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, _pipeline);
-
-            vk::Viewport viewport(0.0f, 0.0f, _swapchainExtent.width, _swapchainExtent.height, 0.0f, 1.0f);
-
-            currentFrameCommandBuffer.setViewport(0, { viewport });
-
-            vk::Rect2D scissor({ 0, 0 }, _swapchainExtent);
-
-            currentFrameCommandBuffer.setScissor(0, scissor);
-
-            currentFrameCommandBuffer.bindVertexBuffers(0, { _vertexBuffers[_currentFrame] }, { 0 });
-
-            currentFrameCommandBuffer.bindDescriptorSets(
-                vk::PipelineBindPoint::eGraphics, _pipelineLayout, 0, { _uniformBufferDescriptorSets[_currentFrame] }, {});
-
-            currentFrameCommandBuffer.draw(static_cast<uint32_t>(_inProgressVerts.size()), 1, 0, 0);
-
-            currentFrameCommandBuffer.endRenderPass();
-
-            currentFrameCommandBuffer.end();
-
-            std::vector<vk::Semaphore> imageAvailableSemaphores = { _imageAvailableSemaphores[_currentFrame] };
-            std::vector<vk::PipelineStageFlags> pipelineStageFlags{ (
-                vk::PipelineStageFlags)vk::PipelineStageFlagBits::eColorAttachmentOutput };
-            std::vector<vk::CommandBuffer> commandBuffers = { currentFrameCommandBuffer };
-            std::vector<vk::Semaphore> recordFinishedSemaphores = { _renderFinishedSemaphores[_currentFrame] };
-
-            vk::SubmitInfo submitInfo(imageAvailableSemaphores, pipelineStageFlags, commandBuffers, recordFinishedSemaphores);
-
-            _graphicsQueue.submit(submitInfo, _inFlightFences[_currentFrame]);
-
-            std::vector<uint32_t> imageIndicies = { _imageIndex };
-
-            std::vector<vk::Semaphore> renderFinishedSemaphores = { _renderFinishedSemaphores[_currentFrame] };
-            std::vector<vk::SwapchainKHR> swapChains = { _swapchain };
-
-            vk::PresentInfoKHR presentInfo(renderFinishedSemaphores, swapChains, imageIndicies, {});
-
-            vk::Result result;
-            try
-            {
-                result = _presentationQueue.presentKHR(presentInfo);
-            }
-            catch (vk::OutOfDateKHRError&)
-            {
-                result = vk::Result::eErrorOutOfDateKHR;
-            }
-
-            if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || _framebufferResized)
-            {
-                _framebufferResized = false;
-
-                _surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(_surface);
-                ChooseSwapchainImageFormat();
-                ChooseSwapchainExtent();
-
-                RecreateSwapChain();
-            }
-            else if (result != vk::Result::eSuccess)
-            {
-                throw std::runtime_error("Failed to present rendered frame");
-            }
-
-            _currentFrame = (_currentFrame + 1) % _swapchainImages.size();
-        }
-
-        void PaintWindows() override
-        {
-        }
-
-        void PaintWeather() override
-        {
-        }
-
-        void CopyRect(int32_t x, int32_t y, int32_t width, int32_t height, int32_t dx, int32_t dy) override
-        {
-        }
-
-        string Screenshot() override
-        {
-            return "";
-        }
-
-        IDrawingContext* GetDrawingContext() override
-        {
-            return _drawingContext.get();
-        }
-
-        RenderTarget* GetDrawingPixelInfo() override
-        {
-            return &_mainRT;
-        }
-
-        DrawingEngineFlags GetFlags() override
-        {
-            return {};
-        }
-
-        void InvalidateImage(uint32_t image) override
-        {
-        }
-    };
 
     unique_ptr<Drawing::IDrawingEngine> CreateVulkanDrawingEngine(IUiContext& uiContext)
     {
@@ -581,6 +162,15 @@ namespace OpenRCT2::Ui
         }
 
         return extensions;
+    }
+
+    inline VulkanDrawingEngine::VulkanDrawingEngine(IUiContext& uiContext)
+        : _uiContext(uiContext)
+        , _window(static_cast<SDL_Window*>(_uiContext.GetWindow()))
+        , _drawingContext(std::make_unique<VulkanDrawingContext>(*this))
+    {
+        _mainRT.DrawingEngine = this;
+        SDL_Vulkan_GetDrawableSize(_window, &_mainRT.width, &_mainRT.height);
     }
 
     void VulkanDrawingEngine::CreateInstance()
@@ -1235,6 +825,283 @@ namespace OpenRCT2::Ui
         CreateSwapchainImages();
         CreateSwapchainImageViews();
         CreateFramebuffers();
+    }
+
+    void VulkanDrawingEngine::Initialise()
+    {
+        SDL_Vulkan_LoadLibrary(nullptr);
+
+        CreateInstance();
+        CreateSurface();
+        PickPhysicalDevice();
+        CreateLogicalDevice();
+        CreateQueues();
+        _surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(_surface);
+        ChooseSwapchainImageFormat();
+        ChooseSwapchainExtent();
+        ChoosePresentMode();
+        CreateSwapchain();
+        CreateSwapchainImages();
+        CreateSwapchainImageViews();
+        CreateRenderPass();
+        CreateDescriptorSetLayout();
+        CreateGraphicsPipelineLayout();
+        CreateGraphicsPipeline();
+        CreateFramebuffers();
+        CreateCommandPool();
+        CreateUniformBuffer();
+        CreateVertexBuffers();
+        CreateDescriptorPool();
+        CreateDescriptorSets();
+        CreateCommandBuffers();
+        CreateSyncObjects();
+    }
+
+    void VulkanDrawingEngine::Resize(uint32_t width, uint32_t height)
+    {
+        _framebufferResized = true;
+        _mainRT.width = width;
+        _mainRT.height = height;
+    }
+
+    void VulkanDrawingEngine::SetPalette(const OpenRCT2::Drawing::GamePalette& colours)
+    {
+        _palette = colours;
+    }
+
+    void VulkanDrawingEngine::SetVSync(bool vsync)
+    {
+    }
+
+    void VulkanDrawingEngine::Invalidate(int32_t left, int32_t top, int32_t right, int32_t bottom)
+    {
+    }
+
+    void VulkanDrawingEngine::BeginDraw()
+    {
+        std::ignore = _device.waitForFences({ _inFlightFences[_currentFrame] }, true, std::numeric_limits<uint64_t>::max());
+
+        auto nextImageResult = _swapchain.acquireNextImage(
+            std::numeric_limits<uint64_t>::max(), _imageAvailableSemaphores[_currentFrame], {});
+
+        if (nextImageResult.first == vk::Result::eErrorOutOfDateKHR)
+        {
+            _framebufferResized = false;
+
+            _surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(_surface);
+            ChooseSwapchainImageFormat();
+            ChooseSwapchainExtent();
+
+            RecreateSwapChain();
+
+            nextImageResult = _swapchain.acquireNextImage(
+                std::numeric_limits<uint64_t>::max(), _imageAvailableSemaphores[_currentFrame], {});
+
+            if (nextImageResult.first != vk::Result::eSuccess)
+            {
+                throw runtime_error("Failed to update swap chain");
+            }
+        }
+        else if (nextImageResult.first != vk::Result::eSuccess && nextImageResult.first != vk::Result::eSuboptimalKHR)
+        {
+            throw runtime_error("Failed to get next image");
+        }
+
+        _imageIndex = nextImageResult.second;
+
+        _inProgressVerts.clear();
+    }
+
+    void VulkanDrawingEngine::EndDraw()
+    {
+        // testing: include 6 verts (2 triagles)
+        auto fillData = _drawingContext->DumpFillRectData();
+
+        for (auto& data : fillData)
+        {
+            auto colour = _palette[data.colour];
+            auto red = (float)colour.Red / 255.0f;
+            auto green = (float)colour.Green / 255.0f;
+            auto blue = (float)colour.Blue / 255.0f;
+
+            auto right = (float)data.right / (float)_mainRT.width;
+            auto left = (float)data.left / (float)_mainRT.width;
+            auto top = (float)data.top / (float)_mainRT.height;
+            auto bottom = (float)data.bottom / (float)_mainRT.height;
+
+            _inProgressVerts.push_back(Vertex{ .pos = { right, top }, .color = { red, green, blue } });
+            _inProgressVerts.push_back(Vertex{ .pos = { left, top }, .color = { red, green, blue } });
+            _inProgressVerts.push_back(Vertex{ .pos = { right, bottom }, .color = { red, green, blue } });
+            _inProgressVerts.push_back(Vertex{ .pos = { right, bottom }, .color = { red, green, blue } });
+            _inProgressVerts.push_back(Vertex{ .pos = { left, top }, .color = { red, green, blue } });
+            _inProgressVerts.push_back(Vertex{ .pos = { left, bottom }, .color = { red, green, blue } });
+        }
+
+        // TODO: upload textures if needed
+
+        // upload Vertex objects (_inProgressVerts)
+        // testing: using a host buffer
+
+        auto neededMem = _inProgressVerts.size() * sizeof(decltype(_inProgressVerts)::value_type);
+
+        if (_vertexDeviceMemorySize[_currentFrame] < neededMem)
+        {
+            _vertexBuffers[_currentFrame].clear();
+            _vertexDeviceMemory[_currentFrame].clear();
+            _vertexDeviceMemorySize[_currentFrame] = neededMem;
+
+            vk::BufferCreateInfo bufferInfo(
+                vk::BufferCreateFlags{}, neededMem, vk::BufferUsageFlagBits::eVertexBuffer,
+                vk::SharingMode::eExclusive, {});
+
+            auto buffer = _device.createBuffer(bufferInfo);
+
+            auto memRequirements = buffer.getMemoryRequirements();
+
+            auto memoryType = GetBufferMemoryType(memRequirements, _physicalDeviceMemoryProps);
+
+            vk::MemoryAllocateInfo memAllocInfo(memRequirements.size, memoryType);
+
+            auto bufferMemory = _device.allocateMemory(memAllocInfo);
+
+            buffer.bindMemory(bufferMemory, 0);
+
+            auto mappedBuffer = bufferMemory.mapMemory(0, neededMem, vk::MemoryMapFlags());
+
+            _vertexBuffers[_currentFrame] = std::move(buffer);
+            _vertexDeviceMemory[_currentFrame] = std::move(bufferMemory);
+            _vertexDeviceMemorySize[_currentFrame] = neededMem;
+            _vertexMappedMemory[_currentFrame] = mappedBuffer;
+        }
+
+        std::memcpy(
+            _vertexMappedMemory[_currentFrame], _inProgressVerts.data(), neededMem);
+
+        UniformBufferObject ubo{ .model = glm::identity<glm::mat4>(),
+                                 .view = glm::lookAt(
+                                     glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+                                 .proj = glm::ortho(0.0f, 1.0f, 0.00f, 1.0f, -10.0f, 10.0f) };
+
+        std::memcpy(_uniformBufferObjectMappedMemory[_currentFrame], &ubo, sizeof(ubo));
+
+        _device.resetFences({ _inFlightFences[_currentFrame] });
+
+        _commandBuffers[_currentFrame].reset(vk::CommandBufferResetFlags{});
+
+        vk::CommandBufferBeginInfo beginInfo{};
+        _commandBuffers[_currentFrame].begin(beginInfo);
+
+        vk::ClearValue clearColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+
+        vk::RenderPassBeginInfo renderPassInfo(
+            _renderPass, _swapchainFramebuffers[_imageIndex], { { 0, 0 }, _swapchainExtent }, clearColor);
+
+        auto& currentFrameCommandBuffer = _commandBuffers[_currentFrame];
+
+        currentFrameCommandBuffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
+
+        currentFrameCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, _pipeline);
+
+        vk::Viewport viewport(0.0f, 0.0f, _swapchainExtent.width, _swapchainExtent.height, 0.0f, 1.0f);
+
+        currentFrameCommandBuffer.setViewport(0, { viewport });
+
+        vk::Rect2D scissor({ 0, 0 }, _swapchainExtent);
+
+        currentFrameCommandBuffer.setScissor(0, scissor);
+
+        currentFrameCommandBuffer.bindVertexBuffers(0, { _vertexBuffers[_currentFrame] }, { 0 });
+
+        currentFrameCommandBuffer.bindDescriptorSets(
+            vk::PipelineBindPoint::eGraphics, _pipelineLayout, 0, { _uniformBufferDescriptorSets[_currentFrame] }, {});
+
+        currentFrameCommandBuffer.draw(static_cast<uint32_t>(_inProgressVerts.size()), 1, 0, 0);
+
+        currentFrameCommandBuffer.endRenderPass();
+
+        currentFrameCommandBuffer.end();
+
+        std::vector<vk::Semaphore> imageAvailableSemaphores = { _imageAvailableSemaphores[_currentFrame] };
+        std::vector<vk::PipelineStageFlags> pipelineStageFlags{ (
+            vk::PipelineStageFlags)vk::PipelineStageFlagBits::eColorAttachmentOutput };
+        std::vector<vk::CommandBuffer> commandBuffers = { currentFrameCommandBuffer };
+        std::vector<vk::Semaphore> recordFinishedSemaphores = { _renderFinishedSemaphores[_currentFrame] };
+
+        vk::SubmitInfo submitInfo(imageAvailableSemaphores, pipelineStageFlags, commandBuffers, recordFinishedSemaphores);
+
+        _graphicsQueue.submit(submitInfo, _inFlightFences[_currentFrame]);
+
+        std::vector<uint32_t> imageIndicies = { _imageIndex };
+
+        std::vector<vk::Semaphore> renderFinishedSemaphores = { _renderFinishedSemaphores[_currentFrame] };
+        std::vector<vk::SwapchainKHR> swapChains = { _swapchain };
+
+        vk::PresentInfoKHR presentInfo(renderFinishedSemaphores, swapChains, imageIndicies, {});
+
+        vk::Result result;
+        try
+        {
+            result = _presentationQueue.presentKHR(presentInfo);
+        }
+        catch (vk::OutOfDateKHRError&)
+        {
+            result = vk::Result::eErrorOutOfDateKHR;
+        }
+
+        if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || _framebufferResized)
+        {
+            _framebufferResized = false;
+
+            _surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(_surface);
+            ChooseSwapchainImageFormat();
+            ChooseSwapchainExtent();
+
+            RecreateSwapChain();
+        }
+        else if (result != vk::Result::eSuccess)
+        {
+            throw std::runtime_error("Failed to present rendered frame");
+        }
+
+        _currentFrame = (_currentFrame + 1) % _swapchainImages.size();
+    }
+
+    void VulkanDrawingEngine::PaintWindows()
+    {
+        OpenRCT2::WindowUpdateAllViewports();
+        OpenRCT2::WindowDrawAll(_mainRT, 0, 0, static_cast<int32_t>(_mainRT.width), static_cast<int32_t>(_mainRT.height));
+    }
+
+    void VulkanDrawingEngine::PaintWeather()
+    {
+    }
+
+    void VulkanDrawingEngine::CopyRect(int32_t x, int32_t y, int32_t width, int32_t height, int32_t dx, int32_t dy)
+    {
+    }
+
+    string VulkanDrawingEngine::Screenshot()
+    {
+        return "";
+    }
+
+    OpenRCT2::Drawing::IDrawingContext* VulkanDrawingEngine::GetDrawingContext()
+    {
+        return _drawingContext.get();
+    }
+
+    RenderTarget* VulkanDrawingEngine::GetDrawingPixelInfo()
+    {
+        return &_mainRT;
+    }
+
+    DrawingEngineFlags VulkanDrawingEngine::GetFlags()
+    {
+        return {};
+    }
+
+    void VulkanDrawingEngine::InvalidateImage(uint32_t image)
+    {
     }
 } // namespace OpenRCT2::Ui
 
