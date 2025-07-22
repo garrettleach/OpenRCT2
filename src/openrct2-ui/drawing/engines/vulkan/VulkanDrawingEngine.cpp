@@ -850,6 +850,8 @@ namespace OpenRCT2::Ui
     void VulkanDrawingEngine::Resize(uint32_t width, uint32_t height)
     {
         _framebufferResized = true;
+        _mainRT.width = width;
+        _mainRT.height = height;
     }
 
     void VulkanDrawingEngine::SetPalette(const OpenRCT2::Drawing::GamePalette& colours)
