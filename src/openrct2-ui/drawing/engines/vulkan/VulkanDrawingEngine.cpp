@@ -22,9 +22,17 @@
 
 
 using namespace std;
-using namespace OpenRCT2::Ui::detail;
+using namespace OpenRCT2::Ui::Vulkan::detail;
 
 namespace OpenRCT2::Ui
+{
+    unique_ptr<Drawing::IDrawingEngine> CreateVulkanDrawingEngine(IUiContext& uiContext)
+    {
+        return make_unique<Vulkan::VulkanDrawingEngine>(uiContext);
+    }
+}
+
+namespace OpenRCT2::Ui::Vulkan
 {
     #if DEBUG_VULKAN
     constexpr bool kDebugUtils = true;
@@ -46,11 +54,6 @@ namespace OpenRCT2::Ui
     namespace
     {
         vector<const char*> kRequiredExtensions{ vk::KHRSwapchainExtensionName };
-    }
-
-    unique_ptr<Drawing::IDrawingEngine> CreateVulkanDrawingEngine(IUiContext& uiContext)
-    {
-        return make_unique<VulkanDrawingEngine>(uiContext);
     }
 
     std::array<int32_t, 8> messageIdsToIgnore{

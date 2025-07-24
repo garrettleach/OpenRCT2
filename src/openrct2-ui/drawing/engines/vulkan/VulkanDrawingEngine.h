@@ -9,7 +9,7 @@
 #include <string>
 #include <vulkan/vulkan_raii.hpp>
 
-namespace OpenRCT2::Ui
+namespace OpenRCT2::Ui::Vulkan
 {
     class VulkanDrawingContext;
 
