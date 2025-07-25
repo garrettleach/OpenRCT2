@@ -519,98 +519,9 @@ namespace OpenRCT2::Ui::Vulkan
         _renderPass = _device.createRenderPass(renderPassInfo);
     }
 
-    void VulkanDrawingEngine::CreateDescriptorSetLayout()
-    {
-        vk::DescriptorSetLayoutBinding uboLayoutBinding(
-            0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex);
-
-        vk::DescriptorSetLayoutCreateInfo layoutInfo(vk::DescriptorSetLayoutCreateFlags(), { uboLayoutBinding });
-
-        _descriptorSetLayout = _device.createDescriptorSetLayout(layoutInfo);
-    }
-
-    void VulkanDrawingEngine::CreateGraphicsPipelineLayout()
-    {
-        std::vector<vk::DescriptorSetLayout> descriptorSetLayouts{ _descriptorSetLayout };
-
-        vk::PipelineLayoutCreateInfo pipelineLayoutInfo(vk::PipelineLayoutCreateFlags(), descriptorSetLayouts);
-
-        _pipelineLayout = _device.createPipelineLayout(pipelineLayoutInfo);
-    }
-
     void VulkanDrawingEngine::CreateGraphicsPipeline()
     {
-        auto vertexShaderSpirV = ReadSpirVFile("vertex.spirv");
-        auto fragmentShaderSpirV = ReadSpirVFile("fragment.spirv");
-
-        vk::ShaderModuleCreateInfo createVertexShaderInfo(vk::ShaderModuleCreateFlags(), vertexShaderSpirV);
-        vk::ShaderModuleCreateInfo createFragmentShaderInfo(vk::ShaderModuleCreateFlags(), fragmentShaderSpirV);
-
-        auto vertexShaderModule = _device.createShaderModule(createVertexShaderInfo);
-        auto fragmentShaderModule = _device.createShaderModule(createFragmentShaderInfo);
-
-        vk::PipelineShaderStageCreateInfo vertexShaderStageInfo(
-            vk::PipelineShaderStageCreateFlags(), vk::ShaderStageFlagBits::eVertex, vertexShaderModule, "main");
-        vk::PipelineShaderStageCreateInfo fragmentShaderStageInfo(
-            vk::PipelineShaderStageCreateFlags(), vk::ShaderStageFlagBits::eFragment, fragmentShaderModule, "main");
-
-        std::vector<vk::PipelineShaderStageCreateInfo> shaderStages = { vertexShaderStageInfo, fragmentShaderStageInfo };
-
-        auto bindingDesc = Vertex::GetBindingDescription();
-        auto attrDesc = Vertex::GetAttributeDescriptions();
-
-        vk::PipelineVertexInputStateCreateInfo pipelineVertexInputStateCreate(
-            vk::PipelineVertexInputStateCreateFlags(), { bindingDesc }, attrDesc);
-
-        vk::PipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreate(
-            vk::PipelineInputAssemblyStateCreateFlags(), vk::PrimitiveTopology::eTriangleList, false);
-
-        vk::PipelineViewportStateCreateInfo pipelineViewportStateCreate(
-            vk::PipelineViewportStateCreateFlags(), 1, nullptr, 1, nullptr);
-
-        vk::PipelineRasterizationStateCreateInfo pipelineRasterizationStateCreate(
-            vk::PipelineRasterizationStateCreateFlags(), false, false, vk::PolygonMode::eFill, vk::CullModeFlagBits::eBack,
-            vk::FrontFace::eCounterClockwise, false, 0.0f, 0.0f, 0.0f, 1.0f);
-
-        vk::PipelineMultisampleStateCreateInfo pipelineMultisampleStateCreate(
-            vk::PipelineMultisampleStateCreateFlags(), vk::SampleCountFlagBits::e1, false);
-
-        vk::PipelineColorBlendAttachmentState pipelineColorBlendAttachment(
-            false, vk::BlendFactor::eZero, vk::BlendFactor::eZero, vk::BlendOp::eAdd, vk::BlendFactor::eZero,
-            vk::BlendFactor::eZero, vk::BlendOp::eAdd,
-            vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB
-                | vk::ColorComponentFlagBits::eA);
-
-        vk::PipelineColorBlendStateCreateInfo pipelineColorBlendStateCreate(
-            vk::PipelineColorBlendStateCreateFlags(), false, vk::LogicOp::eCopy, { pipelineColorBlendAttachment },
-            { 0.0f, 0.0f, 0.0f, 0.0f });
-
-        std::vector<vk::DynamicState> dynamicStates = { vk::DynamicState::eViewport, vk::DynamicState::eScissor };
-
-        vk::PipelineDynamicStateCreateInfo pipelineDynamicStateCreate(vk::PipelineDynamicStateCreateFlags(), dynamicStates);
-
-        vector<vk::DescriptorSetLayout> descriptorSetLayouts{ _descriptorSetLayout };
-
-        vk::PipelineLayoutCreateInfo pipelineLayoutCreate(vk::PipelineLayoutCreateFlags(), descriptorSetLayouts);
-
-        vk::GraphicsPipelineCreateInfo graphicsPipelineCreate{ vk::PipelineCreateFlags{},
-                                                               shaderStages,
-                                                               &pipelineVertexInputStateCreate,
-                                                               &pipelineInputAssemblyStateCreate,
-                                                               nullptr,
-                                                               &pipelineViewportStateCreate,
-                                                               &pipelineRasterizationStateCreate,
-                                                               &pipelineMultisampleStateCreate,
-                                                               nullptr,
-                                                               &pipelineColorBlendStateCreate,
-                                                               &pipelineDynamicStateCreate,
-                                                               _pipelineLayout,
-                                                               _renderPass,
-                                                               0,
-                                                               vk::Pipeline{},
-                                                               int32_t{} };
-
-        _pipeline = _device.createGraphicsPipeline(nullptr, graphicsPipelineCreate);
+        _rectPipeline = DrawRectPipeline(_device, _renderPass);
     }
 
     void VulkanDrawingEngine::CreateFramebuffers()
@@ -690,7 +601,7 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::CreateVertexBuffers()
     {
-        vk::DeviceSize initialVertexBufferSize = sizeof(Vertex) * 6;
+        vk::DeviceSize initialVertexBufferSize = sizeof(DrawRectPipeline::Vertex) * 6;
         for (size_t i = 0; i < _swapchainImages.size(); i++)
         {
             vk::BufferCreateInfo bufferInfo(
@@ -731,7 +642,7 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::CreateDescriptorSets()
     {
-        std::vector<vk::DescriptorSetLayout> layouts(_swapchainImages.size(), _descriptorSetLayout);
+        std::vector<vk::DescriptorSetLayout> layouts(_swapchainImages.size(), _rectPipeline.GetDescriptorSetLayout());
 
         vk::DescriptorSetAllocateInfo allocInfo(_uniformBufferDescriptorPool, layouts);
 
@@ -809,8 +720,6 @@ namespace OpenRCT2::Ui::Vulkan
         CreateSwapchainImages();
         CreateSwapchainImageViews();
         CreateRenderPass();
-        CreateDescriptorSetLayout();
-        CreateGraphicsPipelineLayout();
         CreateGraphicsPipeline();
         CreateFramebuffers();
         CreateCommandPool();
@@ -894,12 +803,12 @@ namespace OpenRCT2::Ui::Vulkan
             auto top = (float)data.top / (float)_mainRT.height;
             auto bottom = (float)data.bottom / (float)_mainRT.height;
 
-            _inProgressVerts.push_back(Vertex{ .pos = { right, top }, .color = { red, green, blue } });
-            _inProgressVerts.push_back(Vertex{ .pos = { left, top }, .color = { red, green, blue } });
-            _inProgressVerts.push_back(Vertex{ .pos = { right, bottom }, .color = { red, green, blue } });
-            _inProgressVerts.push_back(Vertex{ .pos = { right, bottom }, .color = { red, green, blue } });
-            _inProgressVerts.push_back(Vertex{ .pos = { left, top }, .color = { red, green, blue } });
-            _inProgressVerts.push_back(Vertex{ .pos = { left, bottom }, .color = { red, green, blue } });
+            _inProgressVerts.push_back(DrawRectPipeline::Vertex{ .pos = { right, top }, .color = { red, green, blue } });
+            _inProgressVerts.push_back(DrawRectPipeline::Vertex{ .pos = { left, top }, .color = { red, green, blue } });
+            _inProgressVerts.push_back(DrawRectPipeline::Vertex{ .pos = { right, bottom }, .color = { red, green, blue } });
+            _inProgressVerts.push_back(DrawRectPipeline::Vertex{ .pos = { right, bottom }, .color = { red, green, blue } });
+            _inProgressVerts.push_back(DrawRectPipeline::Vertex{ .pos = { left, top }, .color = { red, green, blue } });
+            _inProgressVerts.push_back(DrawRectPipeline::Vertex{ .pos = { left, bottom }, .color = { red, green, blue } });
         }
 
         // TODO: upload textures if needed
@@ -965,7 +874,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         currentFrameCommandBuffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
 
-        currentFrameCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, _pipeline);
+        currentFrameCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, _rectPipeline);
 
         vk::Viewport viewport(0.0f, 0.0f, _swapchainExtent.width, _swapchainExtent.height, 0.0f, 1.0f);
 
@@ -978,7 +887,8 @@ namespace OpenRCT2::Ui::Vulkan
         currentFrameCommandBuffer.bindVertexBuffers(0, { _vertexBuffers[_currentFrame] }, { 0 });
 
         currentFrameCommandBuffer.bindDescriptorSets(
-            vk::PipelineBindPoint::eGraphics, _pipelineLayout, 0, { _uniformBufferDescriptorSets[_currentFrame] }, {});
+            vk::PipelineBindPoint::eGraphics, _rectPipeline.GetPipelineLayout(), 0, { _uniformBufferDescriptorSets[_currentFrame] },
+            {});
 
         currentFrameCommandBuffer.draw(static_cast<uint32_t>(_inProgressVerts.size()), 1, 0, 0);
 
