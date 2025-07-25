@@ -4,7 +4,7 @@
 
 #include <openrct2/drawing/IDrawingContext.h>
 
-namespace OpenRCT2::Ui
+namespace OpenRCT2::Ui::Vulkan
 {
     class VulkanDrawingEngine;
 

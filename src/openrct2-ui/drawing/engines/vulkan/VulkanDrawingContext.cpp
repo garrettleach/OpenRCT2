@@ -2,19 +2,19 @@
     #include "VulkanDrawingContext.h"
 
 using namespace std;
-using OpenRCT2::Ui::VulkanDrawingContext;
-using namespace OpenRCT2::Ui::VulkanDrawing;
+using OpenRCT2::Ui::Vulkan::VulkanDrawingContext;
+using namespace OpenRCT2::Ui::Vulkan::VulkanDrawing;
 
 vector<FillRectData>&& VulkanDrawingContext::DumpFillRectData()
 {
     return move(_fillRects);
 }
 
-void OpenRCT2::Ui::VulkanDrawingContext::Clear(RenderTarget& rt, uint8_t paletteIndex)
+void VulkanDrawingContext::Clear(RenderTarget& rt, uint8_t paletteIndex)
 {
 }
 
-void OpenRCT2::Ui::VulkanDrawingContext::FillRect(
+void VulkanDrawingContext::FillRect(
     RenderTarget& rt, uint32_t colour, int32_t left, int32_t top, int32_t right, int32_t bottom)
 {
     _fillRects.push_back(VulkanDrawing::FillRectData{
@@ -26,35 +26,35 @@ void OpenRCT2::Ui::VulkanDrawingContext::FillRect(
     });
 }
 
-void OpenRCT2::Ui::VulkanDrawingContext::FilterRect(
+void VulkanDrawingContext::FilterRect(
     RenderTarget& rt, FilterPaletteID palette, int32_t left, int32_t top, int32_t right, int32_t bottom)
 {
 }
 
-void OpenRCT2::Ui::VulkanDrawingContext::DrawLine(RenderTarget& rt, uint32_t colour, const ScreenLine& line)
+void VulkanDrawingContext::DrawLine(RenderTarget& rt, uint32_t colour, const ScreenLine& line)
 {
 }
 
-void OpenRCT2::Ui::VulkanDrawingContext::DrawSprite(RenderTarget& rt, const ImageId image, int32_t x, int32_t y)
+void VulkanDrawingContext::DrawSprite(RenderTarget& rt, const ImageId image, int32_t x, int32_t y)
 {
 }
 
-void OpenRCT2::Ui::VulkanDrawingContext::DrawSpriteRawMasked(
+void VulkanDrawingContext::DrawSpriteRawMasked(
     RenderTarget& rt, int32_t x, int32_t y, const ImageId maskImage, const ImageId colourImage)
 {
 }
 
-void OpenRCT2::Ui::VulkanDrawingContext::DrawSpriteSolid(
+void VulkanDrawingContext::DrawSpriteSolid(
     RenderTarget& rt, const ImageId image, int32_t x, int32_t y, uint8_t colour)
 {
 }
 
-void OpenRCT2::Ui::VulkanDrawingContext::DrawGlyph(
+void VulkanDrawingContext::DrawGlyph(
     RenderTarget& rt, const ImageId image, int32_t x, int32_t y, const PaletteMap& palette)
 {
 }
 
-void OpenRCT2::Ui::VulkanDrawingContext::DrawTTFBitmap(
+void VulkanDrawingContext::DrawTTFBitmap(
     RenderTarget& rt, TextDrawInfo* info, TTFSurface* surface, int32_t x, int32_t y, uint8_t hintingThreshold)
 {
 }
