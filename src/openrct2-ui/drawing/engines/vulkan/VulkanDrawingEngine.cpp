@@ -5,10 +5,10 @@
     #include "SpirV.h"
     #include "VulkanDrawingContext.h"
 
+    #include <SDL2/SDL_vulkan.h>
     #include <algorithm>
     #include <glm/gtc/matrix_transform.hpp>
     #include <openrct2/ui/UiContext.h>
-    #include <SDL2/SDL_vulkan.h>
 
     #if _WIN32
         #include <windows.h>
@@ -18,7 +18,6 @@
         #include <debugapi.h>
     #endif
     #include <openrct2/interface/Window.h>
-
 
 using namespace std;
 using namespace OpenRCT2::Ui::Vulkan::detail;
@@ -886,7 +885,8 @@ namespace OpenRCT2::Ui::Vulkan
         currentFrameCommandBuffer.bindVertexBuffers(0, { _vertexBuffers[_currentFrame] }, { 0 });
 
         currentFrameCommandBuffer.bindDescriptorSets(
-            vk::PipelineBindPoint::eGraphics, _rectPipeline.GetPipelineLayout(), 0, { _uniformBufferDescriptorSets[_currentFrame] }, {});
+            vk::PipelineBindPoint::eGraphics, _rectPipeline.GetPipelineLayout(), 0,
+            { _uniformBufferDescriptorSets[_currentFrame] }, {});
 
         currentFrameCommandBuffer.draw(static_cast<uint32_t>(_inProgressVerts.size()), 1, 0, 0);
 
