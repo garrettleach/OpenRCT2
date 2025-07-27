@@ -7,7 +7,7 @@ using namespace OpenRCT2::Ui::Vulkan::VulkanDrawing;
 
 vector<FillRectData>&& VulkanDrawingContext::DumpFillRectData()
 {
-    return move(_fillRects);
+    return std::move(_fillRects);
 }
 
 void VulkanDrawingContext::Clear(RenderTarget& rt, uint8_t paletteIndex)
