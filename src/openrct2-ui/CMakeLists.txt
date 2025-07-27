@@ -47,6 +47,7 @@ endif ()
 
 if (NOT DISABLE_VULKAN AND NOT EMSCRIPTEN)
     find_package(Vulkan REQUIRED)
+    find_package(glm REQUIRED)
 endif ()
 
 # Sources
@@ -113,6 +114,7 @@ endif ()
 
 if (NOT DISABLE_VULKAN)
     target_link_libraries(openrct2 Vulkan::Vulkan)
+    target_link_libraries(openrct2 glm)
 endif ()
 
 # Includes
