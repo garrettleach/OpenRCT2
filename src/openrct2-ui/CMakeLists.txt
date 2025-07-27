@@ -45,6 +45,10 @@ if (NOT DISABLE_OPENGL AND NOT EMSCRIPTEN)
     endif ()
 endif ()
 
+if (NOT DISABLE_VULKAN AND NOT EMSCRIPTEN)
+    find_package(Vulkan REQUIRED)
+endif ()
+
 # Sources
 file(GLOB_RECURSE OPENRCT2_UI_SOURCES
     "${CMAKE_CURRENT_LIST_DIR}/*.cpp")
@@ -107,6 +111,10 @@ if (NOT DISABLE_OPENGL)
     endif ()
 endif ()
 
+if (NOT DISABLE_VULKAN)
+    target_link_libraries(openrct2 Vulkan::Vulkan)
+endif ()
+
 # Includes
 target_include_directories(openrct2 PRIVATE "${CMAKE_CURRENT_LIST_DIR}/.."
                                               ${SPEEX_INCLUDE_DIRS}
@@ -150,6 +158,7 @@ endif ()
 target_compile_definitions(openrct2 PUBLIC
     $<$<BOOL:${DISABLE_FLAC}>:DISABLE_FLAC>
     $<$<BOOL:${DISABLE_VORBIS}>:DISABLE_VORBIS>
+    $<$<BOOL:${DISABLE_VULKAN}>:DISABLE_VULKAN>
     # If OpenGL is enabled then we want to dynamically look up symbols.
     # If its disabled and somehow we magically end up linking to OpenGL we don't want look up the OpenGL symbols????
     $<IF:$<BOOL:${DISABLE_OPENGL}>,DISABLE_OPENGL,OPENGL_NO_LINK>
