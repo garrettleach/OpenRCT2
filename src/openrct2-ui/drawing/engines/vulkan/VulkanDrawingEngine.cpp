@@ -54,6 +54,7 @@ namespace OpenRCT2::Ui::Vulkan
         vector<const char*> kRequiredExtensions{ vk::KHRSwapchainExtensionName };
     }
 
+    #if VK_HEADER_VERSION >= 304
     std::array<int32_t, 8> messageIdsToIgnore{
         1424876368, // "BestPractices-vkCreateSwapchainKHR-suboptimal-swapchain-image-count": we are intentionally only double
                     // buffering
@@ -143,6 +144,7 @@ namespace OpenRCT2::Ui::Vulkan
     static_assert(
         is_same_v<decltype(&VulkanDebugCallback), vk::PFN_DebugUtilsMessengerCallbackEXT>,
         "Debug function does not match prototype");
+    #endif
 
     static vector<const char*> GetRequiredExtensions(SDL_Window* window)
     {
@@ -214,12 +216,17 @@ namespace OpenRCT2::Ui::Vulkan
         auto debugMessageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral
             | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
 
+    #if VK_HEADER_VERSION >= 304
         vk::DebugUtilsMessengerCreateInfoEXT debugCreateInfo{ vk::DebugUtilsMessengerCreateFlagsEXT{}, debugMessageSeverity,
                                                               debugMessageType, &VulkanDebugCallback,
                                                               static_cast<void*>(this) };
 
         vk::InstanceCreateInfo instanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo, enabledLayers,
                                                    enabledExtensions, kDebugUtils ? &debugCreateInfo : nullptr };
+    #else
+        vk::InstanceCreateInfo instanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo, enabledLayers,
+                                                   enabledExtensions, nullptr };
+    #endif
 
         _instance = _vulkanContext.createInstance(instanceCreateInfo);
 
