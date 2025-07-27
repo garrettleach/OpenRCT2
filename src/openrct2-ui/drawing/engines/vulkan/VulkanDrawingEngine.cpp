@@ -134,9 +134,9 @@ namespace OpenRCT2::Ui::Vulkan
 
         msg += "\n";
 
-    #if _WIN32
+        #if _WIN32
         OutputDebugStringA(msg.c_str());
-    #endif
+        #endif
 
         return vk::False;
     }
