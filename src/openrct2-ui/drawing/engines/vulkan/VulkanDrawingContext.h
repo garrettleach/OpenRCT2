@@ -18,7 +18,7 @@ namespace OpenRCT2::Ui::Vulkan
             int32_t bottom;
             uint8_t colour;
         };
-    }
+    } // namespace VulkanDrawing
 
     class VulkanDrawingContext final : public OpenRCT2::Drawing::IDrawingContext
     {
@@ -56,4 +56,4 @@ namespace OpenRCT2::Ui::Vulkan
         void DrawTTFBitmap(
             RenderTarget& rt, TextDrawInfo* info, TTFSurface* surface, int32_t x, int32_t y, uint8_t hintingThreshold) override;
     };
-} // namespace OpenRCT2::Ui
+} // namespace OpenRCT2::Ui::Vulkan

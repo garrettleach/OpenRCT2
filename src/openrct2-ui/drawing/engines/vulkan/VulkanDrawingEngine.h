@@ -1,15 +1,15 @@
 #pragma once
 
+#include "DrawRectPipeline.h"
+
+#include <SDL2/SDL.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <memory>
 #include <openrct2/drawing/Drawing.h>
 #include <openrct2/drawing/IDrawingEngine.h>
 #include <openrct2/ui/UiContext.h>
-#include <SDL2/SDL.h>
 #include <string>
 #include <vulkan/vulkan_raii.hpp>
-
-#include "DrawRectPipeline.h"
 
 namespace OpenRCT2::Ui::Vulkan
 {
@@ -28,15 +28,13 @@ namespace OpenRCT2::Ui::Vulkan
             bool debugMonitorPresent = false;
         };
 
-        
-
         struct UniformBufferObject
         {
             alignas(16) glm::mat4 model;
             alignas(16) glm::mat4 view;
             alignas(16) glm::mat4 proj;
         };
-    } // namespace
+    } // namespace detail
 
     class VulkanDrawingEngine final : public OpenRCT2::Drawing::IDrawingEngine
     {
@@ -157,4 +155,4 @@ namespace OpenRCT2::Ui::Vulkan
 
         void InvalidateImage(uint32_t image) override;
     };
-} // namespace OpenRCT2::Ui
+} // namespace OpenRCT2::Ui::Vulkan

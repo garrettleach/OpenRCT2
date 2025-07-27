@@ -1,13 +1,14 @@
 #ifndef DISABLE_VULKAN
 
+    #include "VulkanDrawingEngine.h"
+
     #include "SpirV.h"
     #include "VulkanDrawingContext.h"
-    #include "VulkanDrawingEngine.h"
-    #include <SDL2/SDL_vulkan.h>
 
     #include <algorithm>
     #include <glm/gtc/matrix_transform.hpp>
     #include <openrct2/ui/UiContext.h>
+    #include <SDL2/SDL_vulkan.h>
 
     #if _WIN32
         #include <windows.h>
@@ -16,7 +17,7 @@
     #if _WIN32
         #include <debugapi.h>
     #endif
-#include <openrct2/interface/Window.h>
+    #include <openrct2/interface/Window.h>
 
 
 using namespace std;
@@ -28,7 +29,7 @@ namespace OpenRCT2::Ui
     {
         return make_unique<Vulkan::VulkanDrawingEngine>(uiContext);
     }
-}
+} // namespace OpenRCT2::Ui
 
 namespace OpenRCT2::Ui::Vulkan
 {
@@ -825,8 +826,7 @@ namespace OpenRCT2::Ui::Vulkan
             _vertexDeviceMemorySize[_currentFrame] = neededMem;
 
             vk::BufferCreateInfo bufferInfo(
-                vk::BufferCreateFlags{}, neededMem, vk::BufferUsageFlagBits::eVertexBuffer,
-                vk::SharingMode::eExclusive, {});
+                vk::BufferCreateFlags{}, neededMem, vk::BufferUsageFlagBits::eVertexBuffer, vk::SharingMode::eExclusive, {});
 
             auto buffer = _device.createBuffer(bufferInfo);
 
@@ -848,8 +848,7 @@ namespace OpenRCT2::Ui::Vulkan
             _vertexMappedMemory[_currentFrame] = mappedBuffer;
         }
 
-        std::memcpy(
-            _vertexMappedMemory[_currentFrame], _inProgressVerts.data(), neededMem);
+        std::memcpy(_vertexMappedMemory[_currentFrame], _inProgressVerts.data(), neededMem);
 
         UniformBufferObject ubo{ .model = glm::identity<glm::mat4>(),
                                  .view = glm::lookAt(
@@ -887,8 +886,7 @@ namespace OpenRCT2::Ui::Vulkan
         currentFrameCommandBuffer.bindVertexBuffers(0, { _vertexBuffers[_currentFrame] }, { 0 });
 
         currentFrameCommandBuffer.bindDescriptorSets(
-            vk::PipelineBindPoint::eGraphics, _rectPipeline.GetPipelineLayout(), 0, { _uniformBufferDescriptorSets[_currentFrame] },
-            {});
+            vk::PipelineBindPoint::eGraphics, _rectPipeline.GetPipelineLayout(), 0, { _uniformBufferDescriptorSets[_currentFrame] }, {});
 
         currentFrameCommandBuffer.draw(static_cast<uint32_t>(_inProgressVerts.size()), 1, 0, 0);
 
@@ -978,6 +976,6 @@ namespace OpenRCT2::Ui::Vulkan
     void VulkanDrawingEngine::InvalidateImage(uint32_t image)
     {
     }
-} // namespace OpenRCT2::Ui
+} // namespace OpenRCT2::Ui::Vulkan
 
 #endif

@@ -1,8 +1,9 @@
 #include "SpirV.h"
-    #include <openrct2/PlatformEnvironment.h>
-    #include <openrct2/core/FileStream.h>
-    #include <openrct2/core/Path.hpp>
-    #include <openrct2/Context.h>
+
+#include <openrct2/Context.h>
+#include <openrct2/PlatformEnvironment.h>
+#include <openrct2/core/FileStream.h>
+#include <openrct2/core/Path.hpp>
 
 using namespace std;
 

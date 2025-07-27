@@ -14,8 +14,7 @@ void VulkanDrawingContext::Clear(RenderTarget& rt, uint8_t paletteIndex)
 {
 }
 
-void VulkanDrawingContext::FillRect(
-    RenderTarget& rt, uint32_t colour, int32_t left, int32_t top, int32_t right, int32_t bottom)
+void VulkanDrawingContext::FillRect(RenderTarget& rt, uint32_t colour, int32_t left, int32_t top, int32_t right, int32_t bottom)
 {
     _fillRects.push_back(VulkanDrawing::FillRectData{
         .left = left,
@@ -44,13 +43,11 @@ void VulkanDrawingContext::DrawSpriteRawMasked(
 {
 }
 
-void VulkanDrawingContext::DrawSpriteSolid(
-    RenderTarget& rt, const ImageId image, int32_t x, int32_t y, uint8_t colour)
+void VulkanDrawingContext::DrawSpriteSolid(RenderTarget& rt, const ImageId image, int32_t x, int32_t y, uint8_t colour)
 {
 }
 
-void VulkanDrawingContext::DrawGlyph(
-    RenderTarget& rt, const ImageId image, int32_t x, int32_t y, const PaletteMap& palette)
+void VulkanDrawingContext::DrawGlyph(RenderTarget& rt, const ImageId image, int32_t x, int32_t y, const PaletteMap& palette)
 {
 }
 

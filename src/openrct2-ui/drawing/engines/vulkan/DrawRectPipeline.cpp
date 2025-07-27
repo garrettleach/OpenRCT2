@@ -1,4 +1,5 @@
 #include "DrawRectPipeline.h"
+
 #include "SpirV.h"
 
 using namespace std;
@@ -28,7 +29,8 @@ namespace OpenRCT2::Ui::Vulkan
         return device.createDescriptorSetLayout(layoutInfo);
     }
 
-    vk::raii::PipelineLayout DrawRectPipeline::CreatePipelineLayout(const vk::raii::Device& device, const vk::DescriptorSetLayout& descriptorSetLayout)
+    vk::raii::PipelineLayout DrawRectPipeline::CreatePipelineLayout(
+        const vk::raii::Device& device, const vk::DescriptorSetLayout& descriptorSetLayout)
     {
         std::vector<vk::DescriptorSetLayout> descriptorSetLayouts{ descriptorSetLayout };
 
