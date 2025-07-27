@@ -232,9 +232,11 @@ namespace OpenRCT2::Ui::Vulkan
 
         if (kDebugUtils)
         {
+    #if VK_HEADER_VERSION >= 304
             debugCreateInfo.messageSeverity &= ~(vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose);
 
             _debugMessanger = _instance.createDebugUtilsMessengerEXT(debugCreateInfo);
+    #endif
         }
     }
 
