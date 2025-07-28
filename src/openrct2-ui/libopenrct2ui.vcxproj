@@ -66,6 +66,7 @@
     <ClInclude Include="drawing\engines\opengl\TransparencyDepth.h" />
     <ClInclude Include="drawing\engines\vulkan\DrawRectPipeline.h" />
     <ClInclude Include="drawing\engines\vulkan\SpirV.h" />
+    <ClInclude Include="drawing\engines\vulkan\SwapchainSync.h" />
     <ClInclude Include="drawing\engines\vulkan\VulkanDrawingContext.h" />
     <ClInclude Include="drawing\engines\vulkan\VulkanDrawingEngine.h" />
     <ClInclude Include="input\InputManager.h" />
@@ -136,6 +137,7 @@
     <ClCompile Include="drawing\engines\opengl\TransparencyDepth.cpp" />
     <ClCompile Include="drawing\engines\vulkan\DrawRectPipeline.cpp" />
     <ClCompile Include="drawing\engines\vulkan\SpirV.cpp" />
+    <ClCompile Include="drawing\engines\vulkan\SwapchainSync.cpp" />
     <ClCompile Include="drawing\engines\vulkan\VulkanDrawingContext.cpp" />
     <ClCompile Include="drawing\engines\vulkan\VulkanDrawingEngine.cpp" />
     <ClCompile Include="input\InputManager.cpp" />

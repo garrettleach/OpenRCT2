@@ -1,6 +1,7 @@
 #pragma once
 
 #include "DrawRectPipeline.h"
+#include "SwapchainSync.h"
 
 #include <SDL2/SDL.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -72,9 +73,7 @@ namespace OpenRCT2::Ui::Vulkan
         vk::raii::DescriptorPool _uniformBufferDescriptorPool = nullptr;
         std::vector<vk::DescriptorSet> _uniformBufferDescriptorSets;
         std::vector<vk::raii::CommandBuffer> _commandBuffers;
-        std::vector<vk::raii::Semaphore> _imageAvailableSemaphores;
-        std::vector<vk::raii::Semaphore> _renderFinishedSemaphores;
-        std::vector<vk::raii::Fence> _inFlightFences;
+        SwapchainSync _swapchainSync = nullptr;
 
         std::vector<vk::raii::DeviceMemory> _vertexDeviceMemory;
         std::vector<vk::raii::Buffer> _vertexBuffers;
