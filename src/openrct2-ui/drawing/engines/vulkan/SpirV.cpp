@@ -1,9 +1,10 @@
-#include "SpirV.h"
-
-#include <openrct2/Context.h>
-#include <openrct2/PlatformEnvironment.h>
-#include <openrct2/core/FileStream.h>
-#include <openrct2/core/Path.hpp>
+#ifndef DISABLE_VULKAN
+    #include "SpirV.h"
+    
+    #include <openrct2/Context.h>
+    #include <openrct2/PlatformEnvironment.h>
+    #include <openrct2/core/FileStream.h>
+    #include <openrct2/core/Path.hpp>
 
 using namespace std;
 
@@ -33,3 +34,4 @@ vector<uint32_t> OpenRCT2::Ui::Vulkan::ReadSpirVFile(const string& filename)
     fs.Read(static_cast<void*>(fileData.data()), fileLength);
     return fileData;
 }
+#endif

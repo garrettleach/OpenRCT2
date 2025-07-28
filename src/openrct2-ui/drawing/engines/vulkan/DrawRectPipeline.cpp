@@ -1,6 +1,7 @@
-#include "DrawRectPipeline.h"
-
-#include "SpirV.h"
+#ifndef DISABLE_VULKAN
+    #include "DrawRectPipeline.h"
+    
+    #include "SpirV.h"
 
 using namespace std;
 
@@ -165,3 +166,4 @@ namespace OpenRCT2::Ui::Vulkan
         return _descriptorSetLayout;
     }
 } // namespace OpenRCT2::Ui::Vulkan
+#endif

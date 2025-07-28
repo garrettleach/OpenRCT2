@@ -112,7 +112,7 @@ if (NOT DISABLE_OPENGL)
     endif ()
 endif ()
 
-if (NOT DISABLE_VULKAN)
+if (NOT DISABLE_VULKAN AND NOT EMSCRIPTEN)
     target_link_libraries(openrct2 Vulkan::Vulkan)
     target_link_libraries(openrct2 glm)
 endif ()
