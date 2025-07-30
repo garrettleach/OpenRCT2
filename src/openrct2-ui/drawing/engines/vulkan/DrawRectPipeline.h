@@ -19,13 +19,13 @@ namespace OpenRCT2::Ui::Vulkan
         };
 
     private:
-        vk::raii::DescriptorSetLayout _descriptorSetLayout = nullptr;
-        vk::raii::PipelineLayout _pipelineLayout = nullptr;
-        vk::raii::Pipeline _pipeline = nullptr;
+        vk::UniqueDescriptorSetLayout _descriptorSetLayout;
+        vk::UniquePipelineLayout _pipelineLayout;
+        vk::UniquePipeline _pipeline;
 
     public:
         DrawRectPipeline(std::nullptr_t);
-        DrawRectPipeline(const vk::raii::Device& device, const vk::raii::RenderPass& renderPass);
+        DrawRectPipeline(const vk::UniqueDevice& device, const vk::UniqueRenderPass& renderPass);
 
         DrawRectPipeline& operator=(const DrawRectPipeline&) = delete;
         DrawRectPipeline(const DrawRectPipeline&) = delete;
@@ -41,11 +41,11 @@ namespace OpenRCT2::Ui::Vulkan
         vk::DescriptorSetLayout GetDescriptorSetLayout();
 
     private:
-        static vk::raii::DescriptorSetLayout CreateDescriptorSetLayout(const vk::raii::Device& device);
-        static vk::raii::PipelineLayout CreatePipelineLayout(
-            const vk::raii::Device& device, const vk::DescriptorSetLayout& descriptorSetLayout);
-        static vk::raii::Pipeline CreatePipeline(
-            const vk::raii::Device& device, const vk::DescriptorSetLayout& descriptorSetLayout,
+        static vk::UniqueDescriptorSetLayout CreateDescriptorSetLayout(const vk::UniqueDevice& device);
+        static vk::UniquePipelineLayout CreatePipelineLayout(
+            const vk::UniqueDevice& device, const vk::DescriptorSetLayout& descriptorSetLayout);
+        static vk::UniquePipeline CreatePipeline(
+            const vk::UniqueDevice& device, const vk::DescriptorSetLayout& descriptorSetLayout,
             const vk::PipelineLayout& pipelineLayout, const vk::RenderPass& renderPass);
     };
 } // namespace OpenRCT2::Ui::Vulkan

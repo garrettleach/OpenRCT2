@@ -6,12 +6,12 @@ namespace OpenRCT2::Ui::Vulkan
 {
     class SwapchainSync
     {
-        std::vector<vk::raii::Semaphore> _imageAvailableSemaphores;
-        std::vector<vk::raii::Semaphore> _renderFinishedSemaphores;
-        std::vector<vk::raii::Fence> _inFlightFences;
+        std::vector<vk::UniqueSemaphore> _imageAvailableSemaphores;
+        std::vector<vk::UniqueSemaphore> _renderFinishedSemaphores;
+        std::vector<vk::UniqueFence> _inFlightFences;
 
     public:
-        SwapchainSync(const vk::raii::Device& device, size_t size);
+        SwapchainSync(const vk::UniqueDevice& device, size_t size);
         SwapchainSync(nullptr_t);
         ~SwapchainSync() = default;
 

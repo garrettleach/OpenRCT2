@@ -45,38 +45,38 @@ namespace OpenRCT2::Ui::Vulkan
 
         RenderTarget _mainRT = {};
 
-        vk::raii::Context _vulkanContext;
+        vk::detail::DispatchLoaderDynamic _vulkanDynamicDispatch;
         detail::InstanceLayers _instanceLayers{};
-        vk::raii::Instance _instance = nullptr;
-        vk::raii::DebugUtilsMessengerEXT _debugMessanger = nullptr;
-        vk::raii::SurfaceKHR _surface = nullptr;
-        vk::raii::PhysicalDevice _physicalDevice = nullptr;
+        vk::UniqueInstance _instance;
+        vk::UniqueHandle<vk::DebugUtilsMessengerEXT, vk::detail::DispatchLoaderDynamic> _debugMessanger;
+        vk::UniqueSurfaceKHR _surface;
+        vk::PhysicalDevice _physicalDevice;
         detail::QueueIndicies _queueIndicies{};
         vk::PhysicalDeviceMemoryProperties _physicalDeviceMemoryProps{};
-        vk::raii::Device _device = nullptr;
-        vk::raii::Queue _graphicsQueue = nullptr;
-        vk::raii::Queue _presentationQueue = nullptr;
+        vk::UniqueDevice _device;
+        vk::Queue _graphicsQueue = nullptr;
+        vk::Queue _presentationQueue = nullptr;
         vk::SurfaceCapabilitiesKHR _surfaceCapabilities{};
         vk::SurfaceFormatKHR _surfaceFormat{};
         vk::Extent2D _swapchainExtent{};
         vk::PresentModeKHR _presentationMode{};
-        vk::raii::SwapchainKHR _swapchain = nullptr;
+        vk::UniqueSwapchainKHR _swapchain;
         std::vector<vk::Image> _swapchainImages{};
-        std::vector<vk::raii::ImageView> _swapchainImageViews{};
-        vk::raii::RenderPass _renderPass = nullptr;
+        std::vector<vk::UniqueImageView> _swapchainImageViews{};
+        vk::UniqueRenderPass _renderPass;
         DrawRectPipeline _rectPipeline = nullptr;
-        std::vector<vk::raii::Framebuffer> _swapchainFramebuffers{};
-        vk::raii::CommandPool _commandPool = nullptr;
-        std::vector<vk::raii::DeviceMemory> _uniformBufferObjectMemory;
-        std::vector<vk::raii::Buffer> _uniformBufferObjectBuffer;
+        std::vector<vk::UniqueFramebuffer> _swapchainFramebuffers{};
+        vk::UniqueCommandPool _commandPool;
+        std::vector<vk::UniqueDeviceMemory> _uniformBufferObjectMemory;
+        std::vector<vk::UniqueBuffer> _uniformBufferObjectBuffer;
         std::vector<void*> _uniformBufferObjectMappedMemory;
-        vk::raii::DescriptorPool _uniformBufferDescriptorPool = nullptr;
+        vk::UniqueDescriptorPool _uniformBufferDescriptorPool;
         std::vector<vk::DescriptorSet> _uniformBufferDescriptorSets;
-        std::vector<vk::raii::CommandBuffer> _commandBuffers;
+        std::vector<vk::UniqueCommandBuffer> _commandBuffers;
         SwapchainSync _swapchainSync = nullptr;
 
-        std::vector<vk::raii::DeviceMemory> _vertexDeviceMemory;
-        std::vector<vk::raii::Buffer> _vertexBuffers;
+        std::vector<vk::UniqueDeviceMemory> _vertexDeviceMemory;
+        std::vector<vk::UniqueBuffer> _vertexBuffers;
         std::vector<void*> _vertexMappedMemory;
         std::vector<vk::DeviceSize> _vertexDeviceMemorySize;
 
@@ -94,9 +94,9 @@ namespace OpenRCT2::Ui::Vulkan
 
         ~VulkanDrawingEngine() override
         {
-            if (static_cast<vk::Device>(_device))
+            if (_device)
             {
-                _device.waitIdle();
+                _device->waitIdle();
             }
         }
 

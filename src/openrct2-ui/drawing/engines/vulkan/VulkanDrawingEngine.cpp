@@ -228,14 +228,17 @@ namespace OpenRCT2::Ui::Vulkan
                                                    enabledExtensions, nullptr };
     #endif
 
-        _instance = _vulkanContext.createInstance(instanceCreateInfo);
+
+        _instance = vk::createInstanceUnique(instanceCreateInfo);
+
+        _vulkanDynamicDispatch = vk::detail::DispatchLoaderDynamic(*_instance, vkGetInstanceProcAddr);
 
         if (kDebugUtils)
         {
     #if VK_HEADER_VERSION >= 304
             debugCreateInfo.messageSeverity &= ~(vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose);
 
-            _debugMessanger = _instance.createDebugUtilsMessengerEXT(debugCreateInfo);
+            _debugMessanger = _instance->createDebugUtilsMessengerEXTUnique(debugCreateInfo, nullptr, _vulkanDynamicDispatch);
     #endif
         }
     }
@@ -243,21 +246,22 @@ namespace OpenRCT2::Ui::Vulkan
     void VulkanDrawingEngine::CreateSurface()
     {
         VkSurfaceKHR surfaceTemp{};
-        if (!SDL_Vulkan_CreateSurface(_window, (vk::Instance)_instance, &surfaceTemp))
+        if (!SDL_Vulkan_CreateSurface(_window, *_instance, &surfaceTemp))
         {
             throw runtime_error("Failed to create SDL Vulkan surface");
         }
 
-        _surface = vk::raii::SurfaceKHR{ _instance, surfaceTemp };
+        _surface = vk::UniqueSurfaceKHR(
+            surfaceTemp, vk::detail::ObjectDestroy(*_instance, nullptr, VULKAN_HPP_DEFAULT_DISPATCHER));
     }
 
     void VulkanDrawingEngine::PickPhysicalDevice()
     {
-        vk::raii::PhysicalDevice chosenDevice = nullptr;
+        vk::PhysicalDevice chosenDevice = nullptr;
         int chosenRating = 0;
         QueueIndicies chosenIndicies{};
 
-        for (auto& physicalDevice : _instance.enumeratePhysicalDevices())
+        for (auto& physicalDevice : _instance->enumeratePhysicalDevices())
         {
             auto queueFamilyProps = physicalDevice.getQueueFamilyProperties();
             optional<size_t> graphicsQueueIndex;
@@ -271,7 +275,7 @@ namespace OpenRCT2::Ui::Vulkan
                 }
 
                 if (!presentationQueueIndex.has_value()
-                    && physicalDevice.getSurfaceSupportKHR(static_cast<uint32_t>(i), _surface))
+                    && physicalDevice.getSurfaceSupportKHR(static_cast<uint32_t>(i), *_surface))
                 {
                     presentationQueueIndex = i;
                 }
@@ -302,11 +306,11 @@ namespace OpenRCT2::Ui::Vulkan
                 continue;
             }
 
-            if (physicalDevice.getSurfaceFormatsKHR(_surface).size() == 0)
+            if (physicalDevice.getSurfaceFormatsKHR(*_surface).size() == 0)
             {
                 continue;
             }
-            if (physicalDevice.getSurfacePresentModesKHR(_surface).size() == 0)
+            if (physicalDevice.getSurfacePresentModesKHR(*_surface).size() == 0)
             {
                 continue;
             }
@@ -398,18 +402,18 @@ namespace OpenRCT2::Ui::Vulkan
             deviceCreateInfo.get<vk::PhysicalDeviceRobustness2FeaturesEXT>().robustImageAccess2 = true;
         }
 
-        _device = _physicalDevice.createDevice(deviceCreateInfo.get());
+        _device = _physicalDevice.createDeviceUnique(deviceCreateInfo.get());
     }
 
     void VulkanDrawingEngine::CreateQueues()
     {
-        _graphicsQueue = _device.getQueue(_queueIndicies.graphics, 0);
-        _presentationQueue = _device.getQueue(_queueIndicies.presentation, 0);
+        _graphicsQueue = _device->getQueue(_queueIndicies.graphics, 0);
+        _presentationQueue = _device->getQueue(_queueIndicies.presentation, 0);
     }
 
     void VulkanDrawingEngine::ChooseSwapchainImageFormat()
     {
-        auto availableFormats = _physicalDevice.getSurfaceFormatsKHR(_surface);
+        auto availableFormats = _physicalDevice.getSurfaceFormatsKHR(*_surface);
 
         auto findFormat = std::find_if(
             availableFormats.begin(), availableFormats.end(), [](vk::SurfaceFormatKHR& surfaceFormat) {
@@ -447,7 +451,7 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::ChoosePresentMode()
     {
-        auto availablePresentModes = _physicalDevice.getSurfacePresentModesKHR(_surface);
+        auto availablePresentModes = _physicalDevice.getSurfacePresentModesKHR(*_surface);
 
         if (std::find(availablePresentModes.begin(), availablePresentModes.end(), vk::PresentModeKHR::eMailbox)
             != availablePresentModes.end())
@@ -481,16 +485,16 @@ namespace OpenRCT2::Ui::Vulkan
         }
 
         vk::SwapchainCreateInfoKHR createInfo(
-            vk::SwapchainCreateFlagsKHR(), _surface, imageCount, _surfaceFormat.format, _surfaceFormat.colorSpace,
+            vk::SwapchainCreateFlagsKHR(), *_surface, imageCount, _surfaceFormat.format, _surfaceFormat.colorSpace,
             _swapchainExtent, 1, vk::ImageUsageFlagBits::eColorAttachment, sharingMode, swapQueueFamilyIndices,
             _surfaceCapabilities.currentTransform, vk::CompositeAlphaFlagBitsKHR::eOpaque, _presentationMode, true, {});
 
-        _swapchain = _device.createSwapchainKHR(createInfo);
+        _swapchain = _device->createSwapchainKHRUnique(createInfo);
     }
 
     void VulkanDrawingEngine::CreateSwapchainImages()
     {
-        _swapchainImages = _swapchain.getImages();
+        _swapchainImages = _device->getSwapchainImagesKHR(*_swapchain);
     }
 
     void VulkanDrawingEngine::CreateSwapchainImageViews()
@@ -503,7 +507,7 @@ namespace OpenRCT2::Ui::Vulkan
                   vk::ComponentSwizzle::eIdentity },
                 vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
-            _swapchainImageViews.push_back(_device.createImageView(createInfo));
+            _swapchainImageViews.push_back(_device->createImageViewUnique(createInfo));
         }
     }
 
@@ -525,7 +529,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         vk::RenderPassCreateInfo renderPassInfo(vk::RenderPassCreateFlags(), { colorAttachment }, { subpass }, { dependency });
 
-        _renderPass = _device.createRenderPass(renderPassInfo);
+        _renderPass = _device->createRenderPassUnique(renderPassInfo);
     }
 
     void VulkanDrawingEngine::CreateGraphicsPipeline()
@@ -537,12 +541,12 @@ namespace OpenRCT2::Ui::Vulkan
     {
         for (auto& imageView : _swapchainImageViews)
         {
-            std::vector<vk::ImageView> attachments{ imageView };
+            std::vector<vk::ImageView> attachments{ *imageView };
 
             vk::FramebufferCreateInfo framebufferCreate(
-                vk::FramebufferCreateFlags(), _renderPass, attachments, _swapchainExtent.width, _swapchainExtent.height, 1);
+                vk::FramebufferCreateFlags(), *_renderPass, attachments, _swapchainExtent.width, _swapchainExtent.height, 1);
 
-            _swapchainFramebuffers.push_back(_device.createFramebuffer(framebufferCreate));
+            _swapchainFramebuffers.push_back(_device->createFramebufferUnique(framebufferCreate));
         }
     }
 
@@ -551,7 +555,7 @@ namespace OpenRCT2::Ui::Vulkan
         vk::CommandPoolCreateInfo commandPoolCreate(
             vk::CommandPoolCreateFlagBits::eResetCommandBuffer, _queueIndicies.graphics);
 
-        _commandPool = _device.createCommandPool(commandPoolCreate);
+        _commandPool = _device->createCommandPoolUnique(commandPoolCreate);
     }
 
     static uint32_t GetBufferMemoryType(
@@ -588,19 +592,19 @@ namespace OpenRCT2::Ui::Vulkan
                 vk::BufferCreateFlags{}, uniformBufferSize, vk::BufferUsageFlagBits::eUniformBuffer,
                 vk::SharingMode::eExclusive, {});
 
-            auto buffer = _device.createBuffer(bufferInfo);
+            auto buffer = _device->createBufferUnique(bufferInfo);
 
-            auto memRequirements = buffer.getMemoryRequirements();
+            auto memRequirements = _device->getBufferMemoryRequirements(*buffer);
 
             auto memoryType = GetBufferMemoryType(memRequirements, _physicalDeviceMemoryProps);
 
             vk::MemoryAllocateInfo memAllocInfo(memRequirements.size, memoryType);
 
-            auto bufferMemory = _device.allocateMemory(memAllocInfo);
+            auto bufferMemory = _device->allocateMemoryUnique(memAllocInfo);
 
-            buffer.bindMemory(bufferMemory, 0);
+            _device->bindBufferMemory(*buffer, *bufferMemory, 0);
 
-            auto mappedBuffer = bufferMemory.mapMemory(0, uniformBufferSize, vk::MemoryMapFlags());
+            auto mappedBuffer = _device->mapMemory(*bufferMemory, 0, uniformBufferSize, vk::MemoryMapFlags());
 
             _uniformBufferObjectBuffer.push_back(std::move(buffer));
             _uniformBufferObjectMemory.push_back(std::move(bufferMemory));
@@ -617,19 +621,19 @@ namespace OpenRCT2::Ui::Vulkan
                 vk::BufferCreateFlags{}, initialVertexBufferSize, vk::BufferUsageFlagBits::eVertexBuffer,
                 vk::SharingMode::eExclusive, {});
 
-            auto buffer = _device.createBuffer(bufferInfo);
+            auto buffer = _device->createBufferUnique(bufferInfo);
 
-            auto memRequirements = buffer.getMemoryRequirements();
+            auto memRequirements = _device->getBufferMemoryRequirements(*buffer);
 
             auto memoryType = GetBufferMemoryType(memRequirements, _physicalDeviceMemoryProps);
 
             vk::MemoryAllocateInfo memAllocInfo(memRequirements.size, memoryType);
 
-            auto bufferMemory = _device.allocateMemory(memAllocInfo);
+            auto bufferMemory = _device->allocateMemoryUnique(memAllocInfo);
 
-            buffer.bindMemory(bufferMemory, 0);
+            _device->bindBufferMemory(*buffer, *bufferMemory, 0);
 
-            auto mappedBuffer = bufferMemory.mapMemory(0, initialVertexBufferSize, vk::MemoryMapFlags());
+            auto mappedBuffer = _device->mapMemory(*bufferMemory, 0, initialVertexBufferSize, vk::MemoryMapFlags());
 
             // testing: using a host buffer
             _vertexBuffers.push_back(std::move(buffer));
@@ -646,40 +650,40 @@ namespace OpenRCT2::Ui::Vulkan
         vk::DescriptorPoolCreateInfo poolInfo(
             vk::DescriptorPoolCreateFlags(), static_cast<uint32_t>(_swapchainImages.size()), { poolSize });
 
-        _uniformBufferDescriptorPool = _device.createDescriptorPool(poolInfo);
+        _uniformBufferDescriptorPool = _device->createDescriptorPoolUnique(poolInfo);
     }
 
     void VulkanDrawingEngine::CreateDescriptorSets()
     {
         std::vector<vk::DescriptorSetLayout> layouts(_swapchainImages.size(), _rectPipeline.GetDescriptorSetLayout());
 
-        vk::DescriptorSetAllocateInfo allocInfo(_uniformBufferDescriptorPool, layouts);
+        vk::DescriptorSetAllocateInfo allocInfo(*_uniformBufferDescriptorPool, layouts);
 
-        auto descriptorSets = _device.allocateDescriptorSets(allocInfo);
+        auto descriptorSets = _device->allocateDescriptorSets(allocInfo);
 
         // We don't want free to be called on these as they are part of a pool (that will release them)
         for (auto& descriptorSet : descriptorSets)
         {
-            _uniformBufferDescriptorSets.push_back(descriptorSet.release());
+            _uniformBufferDescriptorSets.push_back(descriptorSet);
         }
 
         for (size_t i = 0; i < _uniformBufferDescriptorSets.size(); i++)
         {
-            vk::DescriptorBufferInfo bufferInfo(_uniformBufferObjectBuffer[i], 0, sizeof(UniformBufferObject));
+            vk::DescriptorBufferInfo bufferInfo(*_uniformBufferObjectBuffer[i], 0, sizeof(UniformBufferObject));
 
             vk::WriteDescriptorSet descriptorWrite(
                 _uniformBufferDescriptorSets[i], 0, 0, vk::DescriptorType::eUniformBuffer, {}, { bufferInfo }, {});
 
-            _device.updateDescriptorSets({ descriptorWrite }, {});
+            _device->updateDescriptorSets({ descriptorWrite }, {});
         }
     }
 
     void VulkanDrawingEngine::CreateCommandBuffers()
     {
         vk::CommandBufferAllocateInfo allocInfo(
-            _commandPool, vk::CommandBufferLevel::ePrimary, static_cast<uint32_t>(_swapchainImages.size()));
+            *_commandPool, vk::CommandBufferLevel::ePrimary, static_cast<uint32_t>(_swapchainImages.size()));
 
-        _commandBuffers = _device.allocateCommandBuffers(allocInfo);
+        _commandBuffers = _device->allocateCommandBuffersUnique(allocInfo);
     }
 
     void VulkanDrawingEngine::CreateSyncObjects()
@@ -689,13 +693,13 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::RecreateSwapChain()
     {
-        _device.waitIdle();
+        _device->waitIdle();
 
         _swapchainFramebuffers.clear();
         _swapchainImageViews.clear();
         _swapchainImages.clear();
 
-        _swapchain.clear();
+        _swapchain.reset();
 
         CreateSwapchain();
         CreateSwapchainImages();
@@ -712,7 +716,7 @@ namespace OpenRCT2::Ui::Vulkan
         PickPhysicalDevice();
         CreateLogicalDevice();
         CreateQueues();
-        _surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(_surface);
+        _surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(*_surface);
         ChooseSwapchainImageFormat();
         ChooseSwapchainExtent();
         ChoosePresentMode();
@@ -753,35 +757,35 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::BeginDraw()
     {
-        std::ignore = _device.waitForFences({ _swapchainSync.InFlightFence(_currentFrame) }, true, std::numeric_limits<uint64_t>::max());
+        std::ignore = _device->waitForFences({ _swapchainSync.InFlightFence(_currentFrame) }, true, std::numeric_limits<uint64_t>::max());
 
-        auto nextImageResult = _swapchain.acquireNextImage(
+        auto nextImageResult = _device->acquireNextImageKHR(*_swapchain,
             std::numeric_limits<uint64_t>::max(), _swapchainSync.ImageAvailableSemaphore(_currentFrame), {});
 
-        if (nextImageResult.first == vk::Result::eErrorOutOfDateKHR)
+        if (nextImageResult.result == vk::Result::eErrorOutOfDateKHR)
         {
             _framebufferResized = false;
 
-            _surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(_surface);
+            _surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(*_surface);
             ChooseSwapchainImageFormat();
             ChooseSwapchainExtent();
 
             RecreateSwapChain();
 
-            nextImageResult = _swapchain.acquireNextImage(
+            nextImageResult = _device->acquireNextImageKHR(*_swapchain,
                 std::numeric_limits<uint64_t>::max(), _swapchainSync.ImageAvailableSemaphore(_currentFrame), {});
 
-            if (nextImageResult.first != vk::Result::eSuccess)
+            if (nextImageResult.result != vk::Result::eSuccess)
             {
                 throw runtime_error("Failed to update swap chain");
             }
         }
-        else if (nextImageResult.first != vk::Result::eSuccess && nextImageResult.first != vk::Result::eSuboptimalKHR)
+        else if (nextImageResult.result != vk::Result::eSuccess && nextImageResult.result != vk::Result::eSuboptimalKHR)
         {
             throw runtime_error("Failed to get next image");
         }
 
-        _imageIndex = nextImageResult.second;
+        _imageIndex = nextImageResult.value;
 
         _inProgressVerts.clear();
     }
@@ -820,26 +824,26 @@ namespace OpenRCT2::Ui::Vulkan
 
         if (_vertexDeviceMemorySize[_currentFrame] < neededMem)
         {
-            _vertexBuffers[_currentFrame].clear();
-            _vertexDeviceMemory[_currentFrame].clear();
+            _vertexBuffers[_currentFrame].reset();
+            _vertexDeviceMemory[_currentFrame].reset();
             _vertexDeviceMemorySize[_currentFrame] = neededMem;
 
             vk::BufferCreateInfo bufferInfo(
                 vk::BufferCreateFlags{}, neededMem, vk::BufferUsageFlagBits::eVertexBuffer, vk::SharingMode::eExclusive, {});
 
-            auto buffer = _device.createBuffer(bufferInfo);
+            auto buffer = _device->createBufferUnique(bufferInfo);
 
-            auto memRequirements = buffer.getMemoryRequirements();
+            auto memRequirements = _device->getBufferMemoryRequirements(*buffer);
 
             auto memoryType = GetBufferMemoryType(memRequirements, _physicalDeviceMemoryProps);
 
             vk::MemoryAllocateInfo memAllocInfo(memRequirements.size, memoryType);
 
-            auto bufferMemory = _device.allocateMemory(memAllocInfo);
+            auto bufferMemory = _device->allocateMemoryUnique(memAllocInfo);
 
-            buffer.bindMemory(bufferMemory, 0);
+            _device->bindBufferMemory(*buffer, *bufferMemory, 0);
 
-            auto mappedBuffer = bufferMemory.mapMemory(0, neededMem, vk::MemoryMapFlags());
+            auto mappedBuffer = _device->mapMemory(*bufferMemory, 0, neededMem, vk::MemoryMapFlags());
 
             _vertexBuffers[_currentFrame] = std::move(buffer);
             _vertexDeviceMemory[_currentFrame] = std::move(bufferMemory);
@@ -856,48 +860,48 @@ namespace OpenRCT2::Ui::Vulkan
 
         std::memcpy(_uniformBufferObjectMappedMemory[_currentFrame], &ubo, sizeof(ubo));
 
-        _device.resetFences({ _swapchainSync.InFlightFence(_currentFrame) });
+        _device->resetFences({ _swapchainSync.InFlightFence(_currentFrame) });
 
-        _commandBuffers[_currentFrame].reset(vk::CommandBufferResetFlags{});
+        _commandBuffers[_currentFrame]->reset(vk::CommandBufferResetFlags{});
 
         vk::CommandBufferBeginInfo beginInfo{};
-        _commandBuffers[_currentFrame].begin(beginInfo);
+        _commandBuffers[_currentFrame]->begin(beginInfo);
 
         vk::ClearValue clearColor({ 1.0f, 1.0f, 1.0f, 1.0f });
 
         vk::RenderPassBeginInfo renderPassInfo(
-            _renderPass, _swapchainFramebuffers[_imageIndex], { { 0, 0 }, _swapchainExtent }, clearColor);
+            *_renderPass, *_swapchainFramebuffers[_imageIndex], { { 0, 0 }, _swapchainExtent }, clearColor);
 
         auto& currentFrameCommandBuffer = _commandBuffers[_currentFrame];
 
-        currentFrameCommandBuffer.beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
+        currentFrameCommandBuffer->beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
 
-        currentFrameCommandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, _rectPipeline);
+        currentFrameCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, _rectPipeline);
 
         vk::Viewport viewport(0.0f, 0.0f, _swapchainExtent.width, _swapchainExtent.height, 0.0f, 1.0f);
 
-        currentFrameCommandBuffer.setViewport(0, { viewport });
+        currentFrameCommandBuffer->setViewport(0, { viewport });
 
         vk::Rect2D scissor({ 0, 0 }, _swapchainExtent);
 
-        currentFrameCommandBuffer.setScissor(0, scissor);
+        currentFrameCommandBuffer->setScissor(0, scissor);
 
-        currentFrameCommandBuffer.bindVertexBuffers(0, { _vertexBuffers[_currentFrame] }, { 0 });
+        currentFrameCommandBuffer->bindVertexBuffers(0, { *_vertexBuffers[_currentFrame] }, { 0 });
 
-        currentFrameCommandBuffer.bindDescriptorSets(
+        currentFrameCommandBuffer->bindDescriptorSets(
             vk::PipelineBindPoint::eGraphics, _rectPipeline.GetPipelineLayout(), 0,
             { _uniformBufferDescriptorSets[_currentFrame] }, {});
 
-        currentFrameCommandBuffer.draw(static_cast<uint32_t>(_inProgressVerts.size()), 1, 0, 0);
+        currentFrameCommandBuffer->draw(static_cast<uint32_t>(_inProgressVerts.size()), 1, 0, 0);
 
-        currentFrameCommandBuffer.endRenderPass();
+        currentFrameCommandBuffer->endRenderPass();
 
-        currentFrameCommandBuffer.end();
+        currentFrameCommandBuffer->end();
 
         std::vector<vk::Semaphore> imageAvailableSemaphores = { _swapchainSync.ImageAvailableSemaphore(_currentFrame) };
         std::vector<vk::PipelineStageFlags> pipelineStageFlags{ (
             vk::PipelineStageFlags)vk::PipelineStageFlagBits::eColorAttachmentOutput };
-        std::vector<vk::CommandBuffer> commandBuffers = { currentFrameCommandBuffer };
+        std::vector<vk::CommandBuffer> commandBuffers = { *currentFrameCommandBuffer };
         std::vector<vk::Semaphore> recordFinishedSemaphores = { _swapchainSync.RenderFinishedSemaphore(_currentFrame) };
 
         vk::SubmitInfo submitInfo(imageAvailableSemaphores, pipelineStageFlags, commandBuffers, recordFinishedSemaphores);
@@ -907,7 +911,7 @@ namespace OpenRCT2::Ui::Vulkan
         std::vector<uint32_t> imageIndicies = { _imageIndex };
 
         std::vector<vk::Semaphore> renderFinishedSemaphores = { _swapchainSync.RenderFinishedSemaphore(_currentFrame) };
-        std::vector<vk::SwapchainKHR> swapChains = { _swapchain };
+        std::vector<vk::SwapchainKHR> swapChains = { *_swapchain };
 
         vk::PresentInfoKHR presentInfo(renderFinishedSemaphores, swapChains, imageIndicies, {});
 
@@ -925,7 +929,7 @@ namespace OpenRCT2::Ui::Vulkan
         {
             _framebufferResized = false;
 
-            _surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(_surface);
+            _surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(*_surface);
             ChooseSwapchainImageFormat();
             ChooseSwapchainExtent();
 
