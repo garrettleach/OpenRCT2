@@ -2,6 +2,7 @@
 
     #include "VulkanDrawingEngine.h"
 
+    #include "MemoryType.h"
     #include "SpirV.h"
     #include "VulkanDrawingContext.h"
 
@@ -556,30 +557,6 @@ namespace OpenRCT2::Ui::Vulkan
             vk::CommandPoolCreateFlagBits::eResetCommandBuffer, _queueIndicies.graphics);
 
         _commandPool = _device->createCommandPoolUnique(commandPoolCreate);
-    }
-
-    static uint32_t GetBufferMemoryType(
-        const vk::MemoryRequirements& memoryRequirements, const vk::PhysicalDeviceMemoryProperties& physicalDeviceMemoryProps)
-    {
-        optional<uint32_t> memoryType;
-        for (uint32_t i = 0; i < physicalDeviceMemoryProps.memoryTypeCount; i++)
-        {
-            if ((memoryRequirements.memoryTypeBits & (1 << i))
-                && ((physicalDeviceMemoryProps.memoryTypes[i].propertyFlags
-                     & (vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent))
-                    == (vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent)))
-            {
-                memoryType = i;
-                break;
-            }
-        }
-
-        if (!memoryType.has_value())
-        {
-            throw runtime_error("No suitable memory type for uniform buffer");
-        }
-
-        return memoryType.value();
     }
 
     void VulkanDrawingEngine::CreateUniformBuffer()
