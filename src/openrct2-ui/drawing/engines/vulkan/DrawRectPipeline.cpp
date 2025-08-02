@@ -47,8 +47,8 @@ namespace OpenRCT2::Ui::Vulkan
         const vk::Device& device, const vk::DescriptorSetLayout& descriptorSetLayout,
         const vk::PipelineLayout& pipelineLayout, const vk::RenderPass& renderPass)
     {
-        auto vertexShaderSpirV = ReadSpirVFile("vertex.spirv");
-        auto fragmentShaderSpirV = ReadSpirVFile("fragment.spirv");
+        auto vertexShaderSpirV = ReadSpirVFile("drawrect.vertex.spirv");
+        auto fragmentShaderSpirV = ReadSpirVFile("drawrect.fragment.spirv");
 
         vk::ShaderModuleCreateInfo createVertexShaderInfo(vk::ShaderModuleCreateFlags(), vertexShaderSpirV);
         vk::ShaderModuleCreateInfo createFragmentShaderInfo(vk::ShaderModuleCreateFlags(), fragmentShaderSpirV);
