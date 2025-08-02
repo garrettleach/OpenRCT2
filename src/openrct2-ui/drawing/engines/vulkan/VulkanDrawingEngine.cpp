@@ -535,7 +535,7 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::CreateGraphicsPipeline()
     {
-        _rectPipeline = DrawRectPipeline(_device, _renderPass);
+        _rectPipeline = DrawRectPipeline(_physicalDevice, *_device, *_renderPass);
     }
 
     void VulkanDrawingEngine::CreateFramebuffers()

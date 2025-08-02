@@ -25,7 +25,7 @@ namespace OpenRCT2::Ui::Vulkan
 
     public:
         DrawRectPipeline(std::nullptr_t);
-        DrawRectPipeline(const vk::UniqueDevice& device, const vk::UniqueRenderPass& renderPass);
+        DrawRectPipeline(const vk::PhysicalDevice& physicalDevice, const vk::Device& device, const vk::RenderPass& renderPass);
 
         DrawRectPipeline& operator=(const DrawRectPipeline&) = delete;
         DrawRectPipeline(const DrawRectPipeline&) = delete;
@@ -41,11 +41,11 @@ namespace OpenRCT2::Ui::Vulkan
         vk::DescriptorSetLayout GetDescriptorSetLayout();
 
     private:
-        static vk::UniqueDescriptorSetLayout CreateDescriptorSetLayout(const vk::UniqueDevice& device);
+        static vk::UniqueDescriptorSetLayout CreateDescriptorSetLayout(const vk::Device& device);
         static vk::UniquePipelineLayout CreatePipelineLayout(
-            const vk::UniqueDevice& device, const vk::DescriptorSetLayout& descriptorSetLayout);
+            const vk::Device& device, const vk::DescriptorSetLayout& descriptorSetLayout);
         static vk::UniquePipeline CreatePipeline(
-            const vk::UniqueDevice& device, const vk::DescriptorSetLayout& descriptorSetLayout,
+            const vk::Device& device, const vk::DescriptorSetLayout& descriptorSetLayout,
             const vk::PipelineLayout& pipelineLayout, const vk::RenderPass& renderPass);
     };
 } // namespace OpenRCT2::Ui::Vulkan

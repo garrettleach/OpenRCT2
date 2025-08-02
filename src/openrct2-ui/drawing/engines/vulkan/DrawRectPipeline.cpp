@@ -1,6 +1,8 @@
 #ifndef DISABLE_VULKAN
     #include "DrawRectPipeline.h"
-    
+
+    #include <glm/gtc/matrix_transform.hpp>
+    #include "MemoryType.h"
     #include "SpirV.h"
 
 using namespace std;
@@ -20,28 +22,28 @@ namespace OpenRCT2::Ui::Vulkan
         };
     }
 
-    vk::UniqueDescriptorSetLayout DrawRectPipeline::CreateDescriptorSetLayout(const vk::UniqueDevice& device)
+    vk::UniqueDescriptorSetLayout DrawRectPipeline::CreateDescriptorSetLayout(const vk::Device& device)
     {
         vk::DescriptorSetLayoutBinding uboLayoutBinding(
             0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex);
 
         vk::DescriptorSetLayoutCreateInfo layoutInfo(vk::DescriptorSetLayoutCreateFlags(), { uboLayoutBinding });
 
-        return device->createDescriptorSetLayoutUnique(layoutInfo);
+        return device.createDescriptorSetLayoutUnique(layoutInfo);
     }
 
     vk::UniquePipelineLayout DrawRectPipeline::CreatePipelineLayout(
-        const vk::UniqueDevice& device, const vk::DescriptorSetLayout& descriptorSetLayout)
+        const vk::Device& device, const vk::DescriptorSetLayout& descriptorSetLayout)
     {
         std::vector<vk::DescriptorSetLayout> descriptorSetLayouts{ descriptorSetLayout };
 
         vk::PipelineLayoutCreateInfo pipelineLayoutInfo(vk::PipelineLayoutCreateFlags(), descriptorSetLayouts);
 
-        return device->createPipelineLayoutUnique(pipelineLayoutInfo);
+        return device.createPipelineLayoutUnique(pipelineLayoutInfo);
     }
 
     vk::UniquePipeline DrawRectPipeline::CreatePipeline(
-        const vk::UniqueDevice& device, const vk::DescriptorSetLayout& descriptorSetLayout,
+        const vk::Device& device, const vk::DescriptorSetLayout& descriptorSetLayout,
         const vk::PipelineLayout& pipelineLayout, const vk::RenderPass& renderPass)
     {
         auto vertexShaderSpirV = ReadSpirVFile("vertex.spirv");
@@ -50,8 +52,8 @@ namespace OpenRCT2::Ui::Vulkan
         vk::ShaderModuleCreateInfo createVertexShaderInfo(vk::ShaderModuleCreateFlags(), vertexShaderSpirV);
         vk::ShaderModuleCreateInfo createFragmentShaderInfo(vk::ShaderModuleCreateFlags(), fragmentShaderSpirV);
 
-        auto vertexShaderModule = device->createShaderModuleUnique(createVertexShaderInfo);
-        auto fragmentShaderModule = device->createShaderModuleUnique(createFragmentShaderInfo);
+        auto vertexShaderModule = device.createShaderModuleUnique(createVertexShaderInfo);
+        auto fragmentShaderModule = device.createShaderModuleUnique(createFragmentShaderInfo);
 
         vk::PipelineShaderStageCreateInfo vertexShaderStageInfo(
             vk::PipelineShaderStageCreateFlags(), vk::ShaderStageFlagBits::eVertex, *vertexShaderModule, "main");
@@ -114,7 +116,7 @@ namespace OpenRCT2::Ui::Vulkan
                                                                vk::Pipeline{},
                                                                int32_t{} };
 
-        auto pipeline = device->createGraphicsPipelineUnique(nullptr, graphicsPipelineCreate);
+        auto pipeline = device.createGraphicsPipelineUnique(nullptr, graphicsPipelineCreate);
 
         return std::move(pipeline.value);
     }
@@ -126,10 +128,11 @@ namespace OpenRCT2::Ui::Vulkan
     {
     }
 
-    DrawRectPipeline::DrawRectPipeline(const vk::UniqueDevice& device, const vk::UniqueRenderPass& renderPass)
+    DrawRectPipeline::DrawRectPipeline(
+        const vk::PhysicalDevice& physicalDevice, const vk::Device& device, const vk::RenderPass& renderPass)
         : _descriptorSetLayout(CreateDescriptorSetLayout(device))
         , _pipelineLayout(CreatePipelineLayout(device, *_descriptorSetLayout))
-        , _pipeline(CreatePipeline(device, *_descriptorSetLayout, *_pipelineLayout, *renderPass))
+        , _pipeline(CreatePipeline(device, *_descriptorSetLayout, *_pipelineLayout, renderPass))
     {
     }
 
