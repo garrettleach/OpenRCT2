@@ -123,53 +123,67 @@ namespace OpenRCT2::Ui::Vulkan
     }
 
     DrawRectPipeline::DrawRectPipeline(std::nullptr_t)
-        : _descriptorSetLayout(nullptr)
-        , _pipelineLayout(nullptr)
-        , _pipeline(nullptr)
     {
     }
 
     DrawRectPipeline::DrawRectPipeline(
-        const vk::PhysicalDevice& physicalDevice, const vk::Device& device, const vk::RenderPass& renderPass, size_t framesInFlight)
-        : _framesInFlight(framesInFlight)
+        vk::PhysicalDevice physicalDevice, vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight)
+        : _physicalDevice(physicalDevice)
+        , _device(device)
+        , _framesInFlight(framesInFlight)
         , _descriptorSetLayout(CreateDescriptorSetLayout(device))
         , _pipelineLayout(CreatePipelineLayout(device, *_descriptorSetLayout))
         , _pipeline(CreatePipeline(device, *_descriptorSetLayout, *_pipelineLayout, renderPass))
     {
-        CreateBuffers(physicalDevice, device);
-        CreateDescriptorPool(device);
-        CreateDescriptorSets(device);
+        CreateBuffers();
+        CreateDescriptorPool();
+        CreateDescriptorSets();
+        CreateVertexBuffers();
     }
 
     DrawRectPipeline& DrawRectPipeline::operator=(DrawRectPipeline&& other)
     {
+        _physicalDevice = other._physicalDevice;
+        _device = other._device;
         _framesInFlight = other._framesInFlight;
+
+        _vertexDeviceMemorySize.clear();
+        _vertexMappedMemory.clear();
+        _vertexBuffers.clear();
+        _vertexDeviceMemory.clear();
+
+        _uniformBufferDescriptorSets.clear();
+        _uniformBufferDescriptorPool.release();
+        _uniformBufferObjectMappedMemory.clear();
+        _uniformBufferObjectBuffer.clear();
+        _uniformBufferObjectMemory.clear();
 
         _pipeline.release();
         _pipelineLayout.release();
         _descriptorSetLayout.release();
 
-        _uniformBufferObjectMemory.clear();
-        _uniformBufferObjectBuffer.clear();
-        _uniformBufferObjectMappedMemory.clear();
-        _uniformBufferDescriptorPool.release();
-        _uniformBufferDescriptorSets.clear();
-
-        _uniformBufferDescriptorSets = std::move(other._uniformBufferDescriptorSets);
-        _uniformBufferDescriptorPool = std::move(other._uniformBufferDescriptorPool);
-        _uniformBufferObjectMappedMemory = std::move(other._uniformBufferObjectMappedMemory);
-        _uniformBufferObjectBuffer = std::move(other._uniformBufferObjectBuffer);
-        _uniformBufferObjectMemory = std::move(other._uniformBufferObjectMemory);
-
         _descriptorSetLayout = std::move(other._descriptorSetLayout);
         _pipelineLayout = std::move(other._pipelineLayout);
         _pipeline = std::move(other._pipeline);
+
+        _uniformBufferObjectMemory = std::move(other._uniformBufferObjectMemory);
+        _uniformBufferObjectBuffer = std::move(other._uniformBufferObjectBuffer);
+        _uniformBufferObjectMappedMemory = std::move(other._uniformBufferObjectMappedMemory);
+        _uniformBufferDescriptorPool = std::move(other._uniformBufferDescriptorPool);
+        _uniformBufferDescriptorSets = std::move(other._uniformBufferDescriptorSets);
+
+        _vertexDeviceMemory = std::move(other._vertexDeviceMemory);
+        _vertexBuffers = std::move(other._vertexBuffers);
+        _vertexMappedMemory = std::move(other._vertexMappedMemory);
+        _vertexDeviceMemorySize = std::move(other._vertexDeviceMemorySize);
 
         return *this;
     }
 
     DrawRectPipeline::DrawRectPipeline(DrawRectPipeline&& other)
-        : _framesInFlight(other._framesInFlight)
+        : _physicalDevice(other._physicalDevice)
+        , _device(other._device)
+        , _framesInFlight(other._framesInFlight)
         , _descriptorSetLayout(std::move(other._descriptorSetLayout))
         , _pipelineLayout(std::move(other._pipelineLayout))
         , _pipeline(std::move(other._pipeline))
@@ -178,26 +192,30 @@ namespace OpenRCT2::Ui::Vulkan
         , _uniformBufferObjectMappedMemory(std::move(other._uniformBufferObjectMappedMemory))
         , _uniformBufferObjectBuffer(std::move(other._uniformBufferObjectBuffer))
         , _uniformBufferObjectMemory(std::move(other._uniformBufferObjectMemory))
+        , _vertexDeviceMemory(std::move(other._vertexDeviceMemory))
+        , _vertexBuffers(std::move(other._vertexBuffers))
+        , _vertexMappedMemory(std::move(other._vertexMappedMemory))
+        , _vertexDeviceMemorySize(std::move(other._vertexDeviceMemorySize))
     {
     }
 
-    void DrawRectPipeline::CreateDescriptorPool(const vk::Device& device)
+    void DrawRectPipeline::CreateDescriptorPool()
     {
         vk::DescriptorPoolSize poolSize(vk::DescriptorType::eUniformBuffer, static_cast<uint32_t>(_framesInFlight));
 
         vk::DescriptorPoolCreateInfo poolInfo(
             vk::DescriptorPoolCreateFlags(), static_cast<uint32_t>(_framesInFlight), { poolSize });
 
-        _uniformBufferDescriptorPool = device.createDescriptorPoolUnique(poolInfo);
+        _uniformBufferDescriptorPool = _device.createDescriptorPoolUnique(poolInfo);
     }
 
-    void DrawRectPipeline::CreateDescriptorSets(const vk::Device& device)
+    void DrawRectPipeline::CreateDescriptorSets()
     {
         std::vector<vk::DescriptorSetLayout> layouts(_framesInFlight, GetDescriptorSetLayout());
 
         vk::DescriptorSetAllocateInfo allocInfo(*_uniformBufferDescriptorPool, layouts);
 
-        auto descriptorSets = device.allocateDescriptorSets(allocInfo);
+        auto descriptorSets = _device.allocateDescriptorSets(allocInfo);
 
         // We don't want free to be called on these as they are part of a pool (that will release them)
         for (auto& descriptorSet : descriptorSets)
@@ -213,11 +231,11 @@ namespace OpenRCT2::Ui::Vulkan
             vk::WriteDescriptorSet descriptorWrite(
                 _uniformBufferDescriptorSets[i], 0, 0, vk::DescriptorType::eUniformBuffer, {}, { bufferInfo }, {});
 
-            device.updateDescriptorSets({ descriptorWrite }, {});
+            _device.updateDescriptorSets({ descriptorWrite }, {});
         }
     }
 
-    void DrawRectPipeline::CreateBuffers(const vk::PhysicalDevice& physicalDevice, const vk::Device& device)
+    void DrawRectPipeline::CreateBuffers()
     {
         vk::DeviceSize uniformBufferSize = sizeof(UniformBufferObject);
 
@@ -227,23 +245,54 @@ namespace OpenRCT2::Ui::Vulkan
                 vk::BufferCreateFlags{}, uniformBufferSize, vk::BufferUsageFlagBits::eUniformBuffer,
                 vk::SharingMode::eExclusive, {});
 
-            auto buffer = device.createBufferUnique(bufferInfo);
+            auto buffer = _device.createBufferUnique(bufferInfo);
 
-            auto memRequirements = device.getBufferMemoryRequirements(*buffer);
+            auto memRequirements = _device.getBufferMemoryRequirements(*buffer);
 
-            auto memoryType = GetBufferMemoryType(memRequirements, physicalDevice.getMemoryProperties());
+            auto memoryType = GetBufferMemoryType(memRequirements, _physicalDevice.getMemoryProperties());
 
             vk::MemoryAllocateInfo memAllocInfo(memRequirements.size, memoryType);
 
-            auto bufferMemory = device.allocateMemoryUnique(memAllocInfo);
+            auto bufferMemory = _device.allocateMemoryUnique(memAllocInfo);
 
-            device.bindBufferMemory(*buffer, *bufferMemory, 0);
+            _device.bindBufferMemory(*buffer, *bufferMemory, 0);
 
-            auto mappedBuffer = device.mapMemory(*bufferMemory, 0, uniformBufferSize, vk::MemoryMapFlags());
+            auto mappedBuffer = _device.mapMemory(*bufferMemory, 0, uniformBufferSize, vk::MemoryMapFlags());
 
             _uniformBufferObjectBuffer.push_back(std::move(buffer));
             _uniformBufferObjectMemory.push_back(std::move(bufferMemory));
             _uniformBufferObjectMappedMemory.push_back(mappedBuffer);
+        }
+    }
+
+    void DrawRectPipeline::CreateVertexBuffers()
+    {
+        vk::DeviceSize initialVertexBufferSize = sizeof(DrawRectPipeline::Vertex) * 6;
+        for (size_t i = 0; i < _framesInFlight; i++)
+        {
+            vk::BufferCreateInfo bufferInfo(
+                vk::BufferCreateFlags{}, initialVertexBufferSize, vk::BufferUsageFlagBits::eVertexBuffer,
+                vk::SharingMode::eExclusive, {});
+
+            auto buffer = _device.createBufferUnique(bufferInfo);
+
+            auto memRequirements = _device.getBufferMemoryRequirements(*buffer);
+
+            auto memoryType = GetBufferMemoryType(memRequirements, _physicalDevice.getMemoryProperties());
+
+            vk::MemoryAllocateInfo memAllocInfo(memRequirements.size, memoryType);
+
+            auto bufferMemory = _device.allocateMemoryUnique(memAllocInfo);
+
+            _device.bindBufferMemory(*buffer, *bufferMemory, 0);
+
+            auto mappedBuffer = _device.mapMemory(*bufferMemory, 0, initialVertexBufferSize, vk::MemoryMapFlags());
+
+            // testing: using a host buffer
+            _vertexBuffers.push_back(std::move(buffer));
+            _vertexDeviceMemory.push_back(std::move(bufferMemory));
+            _vertexDeviceMemorySize.push_back(initialVertexBufferSize);
+            _vertexMappedMemory.push_back(mappedBuffer);
         }
     }
 
@@ -253,9 +302,41 @@ namespace OpenRCT2::Ui::Vulkan
     }
 
     void DrawRectPipeline::Draw(
-        vk::CommandBuffer& commandBuffer, vk::Extent2D extent, vk::Buffer& buffer, uint32_t vertexCount,
-        uint32_t currentFrame)
+        vk::CommandBuffer& commandBuffer, vk::Extent2D extent, const vector<Vertex>& verticies, uint32_t currentFrame)
     {
+        auto neededMem = verticies.size() * sizeof(std::remove_reference_t<decltype(verticies)>::value_type);
+
+        if (_vertexDeviceMemorySize[currentFrame] < neededMem)
+        {
+            _vertexBuffers[currentFrame].reset();
+            _vertexDeviceMemory[currentFrame].reset();
+            _vertexDeviceMemorySize[currentFrame] = neededMem;
+
+            vk::BufferCreateInfo bufferInfo(
+                vk::BufferCreateFlags{}, neededMem, vk::BufferUsageFlagBits::eVertexBuffer, vk::SharingMode::eExclusive, {});
+
+            auto buffer = _device.createBufferUnique(bufferInfo);
+
+            auto memRequirements = _device.getBufferMemoryRequirements(*buffer);
+
+            auto memoryType = GetBufferMemoryType(memRequirements, _physicalDevice.getMemoryProperties());
+
+            vk::MemoryAllocateInfo memAllocInfo(memRequirements.size, memoryType);
+
+            auto bufferMemory = _device.allocateMemoryUnique(memAllocInfo);
+
+            _device.bindBufferMemory(*buffer, *bufferMemory, 0);
+
+            auto mappedBuffer = _device.mapMemory(*bufferMemory, 0, neededMem, vk::MemoryMapFlags());
+
+            _vertexBuffers[currentFrame] = std::move(buffer);
+            _vertexDeviceMemory[currentFrame] = std::move(bufferMemory);
+            _vertexDeviceMemorySize[currentFrame] = neededMem;
+            _vertexMappedMemory[currentFrame] = mappedBuffer;
+        }
+
+        std::memcpy(_vertexMappedMemory[currentFrame], verticies.data(), neededMem);
+
         DrawRectPipeline::UniformBufferObject ubo{
             .model = glm::identity<glm::mat4>(),
             .view = glm::lookAt(glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
@@ -274,12 +355,12 @@ namespace OpenRCT2::Ui::Vulkan
 
         commandBuffer.setScissor(0, scissor);
 
-        commandBuffer.bindVertexBuffers(0, { buffer }, { 0 });
+        commandBuffer.bindVertexBuffers(0, { *_vertexBuffers[currentFrame] }, { 0 });
 
         commandBuffer.bindDescriptorSets(
             vk::PipelineBindPoint::eGraphics, *_pipelineLayout, 0, { _uniformBufferDescriptorSets[currentFrame] }, {});
 
-        commandBuffer.draw(static_cast<uint32_t>(vertexCount), 1, 0, 0);
+        commandBuffer.draw(static_cast<uint32_t>(verticies.size()), 1, 0, 0);
     }
 } // namespace OpenRCT2::Ui::Vulkan
 #endif

@@ -21,7 +21,9 @@ namespace OpenRCT2::Ui::Vulkan
         };
 
     private:
-        size_t _framesInFlight;
+        vk::PhysicalDevice _physicalDevice;
+        vk::Device _device;
+        size_t _framesInFlight{ 0 };
 
         vk::UniqueDescriptorSetLayout _descriptorSetLayout;
         vk::UniquePipelineLayout _pipelineLayout;
@@ -33,9 +35,14 @@ namespace OpenRCT2::Ui::Vulkan
         vk::UniqueDescriptorPool _uniformBufferDescriptorPool;
         std::vector<vk::DescriptorSet> _uniformBufferDescriptorSets;
 
+        std::vector<vk::UniqueDeviceMemory> _vertexDeviceMemory;
+        std::vector<vk::UniqueBuffer> _vertexBuffers;
+        std::vector<void*> _vertexMappedMemory;
+        std::vector<vk::DeviceSize> _vertexDeviceMemorySize;
+
     public:
         DrawRectPipeline(std::nullptr_t);
-        DrawRectPipeline(const vk::PhysicalDevice& physicalDevice, const vk::Device& device, const vk::RenderPass& renderPass, size_t framesInFlight);
+        DrawRectPipeline(vk::PhysicalDevice physicalDevice, vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight);
 
         DrawRectPipeline& operator=(const DrawRectPipeline&) = delete;
         DrawRectPipeline(const DrawRectPipeline&) = delete;
@@ -48,7 +55,9 @@ namespace OpenRCT2::Ui::Vulkan
 
         vk::DescriptorSetLayout GetDescriptorSetLayout();
 
-        void Draw(vk::CommandBuffer& commandBuffer, vk::Extent2D extent, vk::Buffer& buffer, uint32_t vertexCount, uint32_t currentFrame);
+        void Draw(
+            vk::CommandBuffer& commandBuffer, vk::Extent2D extent, const std::vector<Vertex> &verticies,
+            uint32_t currentFrame);
 
     private:
         static vk::UniqueDescriptorSetLayout CreateDescriptorSetLayout(const vk::Device& device);
@@ -58,8 +67,10 @@ namespace OpenRCT2::Ui::Vulkan
             const vk::Device& device, const vk::DescriptorSetLayout& descriptorSetLayout,
             const vk::PipelineLayout& pipelineLayout, const vk::RenderPass& renderPass);
 
-        void CreateBuffers(const vk::PhysicalDevice& physicalDevice, const vk::Device& device);
-        void CreateDescriptorPool(const vk::Device& device);
-        void CreateDescriptorSets(const vk::Device& device);
+        void CreateBuffers();
+        void CreateDescriptorPool();
+        void CreateDescriptorSets();
+
+        void CreateVertexBuffers();
     };
 } // namespace OpenRCT2::Ui::Vulkan

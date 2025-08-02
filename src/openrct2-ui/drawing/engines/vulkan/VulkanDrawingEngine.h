@@ -63,11 +63,6 @@ namespace OpenRCT2::Ui::Vulkan
         std::vector<vk::UniqueCommandBuffer> _commandBuffers;
         SwapchainSync _swapchainSync = nullptr;
 
-        std::vector<vk::UniqueDeviceMemory> _vertexDeviceMemory;
-        std::vector<vk::UniqueBuffer> _vertexBuffers;
-        std::vector<void*> _vertexMappedMemory;
-        std::vector<vk::DeviceSize> _vertexDeviceMemorySize;
-
         bool _framebufferResized = false;
 
         uint32_t _currentFrame = 0;
@@ -103,7 +98,6 @@ namespace OpenRCT2::Ui::Vulkan
         void CreateGraphicsPipeline();
         void CreateFramebuffers();
         void CreateCommandPool();
-        void CreateVertexBuffers();
         void CreateCommandBuffers();
         void CreateSyncObjects();
 

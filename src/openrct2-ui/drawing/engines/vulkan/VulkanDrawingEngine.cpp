@@ -558,37 +558,6 @@ namespace OpenRCT2::Ui::Vulkan
         _commandPool = _device->createCommandPoolUnique(commandPoolCreate);
     }
 
-    void VulkanDrawingEngine::CreateVertexBuffers()
-    {
-        vk::DeviceSize initialVertexBufferSize = sizeof(DrawRectPipeline::Vertex) * 6;
-        for (size_t i = 0; i < _swapchainImages.size(); i++)
-        {
-            vk::BufferCreateInfo bufferInfo(
-                vk::BufferCreateFlags{}, initialVertexBufferSize, vk::BufferUsageFlagBits::eVertexBuffer,
-                vk::SharingMode::eExclusive, {});
-
-            auto buffer = _device->createBufferUnique(bufferInfo);
-
-            auto memRequirements = _device->getBufferMemoryRequirements(*buffer);
-
-            auto memoryType = GetBufferMemoryType(memRequirements, _physicalDeviceMemoryProps);
-
-            vk::MemoryAllocateInfo memAllocInfo(memRequirements.size, memoryType);
-
-            auto bufferMemory = _device->allocateMemoryUnique(memAllocInfo);
-
-            _device->bindBufferMemory(*buffer, *bufferMemory, 0);
-
-            auto mappedBuffer = _device->mapMemory(*bufferMemory, 0, initialVertexBufferSize, vk::MemoryMapFlags());
-
-            // testing: using a host buffer
-            _vertexBuffers.push_back(std::move(buffer));
-            _vertexDeviceMemory.push_back(std::move(bufferMemory));
-            _vertexDeviceMemorySize.push_back(initialVertexBufferSize);
-            _vertexMappedMemory.push_back(mappedBuffer);
-        }
-    }
-
     void VulkanDrawingEngine::CreateCommandBuffers()
     {
         vk::CommandBufferAllocateInfo allocInfo(
@@ -638,7 +607,6 @@ namespace OpenRCT2::Ui::Vulkan
         CreateGraphicsPipeline();
         CreateFramebuffers();
         CreateCommandPool();
-        CreateVertexBuffers();
         CreateCommandBuffers();
         CreateSyncObjects();
     }
@@ -728,40 +696,6 @@ namespace OpenRCT2::Ui::Vulkan
         // upload Vertex objects (_inProgressVerts)
         // testing: using a host buffer
 
-        auto neededMem = _inProgressVerts.size() * sizeof(decltype(_inProgressVerts)::value_type);
-
-        if (_vertexDeviceMemorySize[_currentFrame] < neededMem)
-        {
-            _vertexBuffers[_currentFrame].reset();
-            _vertexDeviceMemory[_currentFrame].reset();
-            _vertexDeviceMemorySize[_currentFrame] = neededMem;
-
-            vk::BufferCreateInfo bufferInfo(
-                vk::BufferCreateFlags{}, neededMem, vk::BufferUsageFlagBits::eVertexBuffer, vk::SharingMode::eExclusive, {});
-
-            auto buffer = _device->createBufferUnique(bufferInfo);
-
-            auto memRequirements = _device->getBufferMemoryRequirements(*buffer);
-
-            auto memoryType = GetBufferMemoryType(memRequirements, _physicalDeviceMemoryProps);
-
-            vk::MemoryAllocateInfo memAllocInfo(memRequirements.size, memoryType);
-
-            auto bufferMemory = _device->allocateMemoryUnique(memAllocInfo);
-
-            _device->bindBufferMemory(*buffer, *bufferMemory, 0);
-
-            auto mappedBuffer = _device->mapMemory(*bufferMemory, 0, neededMem, vk::MemoryMapFlags());
-
-            _vertexBuffers[_currentFrame] = std::move(buffer);
-            _vertexDeviceMemory[_currentFrame] = std::move(bufferMemory);
-            _vertexDeviceMemorySize[_currentFrame] = neededMem;
-            _vertexMappedMemory[_currentFrame] = mappedBuffer;
-        }
-
-        std::memcpy(_vertexMappedMemory[_currentFrame], _inProgressVerts.data(), neededMem);
-
-
         _device->resetFences({ _swapchainSync.InFlightFence(_currentFrame) });
 
         auto& currentFrameCommandBuffer = _commandBuffers[_currentFrame];
@@ -779,8 +713,8 @@ namespace OpenRCT2::Ui::Vulkan
         currentFrameCommandBuffer->beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
 
         _rectPipeline.Draw(
-            *currentFrameCommandBuffer, _swapchainExtent, *_vertexBuffers[_currentFrame],
-            static_cast<uint32_t>(_inProgressVerts.size()), _currentFrame);
+            *currentFrameCommandBuffer, _swapchainExtent,
+            _inProgressVerts, _currentFrame);
 
         currentFrameCommandBuffer->endRenderPass();
 
