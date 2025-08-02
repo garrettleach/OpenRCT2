@@ -28,13 +28,6 @@ namespace OpenRCT2::Ui::Vulkan
         {
             bool debugMonitorPresent = false;
         };
-
-        struct UniformBufferObject
-        {
-            alignas(16) glm::mat4 model;
-            alignas(16) glm::mat4 view;
-            alignas(16) glm::mat4 proj;
-        };
     } // namespace detail
 
     class VulkanDrawingEngine final : public OpenRCT2::Drawing::IDrawingEngine
@@ -67,11 +60,6 @@ namespace OpenRCT2::Ui::Vulkan
         DrawRectPipeline _rectPipeline = nullptr;
         std::vector<vk::UniqueFramebuffer> _swapchainFramebuffers{};
         vk::UniqueCommandPool _commandPool;
-        std::vector<vk::UniqueDeviceMemory> _uniformBufferObjectMemory;
-        std::vector<vk::UniqueBuffer> _uniformBufferObjectBuffer;
-        std::vector<void*> _uniformBufferObjectMappedMemory;
-        vk::UniqueDescriptorPool _uniformBufferDescriptorPool;
-        std::vector<vk::DescriptorSet> _uniformBufferDescriptorSets;
         std::vector<vk::UniqueCommandBuffer> _commandBuffers;
         SwapchainSync _swapchainSync = nullptr;
 
@@ -115,10 +103,7 @@ namespace OpenRCT2::Ui::Vulkan
         void CreateGraphicsPipeline();
         void CreateFramebuffers();
         void CreateCommandPool();
-        void CreateUniformBuffer();
         void CreateVertexBuffers();
-        void CreateDescriptorPool();
-        void CreateDescriptorSets();
         void CreateCommandBuffers();
         void CreateSyncObjects();
 

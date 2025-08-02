@@ -8,7 +8,6 @@
 
     #include <SDL2/SDL_vulkan.h>
     #include <algorithm>
-    #include <glm/gtc/matrix_transform.hpp>
     #include <openrct2/ui/UiContext.h>
 
     #if _WIN32
@@ -535,7 +534,7 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::CreateGraphicsPipeline()
     {
-        _rectPipeline = DrawRectPipeline(_physicalDevice, *_device, *_renderPass);
+        _rectPipeline = DrawRectPipeline(_physicalDevice, *_device, *_renderPass, _swapchainImages.size());
     }
 
     void VulkanDrawingEngine::CreateFramebuffers()
@@ -557,36 +556,6 @@ namespace OpenRCT2::Ui::Vulkan
             vk::CommandPoolCreateFlagBits::eResetCommandBuffer, _queueIndicies.graphics);
 
         _commandPool = _device->createCommandPoolUnique(commandPoolCreate);
-    }
-
-    void VulkanDrawingEngine::CreateUniformBuffer()
-    {
-        vk::DeviceSize uniformBufferSize = sizeof(UniformBufferObject);
-
-        for (size_t i = 0; i < _swapchainImages.size(); i++)
-        {
-            vk::BufferCreateInfo bufferInfo(
-                vk::BufferCreateFlags{}, uniformBufferSize, vk::BufferUsageFlagBits::eUniformBuffer,
-                vk::SharingMode::eExclusive, {});
-
-            auto buffer = _device->createBufferUnique(bufferInfo);
-
-            auto memRequirements = _device->getBufferMemoryRequirements(*buffer);
-
-            auto memoryType = GetBufferMemoryType(memRequirements, _physicalDeviceMemoryProps);
-
-            vk::MemoryAllocateInfo memAllocInfo(memRequirements.size, memoryType);
-
-            auto bufferMemory = _device->allocateMemoryUnique(memAllocInfo);
-
-            _device->bindBufferMemory(*buffer, *bufferMemory, 0);
-
-            auto mappedBuffer = _device->mapMemory(*bufferMemory, 0, uniformBufferSize, vk::MemoryMapFlags());
-
-            _uniformBufferObjectBuffer.push_back(std::move(buffer));
-            _uniformBufferObjectMemory.push_back(std::move(bufferMemory));
-            _uniformBufferObjectMappedMemory.push_back(mappedBuffer);
-        }
     }
 
     void VulkanDrawingEngine::CreateVertexBuffers()
@@ -617,41 +586,6 @@ namespace OpenRCT2::Ui::Vulkan
             _vertexDeviceMemory.push_back(std::move(bufferMemory));
             _vertexDeviceMemorySize.push_back(initialVertexBufferSize);
             _vertexMappedMemory.push_back(mappedBuffer);
-        }
-    }
-
-    void VulkanDrawingEngine::CreateDescriptorPool()
-    {
-        vk::DescriptorPoolSize poolSize(vk::DescriptorType::eUniformBuffer, static_cast<uint32_t>(_swapchainImages.size()));
-
-        vk::DescriptorPoolCreateInfo poolInfo(
-            vk::DescriptorPoolCreateFlags(), static_cast<uint32_t>(_swapchainImages.size()), { poolSize });
-
-        _uniformBufferDescriptorPool = _device->createDescriptorPoolUnique(poolInfo);
-    }
-
-    void VulkanDrawingEngine::CreateDescriptorSets()
-    {
-        std::vector<vk::DescriptorSetLayout> layouts(_swapchainImages.size(), _rectPipeline.GetDescriptorSetLayout());
-
-        vk::DescriptorSetAllocateInfo allocInfo(*_uniformBufferDescriptorPool, layouts);
-
-        auto descriptorSets = _device->allocateDescriptorSets(allocInfo);
-
-        // We don't want free to be called on these as they are part of a pool (that will release them)
-        for (auto& descriptorSet : descriptorSets)
-        {
-            _uniformBufferDescriptorSets.push_back(descriptorSet);
-        }
-
-        for (size_t i = 0; i < _uniformBufferDescriptorSets.size(); i++)
-        {
-            vk::DescriptorBufferInfo bufferInfo(*_uniformBufferObjectBuffer[i], 0, sizeof(UniformBufferObject));
-
-            vk::WriteDescriptorSet descriptorWrite(
-                _uniformBufferDescriptorSets[i], 0, 0, vk::DescriptorType::eUniformBuffer, {}, { bufferInfo }, {});
-
-            _device->updateDescriptorSets({ descriptorWrite }, {});
         }
     }
 
@@ -704,10 +638,7 @@ namespace OpenRCT2::Ui::Vulkan
         CreateGraphicsPipeline();
         CreateFramebuffers();
         CreateCommandPool();
-        CreateUniformBuffer();
         CreateVertexBuffers();
-        CreateDescriptorPool();
-        CreateDescriptorSets();
         CreateCommandBuffers();
         CreateSyncObjects();
     }
@@ -830,46 +761,26 @@ namespace OpenRCT2::Ui::Vulkan
 
         std::memcpy(_vertexMappedMemory[_currentFrame], _inProgressVerts.data(), neededMem);
 
-        UniformBufferObject ubo{ .model = glm::identity<glm::mat4>(),
-                                 .view = glm::lookAt(
-                                     glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-                                 .proj = glm::ortho(0.0f, 1.0f, 0.00f, 1.0f, -10.0f, 10.0f) };
-
-        std::memcpy(_uniformBufferObjectMappedMemory[_currentFrame], &ubo, sizeof(ubo));
 
         _device->resetFences({ _swapchainSync.InFlightFence(_currentFrame) });
 
-        _commandBuffers[_currentFrame]->reset(vk::CommandBufferResetFlags{});
+        auto& currentFrameCommandBuffer = _commandBuffers[_currentFrame];
+
+        currentFrameCommandBuffer->reset(vk::CommandBufferResetFlags{});
 
         vk::CommandBufferBeginInfo beginInfo{};
-        _commandBuffers[_currentFrame]->begin(beginInfo);
+        currentFrameCommandBuffer->begin(beginInfo);
 
         vk::ClearValue clearColor({ 1.0f, 1.0f, 1.0f, 1.0f });
 
         vk::RenderPassBeginInfo renderPassInfo(
             *_renderPass, *_swapchainFramebuffers[_imageIndex], { { 0, 0 }, _swapchainExtent }, clearColor);
 
-        auto& currentFrameCommandBuffer = _commandBuffers[_currentFrame];
-
         currentFrameCommandBuffer->beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
 
-        currentFrameCommandBuffer->bindPipeline(vk::PipelineBindPoint::eGraphics, _rectPipeline);
-
-        vk::Viewport viewport(0.0f, 0.0f, _swapchainExtent.width, _swapchainExtent.height, 0.0f, 1.0f);
-
-        currentFrameCommandBuffer->setViewport(0, { viewport });
-
-        vk::Rect2D scissor({ 0, 0 }, _swapchainExtent);
-
-        currentFrameCommandBuffer->setScissor(0, scissor);
-
-        currentFrameCommandBuffer->bindVertexBuffers(0, { *_vertexBuffers[_currentFrame] }, { 0 });
-
-        currentFrameCommandBuffer->bindDescriptorSets(
-            vk::PipelineBindPoint::eGraphics, _rectPipeline.GetPipelineLayout(), 0,
-            { _uniformBufferDescriptorSets[_currentFrame] }, {});
-
-        currentFrameCommandBuffer->draw(static_cast<uint32_t>(_inProgressVerts.size()), 1, 0, 0);
+        _rectPipeline.Draw(
+            *currentFrameCommandBuffer, _swapchainExtent, *_vertexBuffers[_currentFrame],
+            static_cast<uint32_t>(_inProgressVerts.size()), _currentFrame);
 
         currentFrameCommandBuffer->endRenderPass();
 
