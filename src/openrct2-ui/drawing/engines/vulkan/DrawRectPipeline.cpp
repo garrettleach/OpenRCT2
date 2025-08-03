@@ -9,19 +9,22 @@ using namespace std;
 
 namespace OpenRCT2::Ui::Vulkan
 {
-    vk::VertexInputBindingDescription GetBindingDescription()
+    namespace
     {
-        return { 0, sizeof(DrawRectPipeline::Vertex), vk::VertexInputRate::eVertex };
-    }
+        vk::VertexInputBindingDescription GetBindingDescription()
+        {
+            return { 0, sizeof(DrawRectPipeline::Vertex), vk::VertexInputRate::eVertex };
+        }
 
-    std::array<vk::VertexInputAttributeDescription, 2> GetAttributeDescriptions()
-    {
-        return {
-            vk::VertexInputAttributeDescription{ 0, 0, vk::Format::eR32G32Sfloat, offsetof(DrawRectPipeline::Vertex, pos) },
-            vk::VertexInputAttributeDescription{ 1, 0, vk::Format::eR32G32B32Sfloat,
-                                                 offsetof(DrawRectPipeline::Vertex, color) },
-        };
-    }
+        std::array<vk::VertexInputAttributeDescription, 2> GetAttributeDescriptions()
+        {
+            return {
+                vk::VertexInputAttributeDescription{ 0, 0, vk::Format::eR32G32Sfloat, offsetof(DrawRectPipeline::Vertex, pos) },
+                vk::VertexInputAttributeDescription{ 1, 0, vk::Format::eR32G32B32Sfloat,
+                                                     offsetof(DrawRectPipeline::Vertex, color) },
+            };
+        }
+    } // namespace
 
     vk::UniqueDescriptorSetLayout DrawRectPipeline::CreateDescriptorSetLayout(const vk::Device& device)
     {
