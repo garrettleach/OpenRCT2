@@ -3,17 +3,21 @@
 
 using namespace OpenRCT2::Ui::Vulkan;
 
-SwapchainSync::SwapchainSync(const vk::UniqueDevice& device, size_t size)
+SwapchainSync::SwapchainSync(const vk::UniqueDevice& device, size_t framesInFlight, size_t swapchainImageCount)
 {
     vk::SemaphoreCreateInfo semaphorInfo{ vk::SemaphoreCreateFlags() };
 
     vk::FenceCreateInfo fenceInfo(vk::FenceCreateFlagBits::eSignaled);
 
-    for (size_t i = 0; i < size; i++)
+    for (size_t i = 0; i < framesInFlight; i++)
     {
-        _imageAvailableSemaphores.push_back(device->createSemaphoreUnique(semaphorInfo));
-        _renderFinishedSemaphores.push_back(device->createSemaphoreUnique(semaphorInfo));
         _inFlightFences.push_back(device->createFenceUnique(fenceInfo));
+        _acquireSemaphores.push_back(device->createSemaphoreUnique(semaphorInfo));
+    }
+
+    for (size_t i = 0; i < swapchainImageCount; i++)
+    {
+        _bufferSubmitSemaphores.push_back(device->createSemaphoreUnique(semaphorInfo));
     }
 }
 
@@ -23,33 +27,33 @@ SwapchainSync::SwapchainSync(nullptr_t)
 
 SwapchainSync& SwapchainSync::operator=(SwapchainSync&& other)
 {
-    _imageAvailableSemaphores = std::move(other._imageAvailableSemaphores);
-    _renderFinishedSemaphores = std::move(other._renderFinishedSemaphores);
     _inFlightFences = std::move(other._inFlightFences);
+    _acquireSemaphores = std::move(other._acquireSemaphores);
+    _bufferSubmitSemaphores = std::move(other._bufferSubmitSemaphores);
 
     return *this;
 }
 
 SwapchainSync::SwapchainSync(SwapchainSync&& other)
-    : _imageAvailableSemaphores(std::move(other._imageAvailableSemaphores))
-    , _renderFinishedSemaphores(std::move(other._renderFinishedSemaphores))
-    , _inFlightFences(std::move(other._inFlightFences))
+    : _inFlightFences(std::move(other._inFlightFences))
+    , _acquireSemaphores(std::move(other._acquireSemaphores))
+    , _bufferSubmitSemaphores(std::move(other._bufferSubmitSemaphores))
 {
 }
 
-vk::Semaphore OpenRCT2::Ui::Vulkan::SwapchainSync::ImageAvailableSemaphore(uint32_t index)
+vk::Fence SwapchainSync::InFlightFence(uint32_t frameNumber)
 {
-    return *_imageAvailableSemaphores[index];
+    return *_inFlightFences[frameNumber];
 }
 
-vk::Semaphore OpenRCT2::Ui::Vulkan::SwapchainSync::RenderFinishedSemaphore(uint32_t index)
+vk::Semaphore SwapchainSync::AcquireSemaphore(uint32_t frameNumber)
 {
-    return *_renderFinishedSemaphores[index];
+    return *_acquireSemaphores[frameNumber];
 }
 
-vk::Fence OpenRCT2::Ui::Vulkan::SwapchainSync::InFlightFence(uint32_t index)
+vk::Semaphore SwapchainSync::CommandSubmitSemaphore(uint32_t acquiredImageIndex)
 {
-    return *_inFlightFences[index];
+    return *_bufferSubmitSemaphores[acquiredImageIndex];
 }
 
 #endif

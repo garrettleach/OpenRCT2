@@ -32,6 +32,8 @@ namespace OpenRCT2::Ui::Vulkan
 
     class VulkanDrawingEngine final : public OpenRCT2::Drawing::IDrawingEngine
     {
+        const uint32_t _framesInFlight = 2;
+
         IUiContext& _uiContext;
         SDL_Window* _window;
         std::unique_ptr<VulkanDrawingContext> _drawingContext;
@@ -53,14 +55,15 @@ namespace OpenRCT2::Ui::Vulkan
         vk::SurfaceFormatKHR _surfaceFormat{};
         vk::Extent2D _swapchainExtent{};
         vk::PresentModeKHR _presentationMode{};
+        uint32_t _swapchainImageCount{};
         vk::UniqueSwapchainKHR _swapchain;
-        std::vector<vk::Image> _swapchainImages{};
-        std::vector<vk::UniqueImageView> _swapchainImageViews{};
+        std::vector<vk::Image> _swapchainImages{}; // [0,_swapchainImageCount)
+        std::vector<vk::UniqueImageView> _swapchainImageViews{}; // [0,_swapchainImageCount)
         vk::UniqueRenderPass _renderPass;
         DrawRectPipeline _rectPipeline = nullptr;
         std::vector<vk::UniqueFramebuffer> _swapchainFramebuffers{};
         vk::UniqueCommandPool _commandPool;
-        std::vector<vk::UniqueCommandBuffer> _commandBuffers;
+        std::vector<vk::UniqueCommandBuffer> _commandBuffers; //[0,_framesInFlight)
         SwapchainSync _swapchainSync = nullptr;
 
         bool _framebufferResized = false;

@@ -472,7 +472,7 @@ namespace OpenRCT2::Ui::Vulkan
             maxImageCount = std::numeric_limits<uint32_t>::max();
         }
 
-        uint32_t imageCount = clamp<uint32_t>(2, _surfaceCapabilities.minImageCount, maxImageCount);
+        _swapchainImageCount = clamp<uint32_t>(2, _surfaceCapabilities.minImageCount, maxImageCount);
 
         vk::SharingMode sharingMode = vk::SharingMode::eExclusive;
         vector<uint32_t> swapQueueFamilyIndices;
@@ -485,7 +485,7 @@ namespace OpenRCT2::Ui::Vulkan
         }
 
         vk::SwapchainCreateInfoKHR createInfo(
-            vk::SwapchainCreateFlagsKHR(), *_surface, imageCount, _surfaceFormat.format, _surfaceFormat.colorSpace,
+            vk::SwapchainCreateFlagsKHR(), *_surface, _swapchainImageCount, _surfaceFormat.format, _surfaceFormat.colorSpace,
             _swapchainExtent, 1, vk::ImageUsageFlagBits::eColorAttachment, sharingMode, swapQueueFamilyIndices,
             _surfaceCapabilities.currentTransform, vk::CompositeAlphaFlagBitsKHR::eOpaque, _presentationMode, true, {});
 
@@ -534,7 +534,7 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::CreateGraphicsPipelines()
     {
-        _rectPipeline = DrawRectPipeline(_physicalDevice, *_device, *_renderPass, _swapchainImages.size());
+        _rectPipeline = DrawRectPipeline(_physicalDevice, *_device, *_renderPass, _framesInFlight);
     }
 
     void VulkanDrawingEngine::CreateFramebuffers()
@@ -561,14 +561,14 @@ namespace OpenRCT2::Ui::Vulkan
     void VulkanDrawingEngine::CreateCommandBuffers()
     {
         vk::CommandBufferAllocateInfo allocInfo(
-            *_commandPool, vk::CommandBufferLevel::ePrimary, static_cast<uint32_t>(_swapchainImages.size()));
+            *_commandPool, vk::CommandBufferLevel::ePrimary, _swapchainImageCount);
 
         _commandBuffers = _device->allocateCommandBuffersUnique(allocInfo);
     }
 
     void VulkanDrawingEngine::CreateSyncObjects()
     {
-        _swapchainSync = SwapchainSync(_device, _swapchainImages.size());
+        _swapchainSync = SwapchainSync(_device, _framesInFlight, _swapchainImageCount);
     }
 
     void VulkanDrawingEngine::RecreateSwapChain()
@@ -636,7 +636,7 @@ namespace OpenRCT2::Ui::Vulkan
         std::ignore = _device->waitForFences({ _swapchainSync.InFlightFence(_currentFrame) }, true, std::numeric_limits<uint64_t>::max());
 
         auto nextImageResult = _device->acquireNextImageKHR(*_swapchain,
-            std::numeric_limits<uint64_t>::max(), _swapchainSync.ImageAvailableSemaphore(_currentFrame), {});
+            std::numeric_limits<uint64_t>::max(), _swapchainSync.AcquireSemaphore(_currentFrame), {});
 
         if (nextImageResult.result == vk::Result::eErrorOutOfDateKHR)
         {
@@ -649,7 +649,7 @@ namespace OpenRCT2::Ui::Vulkan
             RecreateSwapChain();
 
             nextImageResult = _device->acquireNextImageKHR(*_swapchain,
-                std::numeric_limits<uint64_t>::max(), _swapchainSync.ImageAvailableSemaphore(_currentFrame), {});
+                std::numeric_limits<uint64_t>::max(), _swapchainSync.AcquireSemaphore(_currentFrame), {});
 
             if (nextImageResult.result != vk::Result::eSuccess)
             {
@@ -720,22 +720,21 @@ namespace OpenRCT2::Ui::Vulkan
 
         currentFrameCommandBuffer->end();
 
-        std::vector<vk::Semaphore> imageAvailableSemaphores = { _swapchainSync.ImageAvailableSemaphore(_currentFrame) };
+        std::vector<vk::Semaphore> imageAvailableSemaphores = { _swapchainSync.AcquireSemaphore(_currentFrame) };
         std::vector<vk::PipelineStageFlags> pipelineStageFlags{ (
             vk::PipelineStageFlags)vk::PipelineStageFlagBits::eColorAttachmentOutput };
         std::vector<vk::CommandBuffer> commandBuffers = { *currentFrameCommandBuffer };
-        std::vector<vk::Semaphore> recordFinishedSemaphores = { _swapchainSync.RenderFinishedSemaphore(_currentFrame) };
+        std::vector<vk::Semaphore> submitSemaphores = { _swapchainSync.CommandSubmitSemaphore(_imageIndex) };
 
-        vk::SubmitInfo submitInfo(imageAvailableSemaphores, pipelineStageFlags, commandBuffers, recordFinishedSemaphores);
+        vk::SubmitInfo submitInfo(imageAvailableSemaphores, pipelineStageFlags, commandBuffers, submitSemaphores);
 
         _graphicsQueue.submit(submitInfo, _swapchainSync.InFlightFence(_currentFrame));
 
         std::vector<uint32_t> imageIndicies = { _imageIndex };
 
-        std::vector<vk::Semaphore> renderFinishedSemaphores = { _swapchainSync.RenderFinishedSemaphore(_currentFrame) };
         std::vector<vk::SwapchainKHR> swapChains = { *_swapchain };
 
-        vk::PresentInfoKHR presentInfo(renderFinishedSemaphores, swapChains, imageIndicies, {});
+        vk::PresentInfoKHR presentInfo(submitSemaphores, swapChains, imageIndicies, {});
 
         vk::Result result;
         try
@@ -762,7 +761,7 @@ namespace OpenRCT2::Ui::Vulkan
             throw std::runtime_error("Failed to present rendered frame");
         }
 
-        _currentFrame = (_currentFrame + 1) % _swapchainImages.size();
+        _currentFrame = (_currentFrame + 1) % _framesInFlight;
     }
 
     void VulkanDrawingEngine::PaintWindows()

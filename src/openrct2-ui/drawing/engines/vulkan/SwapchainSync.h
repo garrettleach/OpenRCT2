@@ -6,12 +6,15 @@ namespace OpenRCT2::Ui::Vulkan
 {
     class SwapchainSync
     {
-        std::vector<vk::UniqueSemaphore> _imageAvailableSemaphores;
-        std::vector<vk::UniqueSemaphore> _renderFinishedSemaphores;
+        // size: framesInFlight
         std::vector<vk::UniqueFence> _inFlightFences;
+        // size: framesInFlight
+        std::vector<vk::UniqueSemaphore> _acquireSemaphores;
+        // size: swapchainImageCount
+        std::vector<vk::UniqueSemaphore> _bufferSubmitSemaphores;
 
     public:
-        SwapchainSync(const vk::UniqueDevice& device, size_t size);
+        SwapchainSync(const vk::UniqueDevice& device, size_t framesInFlight, size_t swapchainImageCount);
         SwapchainSync(nullptr_t);
         ~SwapchainSync() = default;
 
@@ -21,9 +24,16 @@ namespace OpenRCT2::Ui::Vulkan
         SwapchainSync& operator=(SwapchainSync&&);
         SwapchainSync(SwapchainSync&&);
 
-        vk::Semaphore ImageAvailableSemaphore(uint32_t index);
-        vk::Semaphore RenderFinishedSemaphore(uint32_t index);
-        vk::Fence InFlightFence(uint32_t index);
+        // Passed to waitForFences before any resources are used for the frame
+        // Passed to resetFences before graphics queue submit
+        // Passed to graphics queue submit
+        vk::Fence InFlightFence(uint32_t frameNumber);
+        // Passed as semaphore into acquireNextImageKHR
+        // Passed as the wait semaphore for the queuePresent
+        vk::Semaphore AcquireSemaphore(uint32_t frameNumber);
+        // Passed as signal semaphore in graphics queue submit
+        // Passed as wait semaphore to presentKHR
+        vk::Semaphore CommandSubmitSemaphore(uint32_t acquiredImageIndex);
 
         void clear();
     };
