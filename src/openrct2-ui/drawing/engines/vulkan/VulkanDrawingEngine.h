@@ -95,7 +95,7 @@ namespace OpenRCT2::Ui::Vulkan
         void CreateSwapchainImages();
         void CreateSwapchainImageViews();
         void CreateRenderPass();
-        void CreateGraphicsPipeline();
+        void CreateGraphicsPipelines();
         void CreateFramebuffers();
         void CreateCommandPool();
         void CreateCommandBuffers();

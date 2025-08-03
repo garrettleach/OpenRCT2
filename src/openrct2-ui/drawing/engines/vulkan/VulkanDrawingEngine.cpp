@@ -532,7 +532,7 @@ namespace OpenRCT2::Ui::Vulkan
         _renderPass = _device->createRenderPassUnique(renderPassInfo);
     }
 
-    void VulkanDrawingEngine::CreateGraphicsPipeline()
+    void VulkanDrawingEngine::CreateGraphicsPipelines()
     {
         _rectPipeline = DrawRectPipeline(_physicalDevice, *_device, *_renderPass, _swapchainImages.size());
     }
@@ -604,7 +604,7 @@ namespace OpenRCT2::Ui::Vulkan
         CreateSwapchainImages();
         CreateSwapchainImageViews();
         CreateRenderPass();
-        CreateGraphicsPipeline();
+        CreateGraphicsPipelines();
         CreateFramebuffers();
         CreateCommandPool();
         CreateCommandBuffers();
