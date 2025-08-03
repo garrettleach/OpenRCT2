@@ -1,6 +1,7 @@
 #pragma once
 
 #include "DrawRectPipeline.h"
+#include "DrawSpritePipeline.h"
 #include "SwapchainSync.h"
 
 #include <SDL2/SDL.h>
@@ -61,6 +62,7 @@ namespace OpenRCT2::Ui::Vulkan
         std::vector<vk::UniqueImageView> _swapchainImageViews{}; // [0,_swapchainImageCount)
         vk::UniqueRenderPass _renderPass;
         DrawRectPipeline _rectPipeline = nullptr;
+        DrawSpritePipeline _drawSpritePipeline = nullptr;
         std::vector<vk::UniqueFramebuffer> _swapchainFramebuffers{};
         vk::UniqueCommandPool _commandPool;
         std::vector<vk::UniqueCommandBuffer> _commandBuffers; //[0,_framesInFlight)
@@ -74,6 +76,7 @@ namespace OpenRCT2::Ui::Vulkan
         OpenRCT2::Drawing::GamePalette _palette;
 
         std::vector<DrawRectPipeline::Vertex> _inProgressVerts;
+        std::vector<DrawSpritePipeline::Vertex> _inProgressSprites;
 
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext);

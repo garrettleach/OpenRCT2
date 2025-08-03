@@ -535,6 +535,7 @@ namespace OpenRCT2::Ui::Vulkan
     void VulkanDrawingEngine::CreateGraphicsPipelines()
     {
         _rectPipeline = DrawRectPipeline(_physicalDevice, *_device, *_renderPass, _framesInFlight);
+        _drawSpritePipeline = DrawSpritePipeline(_physicalDevice, *_device, *_renderPass, _framesInFlight);
     }
 
     void VulkanDrawingEngine::CreateFramebuffers()
@@ -664,6 +665,7 @@ namespace OpenRCT2::Ui::Vulkan
         _imageIndex = nextImageResult.value;
 
         _inProgressVerts.clear();
+        _inProgressSprites.clear();
     }
 
     void VulkanDrawingEngine::EndDraw()
@@ -691,6 +693,28 @@ namespace OpenRCT2::Ui::Vulkan
             _inProgressVerts.push_back(DrawRectPipeline::Vertex{ .pos = { left, bottom }, .color = { red, green, blue } });
         }
 
+        auto spriteData = _drawingContext->DumpDrawSpriteData();
+
+        for (auto data : spriteData)
+        {
+            std::ignore /* auto imageIndex */ = _drawSpritePipeline.GetImageIndex(data.imageId);
+
+            uint32_t width = 16;
+            uint32_t height = 16;
+
+            auto left = (float)(data.x) / (float)_mainRT.width;
+            auto right = (float)(data.x + width) / (float)_mainRT.width;
+            auto top = (float)(data.y) / (float)_mainRT.height;
+            auto bottom = (float)(data.y + height) / (float)_mainRT.height;
+
+            _inProgressSprites.push_back(DrawSpritePipeline::Vertex{ .pos = { right, top }, .index = 0 /* imageIndex */ });
+            _inProgressSprites.push_back(DrawSpritePipeline::Vertex{ .pos = { left, top }, .index = 0 /* imageIndex */ });
+            _inProgressSprites.push_back(DrawSpritePipeline::Vertex{ .pos = { right, bottom }, .index = 0 /* imageIndex */ });
+            _inProgressSprites.push_back(DrawSpritePipeline::Vertex{ .pos = { right, bottom }, .index = 0 /* imageIndex */ });
+            _inProgressSprites.push_back(DrawSpritePipeline::Vertex{ .pos = { left, top }, .index = 0 /* imageIndex */ });
+            _inProgressSprites.push_back(DrawSpritePipeline::Vertex{ .pos = { left, bottom }, .index = 0 /* imageIndex */ });
+        }
+
         // TODO: upload textures if needed
 
         // upload Vertex objects (_inProgressVerts)
@@ -711,6 +735,8 @@ namespace OpenRCT2::Ui::Vulkan
             *_renderPass, *_swapchainFramebuffers[_imageIndex], { { 0, 0 }, _swapchainExtent }, clearColor);
 
         currentFrameCommandBuffer->beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
+
+        _drawSpritePipeline.Draw(*currentFrameCommandBuffer, _swapchainExtent, _inProgressSprites, _currentFrame);
 
         _rectPipeline.Draw(
             *currentFrameCommandBuffer, _swapchainExtent,

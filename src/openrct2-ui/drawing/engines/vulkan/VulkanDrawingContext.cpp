@@ -41,6 +41,7 @@ void VulkanDrawingContext::DrawLine(RenderTarget& rt, uint32_t colour, const Scr
 
 void VulkanDrawingContext::DrawSprite(RenderTarget& rt, const ImageId image, int32_t x, int32_t y)
 {
+    _drawSprites.push_back(DrawSpriteData{.x = x, .y = y, .imageId = image});
 }
 
 void VulkanDrawingContext::DrawSpriteRawMasked(
