@@ -10,6 +10,11 @@ vector<FillRectData>&& VulkanDrawingContext::DumpFillRectData()
     return std::move(_fillRects);
 }
 
+vector<DrawSpriteData>&& VulkanDrawingContext::DumpDrawSpriteData()
+{
+    return std::move(_drawSprites);
+}
+
 void VulkanDrawingContext::Clear(RenderTarget& rt, uint8_t paletteIndex)
 {
 }
