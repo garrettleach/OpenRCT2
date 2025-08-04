@@ -405,6 +405,11 @@ namespace OpenRCT2::Ui::Vulkan
         _device = _physicalDevice.createDeviceUnique(deviceCreateInfo.get());
     }
 
+    void VulkanDrawingEngine::CreateAllocator()
+    {
+        _vmaAllocator = std::make_unique<VulkanMemoryAllocator>(*_instance, _physicalDevice, *_device);
+    }
+
     void VulkanDrawingEngine::CreateQueues()
     {
         _graphicsQueue = _device->getQueue(_queueIndicies.graphics, 0);
@@ -596,6 +601,7 @@ namespace OpenRCT2::Ui::Vulkan
         CreateSurface();
         PickPhysicalDevice();
         CreateLogicalDevice();
+        CreateAllocator();
         CreateQueues();
         _surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(*_surface);
         ChooseSwapchainImageFormat();

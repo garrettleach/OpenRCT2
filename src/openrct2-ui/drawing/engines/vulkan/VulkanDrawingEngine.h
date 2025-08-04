@@ -12,6 +12,7 @@
 #include <openrct2/ui/UiContext.h>
 #include <string>
 #include <vulkan/vulkan_raii.hpp>
+#include "VulkanMemoryAllocator.h"
 
 namespace OpenRCT2::Ui::Vulkan
 {
@@ -50,6 +51,7 @@ namespace OpenRCT2::Ui::Vulkan
         detail::QueueIndicies _queueIndicies{};
         vk::PhysicalDeviceMemoryProperties _physicalDeviceMemoryProps{};
         vk::UniqueDevice _device;
+        std::unique_ptr<VulkanMemoryAllocator> _vmaAllocator;
         vk::Queue _graphicsQueue = nullptr;
         vk::Queue _presentationQueue = nullptr;
         vk::SurfaceCapabilitiesKHR _surfaceCapabilities{};
@@ -93,6 +95,7 @@ namespace OpenRCT2::Ui::Vulkan
         void CreateSurface();
         void PickPhysicalDevice();
         void CreateLogicalDevice();
+        void CreateAllocator();
         void CreateQueues();
         void ChooseSwapchainImageFormat();
         void ChooseSwapchainExtent();
