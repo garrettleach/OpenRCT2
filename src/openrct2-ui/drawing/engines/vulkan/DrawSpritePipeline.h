@@ -2,6 +2,7 @@
 #include <glm/glm.hpp>
 #include <openrct2/drawing/ImageId.hpp>
 #include <vulkan/vulkan_raii.hpp>
+#include "VulkanMemoryAllocator.h"
 
 
 namespace OpenRCT2::Ui::Vulkan
@@ -27,18 +28,20 @@ namespace OpenRCT2::Ui::Vulkan
         vk::Device _device;
         size_t _framesInFlight{ 0 };
 
+        VmaAllocator _alloc;
+
         vk::UniqueDescriptorSetLayout _descriptorSetLayout;
         vk::UniquePipelineLayout _pipelineLayout;
         vk::UniquePipeline _pipeline;
 
-        std::vector<vk::UniqueDeviceMemory> _uniformBufferObjectMemory;
-        std::vector<vk::UniqueBuffer> _uniformBufferObjectBuffer;
+        std::vector<VmaAllocation> _uniformBufferObjectMemory;
+        std::vector<VkBuffer> _uniformBufferObjectBuffer;
         std::vector<void*> _uniformBufferObjectMappedMemory;
         vk::UniqueDescriptorPool _uniformBufferDescriptorPool;
         std::vector<vk::DescriptorSet> _uniformBufferDescriptorSets;
 
-        std::vector<vk::UniqueDeviceMemory> _vertexDeviceMemory;
-        std::vector<vk::UniqueBuffer> _vertexBuffers;
+        std::vector<VmaAllocation> _vertexDeviceMemory;
+        std::vector<VkBuffer> _vertexBuffers;
         std::vector<void*> _vertexMappedMemory;
         std::vector<vk::DeviceSize> _vertexDeviceMemorySize;
 
@@ -46,7 +49,8 @@ namespace OpenRCT2::Ui::Vulkan
 
     public:
         DrawSpritePipeline(
-            vk::PhysicalDevice physicalDevice, vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight);
+            vk::PhysicalDevice physicalDevice, vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight,
+            VulkanMemoryAllocator& vma);
 
         DrawSpritePipeline& operator=(const DrawSpritePipeline&) = delete;
         DrawSpritePipeline(const DrawSpritePipeline&) = delete;
@@ -54,7 +58,7 @@ namespace OpenRCT2::Ui::Vulkan
         DrawSpritePipeline& operator=(DrawSpritePipeline&&) = delete;
         DrawSpritePipeline(DrawSpritePipeline&&) = delete;
 
-        ~DrawSpritePipeline() = default;
+        ~DrawSpritePipeline();
 
         uint32_t GetImageIndex(ImageId imageId);
 

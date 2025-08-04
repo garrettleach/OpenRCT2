@@ -126,10 +126,12 @@ namespace OpenRCT2::Ui::Vulkan
     }
 
     DrawSpritePipeline::DrawSpritePipeline(
-        vk::PhysicalDevice physicalDevice, vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight)
+        vk::PhysicalDevice physicalDevice, vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight,
+        VulkanMemoryAllocator& vma)
         : _physicalDevice(physicalDevice)
         , _device(device)
         , _framesInFlight(framesInFlight)
+        , _alloc(vma)
         , _descriptorSetLayout(CreateDescriptorSetLayout(device))
         , _pipelineLayout(CreatePipelineLayout(device, *_descriptorSetLayout))
         , _pipeline(CreatePipeline(device, *_descriptorSetLayout, *_pipelineLayout, renderPass))
@@ -138,6 +140,19 @@ namespace OpenRCT2::Ui::Vulkan
         CreateDescriptorPool();
         CreateDescriptorSets();
         CreateVertexBuffers();
+    }
+
+    DrawSpritePipeline::~DrawSpritePipeline()
+    {
+        for (size_t i = 0; i < _vertexBuffers.size(); i++)
+        {
+            vmaDestroyBuffer(_alloc, _vertexBuffers[i], _vertexDeviceMemory[i]);
+        }
+
+        for (size_t i = 0; i < _uniformBufferObjectMemory.size(); i++)
+        {
+            vmaDestroyBuffer(_alloc, _uniformBufferObjectBuffer[i], _uniformBufferObjectMemory[i]);
+        }
     }
 
     void DrawSpritePipeline::CreateDescriptorPool()
@@ -166,11 +181,13 @@ namespace OpenRCT2::Ui::Vulkan
 
         for (size_t i = 0; i < _uniformBufferDescriptorSets.size(); i++)
         {
-            vk::DescriptorBufferInfo bufferInfo(
-                *_uniformBufferObjectBuffer[i], 0, sizeof(DrawSpritePipeline::UniformBufferObject));
+            VkDescriptorBufferInfo bufferInfo(
+                _uniformBufferObjectBuffer[i], 0, sizeof(DrawSpritePipeline::UniformBufferObject));
+
+            std::vector<vk::DescriptorBufferInfo> b = { bufferInfo };
 
             vk::WriteDescriptorSet descriptorWrite(
-                _uniformBufferDescriptorSets[i], 0, 0, vk::DescriptorType::eUniformBuffer, {}, { bufferInfo }, {});
+                _uniformBufferDescriptorSets[i], 0, 0, vk::DescriptorType::eUniformBuffer, {}, b, {});
 
             _device.updateDescriptorSets({ descriptorWrite }, {});
         }
@@ -186,23 +203,29 @@ namespace OpenRCT2::Ui::Vulkan
                 vk::BufferCreateFlags{}, uniformBufferSize, vk::BufferUsageFlagBits::eUniformBuffer,
                 vk::SharingMode::eExclusive, {});
 
-            auto buffer = _device.createBufferUnique(bufferInfo);
+            VmaAllocationCreateInfo allocInfo = {};
+            allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+            allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+            allocInfo.requiredFlags = (VkMemoryPropertyFlags)vk::MemoryPropertyFlagBits::eHostVisible;
+            allocInfo.preferredFlags = (VkMemoryPropertyFlags)(vk::MemoryPropertyFlagBits::eHostCoherent
+                                                               | vk::MemoryPropertyFlagBits::eHostCached);
 
-            auto memRequirements = _device.getBufferMemoryRequirements(*buffer);
+            
+            VkBuffer buffer;
+            VmaAllocation allocation;
+            VmaAllocationInfo allocationInfo;
 
-            auto memoryType = GetBufferMemoryType(memRequirements, _physicalDevice.getMemoryProperties());
-
-            vk::MemoryAllocateInfo memAllocInfo(memRequirements.size, memoryType);
-
-            auto bufferMemory = _device.allocateMemoryUnique(memAllocInfo);
-
-            _device.bindBufferMemory(*buffer, *bufferMemory, 0);
-
-            auto mappedBuffer = _device.mapMemory(*bufferMemory, 0, uniformBufferSize, vk::MemoryMapFlags());
-
-            _uniformBufferObjectBuffer.push_back(std::move(buffer));
-            _uniformBufferObjectMemory.push_back(std::move(bufferMemory));
-            _uniformBufferObjectMappedMemory.push_back(mappedBuffer);
+            if (VK_SUCCESS == vmaCreateBuffer(_alloc, bufferInfo, &allocInfo, &buffer, &allocation, &allocationInfo))
+            {
+                // testing: using a host buffer
+                _uniformBufferObjectBuffer.push_back(buffer);
+                _uniformBufferObjectMemory.push_back(allocation);
+                _uniformBufferObjectMappedMemory.push_back(allocationInfo.pMappedData);
+            }
+            else
+            {
+                throw std::runtime_error("Vulkan memory error");
+            }
         }
     }
 
@@ -212,28 +235,33 @@ namespace OpenRCT2::Ui::Vulkan
         for (size_t i = 0; i < _framesInFlight; i++)
         {
             vk::BufferCreateInfo bufferInfo(
-                vk::BufferCreateFlags{}, initialVertexBufferSize, vk::BufferUsageFlagBits::eVertexBuffer,
+                vk::BufferCreateFlags{}, initialVertexBufferSize,
+                vk::BufferUsageFlagBits::eVertexBuffer,
                 vk::SharingMode::eExclusive, {});
 
-            auto buffer = _device.createBufferUnique(bufferInfo);
+            VmaAllocationCreateInfo allocInfo = {};
+            allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+            allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+            allocInfo.requiredFlags = (VkMemoryPropertyFlags)vk::MemoryPropertyFlagBits::eHostVisible;
+            allocInfo.preferredFlags = (VkMemoryPropertyFlags)(vk::MemoryPropertyFlagBits::eHostCoherent
+                | vk::MemoryPropertyFlagBits::eHostCached);
 
-            auto memRequirements = _device.getBufferMemoryRequirements(*buffer);
+            VkBuffer buffer;
+            VmaAllocation allocation;
+            VmaAllocationInfo allocationInfo;
 
-            auto memoryType = GetBufferMemoryType(memRequirements, _physicalDevice.getMemoryProperties());
-
-            vk::MemoryAllocateInfo memAllocInfo(memRequirements.size, memoryType);
-
-            auto bufferMemory = _device.allocateMemoryUnique(memAllocInfo);
-
-            _device.bindBufferMemory(*buffer, *bufferMemory, 0);
-
-            auto mappedBuffer = _device.mapMemory(*bufferMemory, 0, initialVertexBufferSize, vk::MemoryMapFlags());
-
-            // testing: using a host buffer
-            _vertexBuffers.push_back(std::move(buffer));
-            _vertexDeviceMemory.push_back(std::move(bufferMemory));
-            _vertexDeviceMemorySize.push_back(initialVertexBufferSize);
-            _vertexMappedMemory.push_back(mappedBuffer);
+            if (VK_SUCCESS == vmaCreateBuffer(_alloc, bufferInfo, &allocInfo, &buffer, &allocation, &allocationInfo))
+            {
+                // testing: using a host buffer
+                _vertexBuffers.push_back(buffer);
+                _vertexDeviceMemory.push_back(allocation);
+                _vertexDeviceMemorySize.push_back(initialVertexBufferSize);
+                _vertexMappedMemory.push_back(allocationInfo.pMappedData);
+            }
+            else
+            {
+                throw std::runtime_error("Vulkan memory error");
+            }
         }
     }
 
@@ -260,31 +288,34 @@ namespace OpenRCT2::Ui::Vulkan
 
         if (_vertexDeviceMemorySize[currentFrame] < neededMem)
         {
-            _vertexBuffers[currentFrame].reset();
-            _vertexDeviceMemory[currentFrame].reset();
-            _vertexDeviceMemorySize[currentFrame] = neededMem;
+            vmaDestroyBuffer(_alloc, _vertexBuffers[currentFrame], _vertexDeviceMemory[currentFrame]);
 
             vk::BufferCreateInfo bufferInfo(
-                vk::BufferCreateFlags{}, neededMem, vk::BufferUsageFlagBits::eVertexBuffer, vk::SharingMode::eExclusive, {});
+                vk::BufferCreateFlags{}, neededMem, vk::BufferUsageFlagBits::eVertexBuffer,
+                vk::SharingMode::eExclusive, {});
 
-            auto buffer = _device.createBufferUnique(bufferInfo);
+            VmaAllocationCreateInfo allocInfo = {};
+            allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+            allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+            allocInfo.requiredFlags = (VkMemoryPropertyFlags)vk::MemoryPropertyFlagBits::eHostVisible;
+            allocInfo.preferredFlags = (VkMemoryPropertyFlags)(vk::MemoryPropertyFlagBits::eHostCoherent
+                                                               | vk::MemoryPropertyFlagBits::eHostCached);
 
-            auto memRequirements = _device.getBufferMemoryRequirements(*buffer);
+            VkBuffer buffer;
+            VmaAllocation allocation;
+            VmaAllocationInfo allocationInfo;
 
-            auto memoryType = GetBufferMemoryType(memRequirements, _physicalDevice.getMemoryProperties());
-
-            vk::MemoryAllocateInfo memAllocInfo(memRequirements.size, memoryType);
-
-            auto bufferMemory = _device.allocateMemoryUnique(memAllocInfo);
-
-            _device.bindBufferMemory(*buffer, *bufferMemory, 0);
-
-            auto mappedBuffer = _device.mapMemory(*bufferMemory, 0, neededMem, vk::MemoryMapFlags());
-
-            _vertexBuffers[currentFrame] = std::move(buffer);
-            _vertexDeviceMemory[currentFrame] = std::move(bufferMemory);
-            _vertexDeviceMemorySize[currentFrame] = neededMem;
-            _vertexMappedMemory[currentFrame] = mappedBuffer;
+            if (VK_SUCCESS == vmaCreateBuffer(_alloc, bufferInfo, &allocInfo, &buffer, &allocation, &allocationInfo))
+            {
+                _vertexBuffers[currentFrame] = buffer;
+                _vertexDeviceMemory[currentFrame] = allocation;
+                _vertexDeviceMemorySize[currentFrame] = neededMem;
+                _vertexMappedMemory[currentFrame] = allocationInfo.pMappedData;
+            }
+            else
+            {
+                throw std::runtime_error("Failed to create larger vertex buffer");
+            }
         }
 
         std::memcpy(_vertexMappedMemory[currentFrame], verticies.data(), neededMem);
@@ -307,7 +338,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         commandBuffer.setScissor(0, scissor);
 
-        commandBuffer.bindVertexBuffers(0, { *_vertexBuffers[currentFrame] }, { 0 });
+        commandBuffer.bindVertexBuffers(0, { (vk::Buffer)_vertexBuffers[currentFrame] }, { 0 });
 
         commandBuffer.bindDescriptorSets(
             vk::PipelineBindPoint::eGraphics, *_pipelineLayout, 0, { _uniformBufferDescriptorSets[currentFrame] }, {});
