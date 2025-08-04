@@ -45,15 +45,14 @@ namespace OpenRCT2::Ui::Vulkan
         // Add sprite tracking
 
     public:
-        DrawSpritePipeline(std::nullptr_t);
         DrawSpritePipeline(
             vk::PhysicalDevice physicalDevice, vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight);
 
         DrawSpritePipeline& operator=(const DrawSpritePipeline&) = delete;
         DrawSpritePipeline(const DrawSpritePipeline&) = delete;
 
-        DrawSpritePipeline& operator=(DrawSpritePipeline&&);
-        DrawSpritePipeline(DrawSpritePipeline&&);
+        DrawSpritePipeline& operator=(DrawSpritePipeline&&) = delete;
+        DrawSpritePipeline(DrawSpritePipeline&&) = delete;
 
         ~DrawSpritePipeline() = default;
 

@@ -125,10 +125,6 @@ namespace OpenRCT2::Ui::Vulkan
         return std::move(pipeline.value);
     }
 
-    DrawRectPipeline::DrawRectPipeline(std::nullptr_t)
-    {
-    }
-
     DrawRectPipeline::DrawRectPipeline(
         vk::PhysicalDevice physicalDevice, vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight)
         : _physicalDevice(physicalDevice)
@@ -142,64 +138,6 @@ namespace OpenRCT2::Ui::Vulkan
         CreateDescriptorPool();
         CreateDescriptorSets();
         CreateVertexBuffers();
-    }
-
-    DrawRectPipeline& DrawRectPipeline::operator=(DrawRectPipeline&& other)
-    {
-        _physicalDevice = other._physicalDevice;
-        _device = other._device;
-        _framesInFlight = other._framesInFlight;
-
-        _vertexDeviceMemorySize.clear();
-        _vertexMappedMemory.clear();
-        _vertexBuffers.clear();
-        _vertexDeviceMemory.clear();
-
-        _uniformBufferDescriptorSets.clear();
-        _uniformBufferDescriptorPool.release();
-        _uniformBufferObjectMappedMemory.clear();
-        _uniformBufferObjectBuffer.clear();
-        _uniformBufferObjectMemory.clear();
-
-        _pipeline.release();
-        _pipelineLayout.release();
-        _descriptorSetLayout.release();
-
-        _descriptorSetLayout = std::move(other._descriptorSetLayout);
-        _pipelineLayout = std::move(other._pipelineLayout);
-        _pipeline = std::move(other._pipeline);
-
-        _uniformBufferObjectMemory = std::move(other._uniformBufferObjectMemory);
-        _uniformBufferObjectBuffer = std::move(other._uniformBufferObjectBuffer);
-        _uniformBufferObjectMappedMemory = std::move(other._uniformBufferObjectMappedMemory);
-        _uniformBufferDescriptorPool = std::move(other._uniformBufferDescriptorPool);
-        _uniformBufferDescriptorSets = std::move(other._uniformBufferDescriptorSets);
-
-        _vertexDeviceMemory = std::move(other._vertexDeviceMemory);
-        _vertexBuffers = std::move(other._vertexBuffers);
-        _vertexMappedMemory = std::move(other._vertexMappedMemory);
-        _vertexDeviceMemorySize = std::move(other._vertexDeviceMemorySize);
-
-        return *this;
-    }
-
-    DrawRectPipeline::DrawRectPipeline(DrawRectPipeline&& other)
-        : _physicalDevice(other._physicalDevice)
-        , _device(other._device)
-        , _framesInFlight(other._framesInFlight)
-        , _descriptorSetLayout(std::move(other._descriptorSetLayout))
-        , _pipelineLayout(std::move(other._pipelineLayout))
-        , _pipeline(std::move(other._pipeline))
-        , _uniformBufferDescriptorSets(std::move(other._uniformBufferDescriptorSets))
-        , _uniformBufferDescriptorPool(std::move(other._uniformBufferDescriptorPool))
-        , _uniformBufferObjectMappedMemory(std::move(other._uniformBufferObjectMappedMemory))
-        , _uniformBufferObjectBuffer(std::move(other._uniformBufferObjectBuffer))
-        , _uniformBufferObjectMemory(std::move(other._uniformBufferObjectMemory))
-        , _vertexDeviceMemory(std::move(other._vertexDeviceMemory))
-        , _vertexBuffers(std::move(other._vertexBuffers))
-        , _vertexMappedMemory(std::move(other._vertexMappedMemory))
-        , _vertexDeviceMemorySize(std::move(other._vertexDeviceMemorySize))
-    {
     }
 
     void DrawRectPipeline::CreateDescriptorPool()

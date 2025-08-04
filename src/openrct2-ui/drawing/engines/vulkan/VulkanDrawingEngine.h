@@ -61,8 +61,8 @@ namespace OpenRCT2::Ui::Vulkan
         std::vector<vk::Image> _swapchainImages{}; // [0,_swapchainImageCount)
         std::vector<vk::UniqueImageView> _swapchainImageViews{}; // [0,_swapchainImageCount)
         vk::UniqueRenderPass _renderPass;
-        DrawRectPipeline _rectPipeline = nullptr;
-        DrawSpritePipeline _drawSpritePipeline = nullptr;
+        std::unique_ptr<DrawRectPipeline> _rectPipeline;
+        std::unique_ptr<DrawSpritePipeline> _drawSpritePipeline;
         std::vector<vk::UniqueFramebuffer> _swapchainFramebuffers{};
         vk::UniqueCommandPool _commandPool;
         std::vector<vk::UniqueCommandBuffer> _commandBuffers; //[0,_framesInFlight)

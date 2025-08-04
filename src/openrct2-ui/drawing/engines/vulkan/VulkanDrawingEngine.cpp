@@ -534,8 +534,8 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::CreateGraphicsPipelines()
     {
-        _rectPipeline = DrawRectPipeline(_physicalDevice, *_device, *_renderPass, _framesInFlight);
-        _drawSpritePipeline = DrawSpritePipeline(_physicalDevice, *_device, *_renderPass, _framesInFlight);
+        _rectPipeline = std::make_unique<DrawRectPipeline>(_physicalDevice, *_device, *_renderPass, _framesInFlight);
+        _drawSpritePipeline = std::make_unique<DrawSpritePipeline>(_physicalDevice, *_device, *_renderPass, _framesInFlight);
     }
 
     void VulkanDrawingEngine::CreateFramebuffers()
@@ -697,7 +697,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         for (auto data : spriteData)
         {
-            std::ignore /* auto imageIndex */ = _drawSpritePipeline.GetImageIndex(data.imageId);
+            std::ignore /* auto imageIndex */ = _drawSpritePipeline->GetImageIndex(data.imageId);
 
             uint32_t width = 16;
             uint32_t height = 16;
@@ -736,9 +736,9 @@ namespace OpenRCT2::Ui::Vulkan
 
         currentFrameCommandBuffer->beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
 
-        _drawSpritePipeline.Draw(*currentFrameCommandBuffer, _swapchainExtent, _inProgressSprites, _currentFrame);
+        _drawSpritePipeline->Draw(*currentFrameCommandBuffer, _swapchainExtent, _inProgressSprites, _currentFrame);
 
-        _rectPipeline.Draw(
+        _rectPipeline->Draw(
             *currentFrameCommandBuffer, _swapchainExtent,
             _inProgressVerts, _currentFrame);
 

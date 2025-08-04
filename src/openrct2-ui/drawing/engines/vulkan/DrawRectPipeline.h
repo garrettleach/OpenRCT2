@@ -23,7 +23,7 @@ namespace OpenRCT2::Ui::Vulkan
     private:
         vk::PhysicalDevice _physicalDevice;
         vk::Device _device;
-        size_t _framesInFlight{ 0 };
+        size_t _framesInFlight;
 
         vk::UniqueDescriptorSetLayout _descriptorSetLayout;
         vk::UniquePipelineLayout _pipelineLayout;
@@ -41,17 +41,15 @@ namespace OpenRCT2::Ui::Vulkan
         std::vector<vk::DeviceSize> _vertexDeviceMemorySize;
 
     public:
-        DrawRectPipeline(std::nullptr_t);
         DrawRectPipeline(vk::PhysicalDevice physicalDevice, vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight);
 
         DrawRectPipeline& operator=(const DrawRectPipeline&) = delete;
         DrawRectPipeline(const DrawRectPipeline&) = delete;
 
-        DrawRectPipeline& operator=(DrawRectPipeline&&);
-        DrawRectPipeline(DrawRectPipeline&&);
+        DrawRectPipeline& operator=(DrawRectPipeline&&) = delete;
+        DrawRectPipeline(DrawRectPipeline&&) = delete;
 
         ~DrawRectPipeline() = default;
-
 
         vk::DescriptorSetLayout GetDescriptorSetLayout();
 
