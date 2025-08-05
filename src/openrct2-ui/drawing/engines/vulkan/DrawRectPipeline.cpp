@@ -325,7 +325,8 @@ namespace OpenRCT2::Ui::Vulkan
         _palette = palette;
     }
 
-    void DrawRectPipeline::QueueRect(RenderTarget& rt, uint32_t colour, int32_t left, int32_t top, int32_t right, int32_t bottom)
+    void DrawRectPipeline::QueueRect(
+        RenderTarget& rt, uint32_t colour, int32_t left, int32_t top, int32_t right, int32_t bottom)
     {
         _inProgressDraws.emplace_back(DrawCommand{ left, top, right, bottom, static_cast<uint8_t>(colour) });
     }
