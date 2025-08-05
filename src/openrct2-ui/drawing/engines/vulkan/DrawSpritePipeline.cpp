@@ -353,7 +353,7 @@ namespace OpenRCT2::Ui::Vulkan
         _palette = palette;
     }
 
-    void DrawSpritePipeline::QueueDraw(ImageId imageId, int32_t x, int32_t y)
+    void DrawSpritePipeline::QueueDraw(RenderTarget& rt, ImageId imageId, int32_t x, int32_t y)
     {
         _inProgressSprites.emplace_back(imageId, x, y);
     }

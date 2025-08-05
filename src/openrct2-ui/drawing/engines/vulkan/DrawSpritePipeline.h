@@ -82,7 +82,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         void SetPalette(const OpenRCT2::Drawing::GamePalette& palette);
 
-        void QueueDraw(ImageId imageId, int32_t x, int32_t y);
+        void QueueDraw(RenderTarget& rt, ImageId imageId, int32_t x, int32_t y);
 
     private:
         static vk::UniqueDescriptorSetLayout CreateDescriptorSetLayout(const vk::Device& device);

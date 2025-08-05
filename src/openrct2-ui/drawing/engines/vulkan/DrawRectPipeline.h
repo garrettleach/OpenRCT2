@@ -75,7 +75,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         void SetPalette(const OpenRCT2::Drawing::GamePalette& palette);
 
-        void QueueRect(uint32_t colour, int32_t left, int32_t top, int32_t right, int32_t bottom);
+        void QueueRect(RenderTarget& rt, uint32_t colour, int32_t left, int32_t top, int32_t right, int32_t bottom);
 
     private:
         static vk::UniqueDescriptorSetLayout CreateDescriptorSetLayout(const vk::Device& device);
