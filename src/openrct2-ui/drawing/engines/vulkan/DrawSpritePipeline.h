@@ -1,5 +1,6 @@
 #pragma once
 #include <glm/glm.hpp>
+#include <openrct2/drawing/ColourPalette.h>
 #include <openrct2/drawing/ImageId.hpp>
 #include <vulkan/vulkan_raii.hpp>
 #include "VulkanMemoryAllocator.h"
@@ -46,6 +47,8 @@ namespace OpenRCT2::Ui::Vulkan
         std::vector<vk::DeviceSize> _vertexDeviceMemorySize;
 
         // Add sprite tracking
+        // Palette for the next upload
+        OpenRCT2::Drawing::GamePalette _palette;
 
     public:
         DrawSpritePipeline(
@@ -66,6 +69,8 @@ namespace OpenRCT2::Ui::Vulkan
 
         void Draw(
             vk::CommandBuffer& commandBuffer, vk::Extent2D extent, const std::vector<Vertex>& verticies, uint32_t currentFrame);
+
+        void SetPalette(const OpenRCT2::Drawing::GamePalette& palette);
 
     private:
         static vk::UniqueDescriptorSetLayout CreateDescriptorSetLayout(const vk::Device& device);

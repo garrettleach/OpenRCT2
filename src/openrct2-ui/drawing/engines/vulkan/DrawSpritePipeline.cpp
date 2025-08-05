@@ -345,5 +345,10 @@ namespace OpenRCT2::Ui::Vulkan
 
         commandBuffer.draw(static_cast<uint32_t>(verticies.size()), 1, 0, 0);
     }
+
+    void DrawSpritePipeline::SetPalette(const OpenRCT2::Drawing::GamePalette& palette)
+    {
+        _palette = palette;
+    }
 } // namespace OpenRCT2::Ui::Vulkan
 #endif
