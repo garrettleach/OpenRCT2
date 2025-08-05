@@ -91,27 +91,6 @@ namespace OpenRCT2::Ui::Vulkan
             }
         }
 
-        void CreateInstance();
-        void CreateSurface();
-        void PickPhysicalDevice();
-        void CreateLogicalDevice();
-        void CreateAllocator();
-        void CreateQueues();
-        void ChooseSwapchainImageFormat();
-        void ChooseSwapchainExtent();
-        void ChoosePresentMode();
-        void CreateSwapchain();
-        void CreateSwapchainImages();
-        void CreateSwapchainImageViews();
-        void CreateRenderPass();
-        void CreateGraphicsPipelines();
-        void CreateFramebuffers();
-        void CreateCommandPool();
-        void CreateCommandBuffers();
-        void CreateSyncObjects();
-
-        void RecreateSwapChain();
-
         void Initialise() override;
 
         void Resize(uint32_t width, uint32_t height) override;
@@ -141,5 +120,27 @@ namespace OpenRCT2::Ui::Vulkan
         DrawingEngineFlags GetFlags() override;
 
         void InvalidateImage(uint32_t image) override;
+
+    private:
+        void CreateInstance();
+        void CreateSurface();
+        void PickPhysicalDevice();
+        void CreateLogicalDevice();
+        void CreateAllocator();
+        void CreateQueues();
+        void ChooseSwapchainImageFormat();
+        void ChooseSwapchainExtent();
+        void ChoosePresentMode();
+        void CreateSwapchain();
+        void CreateSwapchainImages();
+        void CreateSwapchainImageViews();
+        void CreateRenderPass();
+        void CreateGraphicsPipelines();
+        void CreateFramebuffers();
+        void CreateCommandPool();
+        void CreateCommandBuffers();
+        void CreateSyncObjects();
+
+        void RecreateSwapChain();
     };
 } // namespace OpenRCT2::Ui::Vulkan
