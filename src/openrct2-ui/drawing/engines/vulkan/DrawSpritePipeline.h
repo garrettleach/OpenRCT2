@@ -1,6 +1,7 @@
 #pragma once
 #include <glm/glm.hpp>
 #include <openrct2/drawing/ColourPalette.h>
+#include <openrct2/drawing/Drawing.h>
 #include <openrct2/drawing/ImageId.hpp>
 #include <vulkan/vulkan_raii.hpp>
 #include "VulkanMemoryAllocator.h"
@@ -10,6 +11,13 @@ namespace OpenRCT2::Ui::Vulkan
 {
     class DrawSpritePipeline
     {
+        struct DrawCommand
+        {
+            ImageId imageId;
+            int32_t x;
+            int32_t y;
+        };
+
     public:
         struct UniformBufferObject
         {
@@ -50,6 +58,11 @@ namespace OpenRCT2::Ui::Vulkan
         // Palette for the next upload
         OpenRCT2::Drawing::GamePalette _palette;
 
+        std::vector<DrawCommand> _inProgressSprites;
+
+        // used to keep an appropriately sized vector ready between frames
+        std::vector<Vertex> _workingVerticies;
+
     public:
         DrawSpritePipeline(
             vk::PhysicalDevice physicalDevice, vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight,
@@ -63,14 +76,13 @@ namespace OpenRCT2::Ui::Vulkan
 
         ~DrawSpritePipeline();
 
-        uint32_t GetImageIndex(ImageId imageId);
-
         vk::DescriptorSetLayout GetDescriptorSetLayout();
 
-        void Draw(
-            vk::CommandBuffer& commandBuffer, vk::Extent2D extent, const std::vector<Vertex>& verticies, uint32_t currentFrame);
+        void Draw(vk::CommandBuffer& commandBuffer, RenderTarget& renderTarget, uint32_t currentFrame);
 
         void SetPalette(const OpenRCT2::Drawing::GamePalette& palette);
+
+        void QueueDraw(ImageId imageId, int32_t x, int32_t y);
 
     private:
         static vk::UniqueDescriptorSetLayout CreateDescriptorSetLayout(const vk::Device& device);

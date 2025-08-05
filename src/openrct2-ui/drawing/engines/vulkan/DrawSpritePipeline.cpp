@@ -265,26 +265,34 @@ namespace OpenRCT2::Ui::Vulkan
         }
     }
 
-    uint32_t DrawSpritePipeline::GetImageIndex(ImageId imageId)
-    {
-        // do we have this image id already uploaded? then use it
-
-        // otherwise get the image, upload it (or whatever)
-
-        // return the index in our image array
-
-        return 0;
-    }
-
     vk::DescriptorSetLayout DrawSpritePipeline::GetDescriptorSetLayout()
     {
         return *_descriptorSetLayout;
     }
 
-    void DrawSpritePipeline::Draw(
-        vk::CommandBuffer& commandBuffer, vk::Extent2D extent, const vector<Vertex>& verticies, uint32_t currentFrame)
+    void DrawSpritePipeline::Draw(vk::CommandBuffer& commandBuffer, RenderTarget& renderTarget, uint32_t currentFrame)
     {
-        auto neededMem = verticies.size() * sizeof(std::remove_reference_t<decltype(verticies)>::value_type);
+        _workingVerticies.clear();
+        for (auto data : _inProgressSprites)
+        {
+            int32_t width = 4;
+            int32_t height = 4;
+
+            auto left = (float)(data.x) / (float)renderTarget.width;
+            auto right = (float)(data.x + width) / (float)renderTarget.width;
+            auto top = (float)(data.y) / (float)renderTarget.height;
+            auto bottom = (float)(data.y + height) / (float)renderTarget.height;
+
+            _workingVerticies.push_back(DrawSpritePipeline::Vertex{ .pos = { right, top }, .index = 0 /* imageIndex */ });
+            _workingVerticies.push_back(DrawSpritePipeline::Vertex{ .pos = { left, top }, .index = 0 /* imageIndex */ });
+            _workingVerticies.push_back(DrawSpritePipeline::Vertex{ .pos = { right, bottom }, .index = 0 /* imageIndex */ });
+            _workingVerticies.push_back(DrawSpritePipeline::Vertex{ .pos = { right, bottom }, .index = 0 /* imageIndex */ });
+            _workingVerticies.push_back(DrawSpritePipeline::Vertex{ .pos = { left, top }, .index = 0 /* imageIndex */ });
+            _workingVerticies.push_back(DrawSpritePipeline::Vertex{ .pos = { left, bottom }, .index = 0 /* imageIndex */ });
+        }
+        _inProgressSprites.clear();
+
+        auto neededMem = _workingVerticies.size() * sizeof(std::remove_reference_t<decltype(_workingVerticies)>::value_type);
 
         if (_vertexDeviceMemorySize[currentFrame] < neededMem)
         {
@@ -318,7 +326,7 @@ namespace OpenRCT2::Ui::Vulkan
             }
         }
 
-        std::memcpy(_vertexMappedMemory[currentFrame], verticies.data(), neededMem);
+        std::memcpy(_vertexMappedMemory[currentFrame], _workingVerticies.data(), neededMem);
 
         DrawSpritePipeline::UniformBufferObject ubo{
             .model = glm::identity<glm::mat4>(),
@@ -330,25 +338,24 @@ namespace OpenRCT2::Ui::Vulkan
 
         commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *_pipeline);
 
-        vk::Viewport viewport(0.0f, 0.0f, extent.width, extent.height, 0.0f, 1.0f);
-
-        commandBuffer.setViewport(0, { viewport });
-
-        vk::Rect2D scissor({ 0, 0 }, extent);
-
-        commandBuffer.setScissor(0, scissor);
-
         commandBuffer.bindVertexBuffers(0, { (vk::Buffer)_vertexBuffers[currentFrame] }, { 0 });
 
         commandBuffer.bindDescriptorSets(
             vk::PipelineBindPoint::eGraphics, *_pipelineLayout, 0, { _uniformBufferDescriptorSets[currentFrame] }, {});
 
-        commandBuffer.draw(static_cast<uint32_t>(verticies.size()), 1, 0, 0);
+        commandBuffer.draw(static_cast<uint32_t>(_workingVerticies.size()), 1, 0, 0);
+
+        _workingVerticies.clear();
     }
 
     void DrawSpritePipeline::SetPalette(const OpenRCT2::Drawing::GamePalette& palette)
     {
         _palette = palette;
+    }
+
+    void DrawSpritePipeline::QueueDraw(ImageId imageId, int32_t x, int32_t y)
+    {
+        _inProgressSprites.emplace_back(imageId, x, y);
     }
 } // namespace OpenRCT2::Ui::Vulkan
 #endif

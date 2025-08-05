@@ -77,9 +77,6 @@ namespace OpenRCT2::Ui::Vulkan
 
         OpenRCT2::Drawing::GamePalette _palette;
 
-        std::vector<DrawRectPipeline::Vertex> _inProgressVerts;
-        std::vector<DrawSpritePipeline::Vertex> _inProgressSprites;
-
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext);
 
@@ -121,6 +118,8 @@ namespace OpenRCT2::Ui::Vulkan
 
         void InvalidateImage(uint32_t image) override;
 
+        DrawRectPipeline& GetDrawRectPipeline();
+        DrawSpritePipeline& GetDrawSpritePipeline();
     private:
         void CreateInstance();
         void CreateSurface();

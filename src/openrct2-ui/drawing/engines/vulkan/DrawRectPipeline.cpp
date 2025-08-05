@@ -242,10 +242,31 @@ namespace OpenRCT2::Ui::Vulkan
         return *_descriptorSetLayout;
     }
 
-    void DrawRectPipeline::Draw(
-        vk::CommandBuffer& commandBuffer, vk::Extent2D extent, const vector<Vertex>& verticies, uint32_t currentFrame)
+    void DrawRectPipeline::Draw(vk::CommandBuffer& commandBuffer, RenderTarget& renderTarget, uint32_t currentFrame)
     {
-        auto neededMem = verticies.size() * sizeof(std::remove_reference_t<decltype(verticies)>::value_type);
+        _workingVerticies.clear();
+        for (auto& data : _inProgressDraws)
+        {
+            auto colour = _palette[data.colour];
+            auto red = (float)colour.Red / 255.0f;
+            auto green = (float)colour.Green / 255.0f;
+            auto blue = (float)colour.Blue / 255.0f;
+
+            auto right = (float)data.right / (float)renderTarget.width;
+            auto left = (float)data.left / (float)renderTarget.width;
+            auto top = (float)data.top / (float)renderTarget.height;
+            auto bottom = (float)data.bottom / (float)renderTarget.height;
+
+            _workingVerticies.push_back(DrawRectPipeline::Vertex{ .pos = { right, top }, .color = { red, green, blue } });
+            _workingVerticies.push_back(DrawRectPipeline::Vertex{ .pos = { left, top }, .color = { red, green, blue } });
+            _workingVerticies.push_back(DrawRectPipeline::Vertex{ .pos = { right, bottom }, .color = { red, green, blue } });
+            _workingVerticies.push_back(DrawRectPipeline::Vertex{ .pos = { right, bottom }, .color = { red, green, blue } });
+            _workingVerticies.push_back(DrawRectPipeline::Vertex{ .pos = { left, top }, .color = { red, green, blue } });
+            _workingVerticies.push_back(DrawRectPipeline::Vertex{ .pos = { left, bottom }, .color = { red, green, blue } });
+        }
+        _inProgressDraws.clear();
+
+        auto neededMem = _workingVerticies.size() * sizeof(std::remove_reference_t<decltype(_workingVerticies)>::value_type);
 
         if (_vertexDeviceMemorySize[currentFrame] < neededMem)
         {
@@ -276,7 +297,7 @@ namespace OpenRCT2::Ui::Vulkan
             _vertexMappedMemory[currentFrame] = mappedBuffer;
         }
 
-        std::memcpy(_vertexMappedMemory[currentFrame], verticies.data(), neededMem);
+        std::memcpy(_vertexMappedMemory[currentFrame], _workingVerticies.data(), neededMem);
 
         DrawRectPipeline::UniformBufferObject ubo{
             .model = glm::identity<glm::mat4>(),
@@ -288,20 +309,24 @@ namespace OpenRCT2::Ui::Vulkan
 
         commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *_pipeline);
 
-        vk::Viewport viewport(0.0f, 0.0f, extent.width, extent.height, 0.0f, 1.0f);
-
-        commandBuffer.setViewport(0, { viewport });
-
-        vk::Rect2D scissor({ 0, 0 }, extent);
-
-        commandBuffer.setScissor(0, scissor);
-
         commandBuffer.bindVertexBuffers(0, { *_vertexBuffers[currentFrame] }, { 0 });
 
         commandBuffer.bindDescriptorSets(
             vk::PipelineBindPoint::eGraphics, *_pipelineLayout, 0, { _uniformBufferDescriptorSets[currentFrame] }, {});
 
-        commandBuffer.draw(static_cast<uint32_t>(verticies.size()), 1, 0, 0);
+        commandBuffer.draw(static_cast<uint32_t>(_workingVerticies.size()), 1, 0, 0);
+
+        _workingVerticies.clear();
+    }
+
+    void DrawRectPipeline::SetPalette(const OpenRCT2::Drawing::GamePalette& palette)
+    {
+        _palette = palette;
+    }
+
+    void DrawRectPipeline::QueueRect(uint32_t colour, int32_t left, int32_t top, int32_t right, int32_t bottom)
+    {
+        _inProgressDraws.emplace_back(DrawCommand{ left, top, right, bottom, static_cast<uint8_t>(colour) });
     }
 } // namespace OpenRCT2::Ui::Vulkan
 #endif

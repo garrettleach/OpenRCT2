@@ -630,7 +630,8 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::SetPalette(const OpenRCT2::Drawing::GamePalette& colours)
     {
-        _palette = colours;
+        _rectPipeline->SetPalette(colours);
+        _drawSpritePipeline->SetPalette(colours);
     }
 
     void VulkanDrawingEngine::SetVSync(bool vsync)
@@ -672,63 +673,10 @@ namespace OpenRCT2::Ui::Vulkan
         }
 
         _imageIndex = nextImageResult.value;
-
-        _inProgressVerts.clear();
-        _inProgressSprites.clear();
     }
 
     void VulkanDrawingEngine::EndDraw()
     {
-        // testing: include 6 verts (2 triagles)
-        auto fillData = _drawingContext->DumpFillRectData();
-
-        for (auto& data : fillData)
-        {
-            auto colour = _palette[data.colour];
-            auto red = (float)colour.Red / 255.0f;
-            auto green = (float)colour.Green / 255.0f;
-            auto blue = (float)colour.Blue / 255.0f;
-
-            auto right = (float)data.right / (float)_mainRT.width;
-            auto left = (float)data.left / (float)_mainRT.width;
-            auto top = (float)data.top / (float)_mainRT.height;
-            auto bottom = (float)data.bottom / (float)_mainRT.height;
-
-            _inProgressVerts.push_back(DrawRectPipeline::Vertex{ .pos = { right, top }, .color = { red, green, blue } });
-            _inProgressVerts.push_back(DrawRectPipeline::Vertex{ .pos = { left, top }, .color = { red, green, blue } });
-            _inProgressVerts.push_back(DrawRectPipeline::Vertex{ .pos = { right, bottom }, .color = { red, green, blue } });
-            _inProgressVerts.push_back(DrawRectPipeline::Vertex{ .pos = { right, bottom }, .color = { red, green, blue } });
-            _inProgressVerts.push_back(DrawRectPipeline::Vertex{ .pos = { left, top }, .color = { red, green, blue } });
-            _inProgressVerts.push_back(DrawRectPipeline::Vertex{ .pos = { left, bottom }, .color = { red, green, blue } });
-        }
-
-        auto spriteData = _drawingContext->DumpDrawSpriteData();
-
-        for (auto data : spriteData)
-        {
-            std::ignore /* auto imageIndex */ = _drawSpritePipeline->GetImageIndex(data.imageId);
-
-            uint32_t width = 16;
-            uint32_t height = 16;
-
-            auto left = (float)(data.x) / (float)_mainRT.width;
-            auto right = (float)(data.x + width) / (float)_mainRT.width;
-            auto top = (float)(data.y) / (float)_mainRT.height;
-            auto bottom = (float)(data.y + height) / (float)_mainRT.height;
-
-            _inProgressSprites.push_back(DrawSpritePipeline::Vertex{ .pos = { right, top }, .index = 0 /* imageIndex */ });
-            _inProgressSprites.push_back(DrawSpritePipeline::Vertex{ .pos = { left, top }, .index = 0 /* imageIndex */ });
-            _inProgressSprites.push_back(DrawSpritePipeline::Vertex{ .pos = { right, bottom }, .index = 0 /* imageIndex */ });
-            _inProgressSprites.push_back(DrawSpritePipeline::Vertex{ .pos = { right, bottom }, .index = 0 /* imageIndex */ });
-            _inProgressSprites.push_back(DrawSpritePipeline::Vertex{ .pos = { left, top }, .index = 0 /* imageIndex */ });
-            _inProgressSprites.push_back(DrawSpritePipeline::Vertex{ .pos = { left, bottom }, .index = 0 /* imageIndex */ });
-        }
-
-        // TODO: upload textures if needed
-
-        // upload Vertex objects (_inProgressVerts)
-        // testing: using a host buffer
-
         _device->resetFences({ _swapchainSync.InFlightFence(_currentFrame) });
 
         auto& currentFrameCommandBuffer = _commandBuffers[_currentFrame];
@@ -745,11 +693,17 @@ namespace OpenRCT2::Ui::Vulkan
 
         currentFrameCommandBuffer->beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
 
-        _drawSpritePipeline->Draw(*currentFrameCommandBuffer, _swapchainExtent, _inProgressSprites, _currentFrame);
+        vk::Viewport viewport(0.0f, 0.0f, _swapchainExtent.width, _swapchainExtent.height, 0.0f, 1.0f);
 
-        _rectPipeline->Draw(
-            *currentFrameCommandBuffer, _swapchainExtent,
-            _inProgressVerts, _currentFrame);
+        currentFrameCommandBuffer->setViewport(0, { viewport });
+
+        vk::Rect2D scissor({ 0, 0 }, _swapchainExtent);
+
+        currentFrameCommandBuffer->setScissor(0, scissor);
+
+        _drawSpritePipeline->Draw(*currentFrameCommandBuffer, _mainRT, _currentFrame);
+
+        _rectPipeline->Draw(*currentFrameCommandBuffer, _mainRT, _currentFrame);
 
         currentFrameCommandBuffer->endRenderPass();
 
@@ -835,6 +789,16 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::InvalidateImage(uint32_t image)
     {
+    }
+
+    DrawRectPipeline& VulkanDrawingEngine::GetDrawRectPipeline()
+    {
+        return *_rectPipeline;
+    }
+
+    DrawSpritePipeline& VulkanDrawingEngine::GetDrawSpritePipeline()
+    {
+        return *_drawSpritePipeline;
     }
 } // namespace OpenRCT2::Ui::Vulkan
 
