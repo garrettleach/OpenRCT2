@@ -3,13 +3,13 @@
 using namespace OpenRCT2::Ui::Vulkan;
 
 VulkanMemoryAllocator::VulkanMemoryAllocator(
-    vk::Instance instance, vk::PhysicalDevice physicalDevice, vk::Device device)
+    vk::Instance instance, vk::PhysicalDevice physicalDevice, vk::Device device, uint32_t applicationApiVersion)
     : _instance(instance)
     , _physicalDevice(physicalDevice)
     , _device(device)
 {
     VmaAllocatorCreateInfo allocatorInfo = {};
-    allocatorInfo.vulkanApiVersion = physicalDevice.getProperties().apiVersion;
+    allocatorInfo.vulkanApiVersion = std::min(physicalDevice.getProperties().apiVersion, applicationApiVersion);
     allocatorInfo.physicalDevice = physicalDevice;
     allocatorInfo.device = device;
     allocatorInfo.instance = instance;

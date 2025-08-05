@@ -51,6 +51,8 @@ namespace OpenRCT2::Ui::Vulkan
 
     namespace
     {
+        constexpr uint32_t authoredVulkanApiVersion = vk::ApiVersion13;
+
         vector<const char*> kRequiredExtensions{ vk::KHRSwapchainExtensionName };
     }
 
@@ -178,7 +180,7 @@ namespace OpenRCT2::Ui::Vulkan
     {
         const uint32_t applicationVersion = 1;
 
-        vk::ApplicationInfo applicationInfo{ "OpenRCT2", applicationVersion, "No Engine", 0, vk::ApiVersion13 };
+        vk::ApplicationInfo applicationInfo{ "OpenRCT2", applicationVersion, "No Engine", 0, authoredVulkanApiVersion };
 
         vector<const char*> enabledExtensions = GetRequiredExtensions(_window);
 
@@ -407,7 +409,8 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::CreateAllocator()
     {
-        _vmaAllocator = std::make_unique<VulkanMemoryAllocator>(*_instance, _physicalDevice, *_device);
+        _vmaAllocator = std::make_unique<VulkanMemoryAllocator>(
+            *_instance, _physicalDevice, *_device, authoredVulkanApiVersion);
     }
 
     void VulkanDrawingEngine::CreateQueues()

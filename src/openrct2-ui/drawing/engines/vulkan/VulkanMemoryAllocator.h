@@ -14,7 +14,8 @@ namespace OpenRCT2::Ui::Vulkan
         std::optional<VmaAllocator> _allocator;
 
     public:
-        VulkanMemoryAllocator(vk::Instance instance, vk::PhysicalDevice physicalDevice, vk::Device device);
+        VulkanMemoryAllocator(
+            vk::Instance instance, vk::PhysicalDevice physicalDevice, vk::Device device, uint32_t applicationApiVersion);
         ~VulkanMemoryAllocator();
 
         VulkanMemoryAllocator(VulkanMemoryAllocator&& other) = delete;
