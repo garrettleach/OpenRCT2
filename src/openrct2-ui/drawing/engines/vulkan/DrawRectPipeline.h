@@ -4,7 +4,6 @@
 #include <openrct2/drawing/Drawing.h>
 #include <vulkan/vulkan_raii.hpp>
 
-
 namespace OpenRCT2::Ui::Vulkan
 {
     class DrawRectPipeline
@@ -58,8 +57,10 @@ namespace OpenRCT2::Ui::Vulkan
 
         // used to keep an appropriately sized vector ready between frames
         std::vector<Vertex> _workingVerticies;
+
     public:
-        DrawRectPipeline(vk::PhysicalDevice physicalDevice, vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight);
+        DrawRectPipeline(
+            vk::PhysicalDevice physicalDevice, vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight);
 
         DrawRectPipeline& operator=(const DrawRectPipeline&) = delete;
         DrawRectPipeline(const DrawRectPipeline&) = delete;

@@ -1,6 +1,6 @@
 #ifndef DISABLE_VULKAN
     #include "SpirV.h"
-    
+
     #include <openrct2/Context.h>
     #include <openrct2/PlatformEnvironment.h>
     #include <openrct2/core/FileStream.h>

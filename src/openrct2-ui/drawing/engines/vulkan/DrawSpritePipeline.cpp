@@ -1,5 +1,6 @@
 #ifndef DISABLE_VULKAN
     #include "DrawSpritePipeline.h"
+
     #include "MemoryType.h"
     #include "SpirV.h"
 
@@ -210,7 +211,6 @@ namespace OpenRCT2::Ui::Vulkan
             allocInfo.preferredFlags = (VkMemoryPropertyFlags)(vk::MemoryPropertyFlagBits::eHostCoherent
                                                                | vk::MemoryPropertyFlagBits::eHostCached);
 
-            
             VkBuffer buffer;
             VmaAllocation allocation;
             VmaAllocationInfo allocationInfo;
@@ -235,8 +235,7 @@ namespace OpenRCT2::Ui::Vulkan
         for (size_t i = 0; i < _framesInFlight; i++)
         {
             vk::BufferCreateInfo bufferInfo(
-                vk::BufferCreateFlags{}, initialVertexBufferSize,
-                vk::BufferUsageFlagBits::eVertexBuffer,
+                vk::BufferCreateFlags{}, initialVertexBufferSize, vk::BufferUsageFlagBits::eVertexBuffer,
                 vk::SharingMode::eExclusive, {});
 
             VmaAllocationCreateInfo allocInfo = {};
@@ -244,7 +243,7 @@ namespace OpenRCT2::Ui::Vulkan
             allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
             allocInfo.requiredFlags = (VkMemoryPropertyFlags)vk::MemoryPropertyFlagBits::eHostVisible;
             allocInfo.preferredFlags = (VkMemoryPropertyFlags)(vk::MemoryPropertyFlagBits::eHostCoherent
-                | vk::MemoryPropertyFlagBits::eHostCached);
+                                                               | vk::MemoryPropertyFlagBits::eHostCached);
 
             VkBuffer buffer;
             VmaAllocation allocation;
@@ -299,8 +298,7 @@ namespace OpenRCT2::Ui::Vulkan
             vmaDestroyBuffer(_alloc, _vertexBuffers[currentFrame], _vertexDeviceMemory[currentFrame]);
 
             vk::BufferCreateInfo bufferInfo(
-                vk::BufferCreateFlags{}, neededMem, vk::BufferUsageFlagBits::eVertexBuffer,
-                vk::SharingMode::eExclusive, {});
+                vk::BufferCreateFlags{}, neededMem, vk::BufferUsageFlagBits::eVertexBuffer, vk::SharingMode::eExclusive, {});
 
             VmaAllocationCreateInfo allocInfo = {};
             allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
@@ -355,6 +353,31 @@ namespace OpenRCT2::Ui::Vulkan
 
     void DrawSpritePipeline::QueueDraw(RenderTarget& rt, ImageId imageId, int32_t x, int32_t y)
     {
+        auto g1Element = GfxGetG1Element(imageId);
+        if (g1Element == nullptr)
+        {
+            return;
+        }
+
+        if (rt.zoom_level > ZoomLevel{ 0 })
+        {
+            if (g1Element->flags & G1_FLAG_HAS_ZOOM_SPRITE)
+            {
+                // TODO
+                return;
+            }
+            if (g1Element->flags & G1_FLAG_NO_ZOOM_DRAW)
+            {
+                return;
+            }
+        }
+
+        // TODO: get texture data (and upload?)
+
+        // TODO: calculate clipping???
+
+        // TODO: palette?
+
         _inProgressSprites.emplace_back(imageId, x, y);
     }
 } // namespace OpenRCT2::Ui::Vulkan

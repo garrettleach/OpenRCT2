@@ -1,5 +1,6 @@
 #ifndef DISABLE_VULKAN
     #include "VulkanDrawingContext.h"
+
     #include "VulkanDrawingEngine.h"
 
 using namespace std;

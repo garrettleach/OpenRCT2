@@ -1,4 +1,5 @@
 #include "MemoryType.h"
+
 #include <optional>
 
 using namespace std;

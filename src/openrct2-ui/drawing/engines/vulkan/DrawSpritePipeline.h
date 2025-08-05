@@ -1,11 +1,11 @@
 #pragma once
+#include "VulkanMemoryAllocator.h"
+
 #include <glm/glm.hpp>
 #include <openrct2/drawing/ColourPalette.h>
 #include <openrct2/drawing/Drawing.h>
 #include <openrct2/drawing/ImageId.hpp>
 #include <vulkan/vulkan_raii.hpp>
-#include "VulkanMemoryAllocator.h"
-
 
 namespace OpenRCT2::Ui::Vulkan
 {

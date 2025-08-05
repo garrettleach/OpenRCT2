@@ -1,9 +1,10 @@
 #ifndef DISABLE_VULKAN
     #include "DrawRectPipeline.h"
 
-    #include <glm/gtc/matrix_transform.hpp>
     #include "MemoryType.h"
     #include "SpirV.h"
+
+    #include <glm/gtc/matrix_transform.hpp>
 
 using namespace std;
 
@@ -47,8 +48,8 @@ namespace OpenRCT2::Ui::Vulkan
     }
 
     vk::UniquePipeline DrawRectPipeline::CreatePipeline(
-        const vk::Device& device, const vk::DescriptorSetLayout& descriptorSetLayout,
-        const vk::PipelineLayout& pipelineLayout, const vk::RenderPass& renderPass)
+        const vk::Device& device, const vk::DescriptorSetLayout& descriptorSetLayout, const vk::PipelineLayout& pipelineLayout,
+        const vk::RenderPass& renderPass)
     {
         auto vertexShaderSpirV = ReadSpirVFile("drawrect.vertex.spirv");
         auto fragmentShaderSpirV = ReadSpirVFile("drawrect.fragment.spirv");

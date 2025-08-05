@@ -26,4 +26,4 @@ namespace OpenRCT2::Ui::Vulkan
 
         operator VmaAllocator();
     };
-}
+} // namespace OpenRCT2::Ui::Vulkan

@@ -3,6 +3,7 @@
 #include "DrawRectPipeline.h"
 #include "DrawSpritePipeline.h"
 #include "SwapchainSync.h"
+#include "VulkanMemoryAllocator.h"
 
 #include <SDL2/SDL.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -12,7 +13,6 @@
 #include <openrct2/ui/UiContext.h>
 #include <string>
 #include <vulkan/vulkan_raii.hpp>
-#include "VulkanMemoryAllocator.h"
 
 namespace OpenRCT2::Ui::Vulkan
 {
@@ -60,7 +60,7 @@ namespace OpenRCT2::Ui::Vulkan
         vk::PresentModeKHR _presentationMode{};
         uint32_t _swapchainImageCount{};
         vk::UniqueSwapchainKHR _swapchain;
-        std::vector<vk::Image> _swapchainImages{}; // [0,_swapchainImageCount)
+        std::vector<vk::Image> _swapchainImages{};               // [0,_swapchainImageCount)
         std::vector<vk::UniqueImageView> _swapchainImageViews{}; // [0,_swapchainImageCount)
         vk::UniqueRenderPass _renderPass;
         std::unique_ptr<DrawRectPipeline> _rectPipeline;
@@ -120,6 +120,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         DrawRectPipeline& GetDrawRectPipeline();
         DrawSpritePipeline& GetDrawSpritePipeline();
+
     private:
         void CreateInstance();
         void CreateSurface();

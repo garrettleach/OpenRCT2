@@ -1,6 +1,6 @@
 #include "ImageId.hpp"
-#include <memory>
 
+#include <memory>
 
 std::size_t ImageIdHasher::operator()(const ImageId& k) const
 {

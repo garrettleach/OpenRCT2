@@ -54,7 +54,7 @@ namespace OpenRCT2::Ui::Vulkan
         constexpr uint32_t authoredVulkanApiVersion = vk::ApiVersion13;
 
         vector<const char*> kRequiredExtensions{ vk::KHRSwapchainExtensionName };
-    }
+    } // namespace
 
     #if VK_HEADER_VERSION >= 304
     std::array<int32_t, 8> messageIdsToIgnore{
@@ -229,7 +229,6 @@ namespace OpenRCT2::Ui::Vulkan
         vk::InstanceCreateInfo instanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo, enabledLayers,
                                                    enabledExtensions, nullptr };
     #endif
-
 
         _instance = vk::createInstanceUnique(instanceCreateInfo);
 
@@ -543,7 +542,8 @@ namespace OpenRCT2::Ui::Vulkan
     void VulkanDrawingEngine::CreateGraphicsPipelines()
     {
         _rectPipeline = std::make_unique<DrawRectPipeline>(_physicalDevice, *_device, *_renderPass, _framesInFlight);
-        _drawSpritePipeline = std::make_unique<DrawSpritePipeline>(_physicalDevice, *_device, *_renderPass, _framesInFlight, *_vmaAllocator);
+        _drawSpritePipeline = std::make_unique<DrawSpritePipeline>(
+            _physicalDevice, *_device, *_renderPass, _framesInFlight, *_vmaAllocator);
     }
 
     void VulkanDrawingEngine::CreateFramebuffers()
@@ -569,8 +569,7 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::CreateCommandBuffers()
     {
-        vk::CommandBufferAllocateInfo allocInfo(
-            *_commandPool, vk::CommandBufferLevel::ePrimary, _swapchainImageCount);
+        vk::CommandBufferAllocateInfo allocInfo(*_commandPool, vk::CommandBufferLevel::ePrimary, _swapchainImageCount);
 
         _commandBuffers = _device->allocateCommandBuffersUnique(allocInfo);
     }
@@ -644,10 +643,11 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::BeginDraw()
     {
-        std::ignore = _device->waitForFences({ _swapchainSync.InFlightFence(_currentFrame) }, true, std::numeric_limits<uint64_t>::max());
+        std::ignore = _device->waitForFences(
+            { _swapchainSync.InFlightFence(_currentFrame) }, true, std::numeric_limits<uint64_t>::max());
 
-        auto nextImageResult = _device->acquireNextImageKHR(*_swapchain,
-            std::numeric_limits<uint64_t>::max(), _swapchainSync.AcquireSemaphore(_currentFrame), {});
+        auto nextImageResult = _device->acquireNextImageKHR(
+            *_swapchain, std::numeric_limits<uint64_t>::max(), _swapchainSync.AcquireSemaphore(_currentFrame), {});
 
         if (nextImageResult.result == vk::Result::eErrorOutOfDateKHR)
         {
@@ -659,8 +659,8 @@ namespace OpenRCT2::Ui::Vulkan
 
             RecreateSwapChain();
 
-            nextImageResult = _device->acquireNextImageKHR(*_swapchain,
-                std::numeric_limits<uint64_t>::max(), _swapchainSync.AcquireSemaphore(_currentFrame), {});
+            nextImageResult = _device->acquireNextImageKHR(
+                *_swapchain, std::numeric_limits<uint64_t>::max(), _swapchainSync.AcquireSemaphore(_currentFrame), {});
 
             if (nextImageResult.result != vk::Result::eSuccess)
             {
