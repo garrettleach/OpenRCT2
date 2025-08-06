@@ -128,10 +128,11 @@ namespace OpenRCT2::Ui::Vulkan
 
     DrawSpritePipeline::DrawSpritePipeline(
         vk::PhysicalDevice physicalDevice, vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight,
-        VulkanMemoryAllocator& vma)
+        VulkanMemoryAllocator& vma, uint32_t graphicsQueueIndex)
         : _physicalDevice(physicalDevice)
         , _device(device)
         , _framesInFlight(framesInFlight)
+        , _graphicsQueueIndex(graphicsQueueIndex)
         , _alloc(vma)
         , _descriptorSetLayout(CreateDescriptorSetLayout(device))
         , _pipelineLayout(CreatePipelineLayout(device, *_descriptorSetLayout))
@@ -141,6 +142,7 @@ namespace OpenRCT2::Ui::Vulkan
         CreateDescriptorPool();
         CreateDescriptorSets();
         CreateVertexBuffers();
+        CreateCommandPool();
     }
 
     DrawSpritePipeline::~DrawSpritePipeline()
@@ -379,6 +381,14 @@ namespace OpenRCT2::Ui::Vulkan
         // TODO: palette?
 
         _inProgressSprites.emplace_back(imageId, x, y);
+    }
+
+    void DrawSpritePipeline::CreateCommandPool()
+    {
+        vk::CommandPoolCreateInfo commandPoolCreate(
+            vk::CommandPoolCreateFlagBits::eResetCommandBuffer, _graphicsQueueIndex);
+
+        _commandPool = _device.createCommandPoolUnique(commandPoolCreate);
     }
 } // namespace OpenRCT2::Ui::Vulkan
 #endif

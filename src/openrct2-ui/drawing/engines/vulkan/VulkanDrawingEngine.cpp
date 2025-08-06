@@ -543,7 +543,7 @@ namespace OpenRCT2::Ui::Vulkan
     {
         _rectPipeline = std::make_unique<DrawRectPipeline>(_physicalDevice, *_device, *_renderPass, _framesInFlight);
         _drawSpritePipeline = std::make_unique<DrawSpritePipeline>(
-            _physicalDevice, *_device, *_renderPass, _framesInFlight, *_vmaAllocator);
+            _physicalDevice, *_device, *_renderPass, _framesInFlight, *_vmaAllocator, _queueIndicies.graphics);
     }
 
     void VulkanDrawingEngine::CreateFramebuffers()

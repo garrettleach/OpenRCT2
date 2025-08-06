@@ -36,6 +36,7 @@ namespace OpenRCT2::Ui::Vulkan
         vk::PhysicalDevice _physicalDevice;
         vk::Device _device;
         size_t _framesInFlight{ 0 };
+        uint32_t _graphicsQueueIndex;
 
         VmaAllocator _alloc;
 
@@ -63,10 +64,12 @@ namespace OpenRCT2::Ui::Vulkan
         // used to keep an appropriately sized vector ready between frames
         std::vector<Vertex> _workingVerticies;
 
+        vk::UniqueCommandPool _commandPool;
+
     public:
         DrawSpritePipeline(
             vk::PhysicalDevice physicalDevice, vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight,
-            VulkanMemoryAllocator& vma);
+            VulkanMemoryAllocator& vma, uint32_t graphicsQueueIndex);
 
         DrawSpritePipeline& operator=(const DrawSpritePipeline&) = delete;
         DrawSpritePipeline(const DrawSpritePipeline&) = delete;
@@ -97,5 +100,7 @@ namespace OpenRCT2::Ui::Vulkan
         void CreateDescriptorSets();
 
         void CreateVertexBuffers();
+
+        void CreateCommandPool();
     };
 } // namespace OpenRCT2::Ui::Vulkan
