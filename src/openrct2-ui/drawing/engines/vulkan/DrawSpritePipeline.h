@@ -33,10 +33,10 @@ namespace OpenRCT2::Ui::Vulkan
         };
 
     private:
-        vk::PhysicalDevice _physicalDevice;
-        vk::Device _device;
-        size_t _framesInFlight{ 0 };
-        uint32_t _graphicsQueueIndex;
+        const vk::PhysicalDevice _physicalDevice;
+        const vk::Device _device;
+        const size_t _framesInFlight{ 0 };
+        const uint32_t _graphicsQueueIndex;
 
         VmaAllocator _alloc;
 
@@ -68,7 +68,7 @@ namespace OpenRCT2::Ui::Vulkan
 
     public:
         DrawSpritePipeline(
-            vk::PhysicalDevice physicalDevice, vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight,
+            const vk::PhysicalDevice const physicalDevice, vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight,
             VulkanMemoryAllocator& vma, uint32_t graphicsQueueIndex);
 
         DrawSpritePipeline& operator=(const DrawSpritePipeline&) = delete;
@@ -81,7 +81,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         vk::DescriptorSetLayout GetDescriptorSetLayout();
 
-        void Draw(vk::CommandBuffer& commandBuffer, RenderTarget& renderTarget, uint32_t currentFrame);
+        void Draw(const vk::CommandBuffer& commandBuffer, const RenderTarget& renderTarget, uint32_t currentFrame);
 
         void SetPalette(const OpenRCT2::Drawing::GamePalette& palette);
 

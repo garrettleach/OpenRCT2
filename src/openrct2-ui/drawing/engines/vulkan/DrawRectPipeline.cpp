@@ -127,7 +127,7 @@ namespace OpenRCT2::Ui::Vulkan
     }
 
     DrawRectPipeline::DrawRectPipeline(
-        vk::PhysicalDevice physicalDevice, vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight)
+        const vk::PhysicalDevice physicalDevice, const vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight)
         : _physicalDevice(physicalDevice)
         , _device(device)
         , _framesInFlight(framesInFlight)
@@ -243,7 +243,7 @@ namespace OpenRCT2::Ui::Vulkan
         return *_descriptorSetLayout;
     }
 
-    void DrawRectPipeline::Draw(vk::CommandBuffer& commandBuffer, RenderTarget& renderTarget, uint32_t currentFrame)
+    void DrawRectPipeline::Draw(const vk::CommandBuffer& commandBuffer, const RenderTarget& renderTarget, uint32_t currentFrame)
     {
         _workingVerticies.clear();
         for (auto& data : _inProgressDraws)
@@ -326,7 +326,7 @@ namespace OpenRCT2::Ui::Vulkan
     }
 
     void DrawRectPipeline::QueueRect(
-        RenderTarget& rt, uint32_t colour, int32_t left, int32_t top, int32_t right, int32_t bottom)
+        const RenderTarget& rt, uint32_t colour, int32_t left, int32_t top, int32_t right, int32_t bottom)
     {
         _inProgressDraws.emplace_back(DrawCommand{ left, top, right, bottom, static_cast<uint8_t>(colour) });
     }

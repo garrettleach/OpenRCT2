@@ -127,7 +127,7 @@ namespace OpenRCT2::Ui::Vulkan
     }
 
     DrawSpritePipeline::DrawSpritePipeline(
-        vk::PhysicalDevice physicalDevice, vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight,
+        const vk::PhysicalDevice physicalDevice, const vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight,
         VulkanMemoryAllocator& vma, uint32_t graphicsQueueIndex)
         : _physicalDevice(physicalDevice)
         , _device(device)
@@ -265,7 +265,7 @@ namespace OpenRCT2::Ui::Vulkan
         return *_descriptorSetLayout;
     }
 
-    void DrawSpritePipeline::Draw(vk::CommandBuffer& commandBuffer, RenderTarget& renderTarget, uint32_t currentFrame)
+    void DrawSpritePipeline::Draw(const vk::CommandBuffer& commandBuffer, const RenderTarget& renderTarget, uint32_t currentFrame)
     {
         _workingVerticies.clear();
         for (auto data : _inProgressSprites)

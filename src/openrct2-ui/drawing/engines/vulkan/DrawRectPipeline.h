@@ -32,9 +32,9 @@ namespace OpenRCT2::Ui::Vulkan
         };
 
     private:
-        vk::PhysicalDevice _physicalDevice;
-        vk::Device _device;
-        size_t _framesInFlight;
+        const vk::PhysicalDevice _physicalDevice;
+        const vk::Device _device;
+        const size_t _framesInFlight;
 
         OpenRCT2::Drawing::GamePalette _palette;
 
@@ -60,7 +60,7 @@ namespace OpenRCT2::Ui::Vulkan
 
     public:
         DrawRectPipeline(
-            vk::PhysicalDevice physicalDevice, vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight);
+            const vk::PhysicalDevice physicalDevice, const vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight);
 
         DrawRectPipeline& operator=(const DrawRectPipeline&) = delete;
         DrawRectPipeline(const DrawRectPipeline&) = delete;
@@ -72,11 +72,11 @@ namespace OpenRCT2::Ui::Vulkan
 
         vk::DescriptorSetLayout GetDescriptorSetLayout();
 
-        void Draw(vk::CommandBuffer& commandBuffer, RenderTarget& renderTarget, uint32_t currentFrame);
+        void Draw(const vk::CommandBuffer& commandBuffer, const RenderTarget& renderTarget, uint32_t currentFrame);
 
         void SetPalette(const OpenRCT2::Drawing::GamePalette& palette);
 
-        void QueueRect(RenderTarget& rt, uint32_t colour, int32_t left, int32_t top, int32_t right, int32_t bottom);
+        void QueueRect(const RenderTarget& rt, uint32_t colour, int32_t left, int32_t top, int32_t right, int32_t bottom);
 
     private:
         static vk::UniqueDescriptorSetLayout CreateDescriptorSetLayout(const vk::Device& device);
