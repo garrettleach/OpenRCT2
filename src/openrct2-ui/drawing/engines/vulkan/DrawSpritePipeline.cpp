@@ -174,13 +174,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         vk::DescriptorSetAllocateInfo allocInfo(*_uniformBufferDescriptorPool, layouts);
 
-        auto descriptorSets = _device.allocateDescriptorSets(allocInfo);
-
-        // We don't want free to be called on these as they are part of a pool (that will release them)
-        for (auto& descriptorSet : descriptorSets)
-        {
-            _uniformBufferDescriptorSets.push_back(descriptorSet);
-        }
+        _uniformBufferDescriptorSets = _device.allocateDescriptorSets(allocInfo);
 
         for (size_t i = 0; i < _uniformBufferDescriptorSets.size(); i++)
         {
