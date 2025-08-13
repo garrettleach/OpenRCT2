@@ -828,7 +828,7 @@ namespace OpenRCT2::Ui::Vulkan
                     vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
                 auto imageView = _device.createImageView(imageViewCreateInfo);
-                
+
                 _uploadedSprites.insert(
                     std::make_pair(
                         sprite.first, UploadedSpriteInfo(stagingBuffer, stagingAllocation, image, imageAllocation, imageView)));
@@ -857,7 +857,7 @@ namespace OpenRCT2::Ui::Vulkan
         {
             descriptors.emplace_back(vk::Sampler{}, uploadedSprite.second.imageView, vk::ImageLayout::eShaderReadOnlyOptimal);
             descriptorMap[uploadedSprite.first] = static_cast<uint32_t>(
-                descriptors.size());// this intentionally starts at 1, we have a placeholder for zero
+                descriptors.size()); // this intentionally starts at 1, we have a placeholder for zero
         }
     }
 } // namespace OpenRCT2::Ui::Vulkan

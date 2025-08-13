@@ -253,7 +253,7 @@ namespace OpenRCT2::Ui::Vulkan
         }
     #else
         vk::StructureChain<vk::InstanceCreateInfo> instanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo,
-                                                   enabledLayers, enabledExtensions, nullptr };
+                                                                       enabledLayers, enabledExtensions, nullptr };
     #endif
 
         _instance = vk::createInstanceUnique(instanceCreateInfo.get());
