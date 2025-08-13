@@ -394,6 +394,10 @@ namespace OpenRCT2::Ui::Vulkan
 
         deviceCreateInfo.get<vk::PhysicalDeviceVulkan12Features>().descriptorIndexing = true;
         deviceCreateInfo.get<vk::PhysicalDeviceVulkan12Features>().descriptorBindingVariableDescriptorCount = true;
+        deviceCreateInfo.get<vk::PhysicalDeviceVulkan12Features>().descriptorBindingPartiallyBound = true;
+        deviceCreateInfo.get<vk::PhysicalDeviceVulkan12Features>().descriptorBindingUpdateUnusedWhilePending = true;
+        deviceCreateInfo.get<vk::PhysicalDeviceVulkan12Features>().descriptorBindingSampledImageUpdateAfterBind = true;
+        deviceCreateInfo.get<vk::PhysicalDeviceVulkan12Features>().runtimeDescriptorArray = true;
 
         if (kRobustAccess)
         {
@@ -543,7 +547,7 @@ namespace OpenRCT2::Ui::Vulkan
     {
         _rectPipeline = std::make_unique<DrawRectPipeline>(_physicalDevice, *_device, *_renderPass, _framesInFlight);
         _drawSpritePipeline = std::make_unique<DrawSpritePipeline>(
-            _physicalDevice, *_device, *_renderPass, _framesInFlight, *_vmaAllocator, _queueIndicies.graphics);
+            _physicalDevice, *_device, *_renderPass, _framesInFlight, *_vmaAllocator, _graphicsQueue, _queueIndicies.graphics);
     }
 
     void VulkanDrawingEngine::CreateFramebuffers()
@@ -673,6 +677,8 @@ namespace OpenRCT2::Ui::Vulkan
         }
 
         _imageIndex = nextImageResult.value;
+
+        _drawSpritePipeline->BeginDraw(_currentFrame);
     }
 
     void VulkanDrawingEngine::EndDraw()
@@ -789,6 +795,7 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::InvalidateImage(uint32_t image)
     {
+        _drawSpritePipeline->InvalidateImage(image);
     }
 
     DrawRectPipeline& VulkanDrawingEngine::GetDrawRectPipeline()
