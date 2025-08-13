@@ -9,7 +9,7 @@ layout(set = 0, binding = 2) uniform DrawInfo
     vec4 palette[256];
 } drawInfo;
 
-layout(set = 1, binding = 0) uniform texture2D textures[];
+layout(set = 1, binding = 0) uniform utexture2D textures[];
 
 layout(location = 0) flat in uint textureIndex;
 layout(location = 1) in vec2 texCoord;
@@ -17,7 +17,7 @@ layout(location = 1) in vec2 texCoord;
 layout(location = 0) out vec4 outColor;
 
 void main() {
-    //debugPrintfEXT("f");
+    uint upaletteindex = texture(usampler2D(textures[textureIndex], singleSampler), texCoord).r;
 
-    outColor = texture(sampler2D(textures[textureIndex], singleSampler), texCoord);
+    outColor = drawInfo.palette[upaletteindex];
 }

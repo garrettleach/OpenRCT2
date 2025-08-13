@@ -173,5 +173,7 @@ namespace OpenRCT2::Ui::Vulkan
             std::unordered_map<ImageId, uint32_t, ImageIdHasher>& descriptorMap, std::vector<vk::DescriptorImageInfo>& descriptors);
 
         void ReleaseUploadedSprites(std::vector<DrawSpritePipeline::UploadedSpriteInfo>& sprites);
+
+        std::vector<glm::vec4> TransformPalette(OpenRCT2::Drawing::GamePalette& palette);
     };
 } // namespace OpenRCT2::Ui::Vulkan

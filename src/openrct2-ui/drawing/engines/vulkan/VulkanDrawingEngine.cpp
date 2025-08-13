@@ -37,12 +37,14 @@ namespace OpenRCT2::Ui::Vulkan
     constexpr bool kValidationLayer = true;
     constexpr bool kMonitorIfPresent = true;
     constexpr bool kDebugPrintfShader = true;
+    constexpr bool kGpuAssistedValidation = true;
     constexpr bool kRobustAccess = true;
     #else
     constexpr bool kDebugUtils = false;
     constexpr bool kValidationLayer = false;
     constexpr bool kMonitorIfPresent = false;
     constexpr bool kDebugPrintfShader = false;
+    constexpr bool kGpuAssistedValidation = false;
     constexpr bool kRobustAccess = false;
     #endif
 
@@ -219,24 +221,51 @@ namespace OpenRCT2::Ui::Vulkan
             | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
 
     #if VK_HEADER_VERSION >= 304
-        vk::DebugUtilsMessengerCreateInfoEXT debugCreateInfo{ vk::DebugUtilsMessengerCreateFlagsEXT{}, debugMessageSeverity,
-                                                              debugMessageType, &VulkanDebugCallback,
-                                                              static_cast<void*>(this) };
+        std::vector<vk::ValidationFeatureEnableEXT> enabledValidationFeatures;
 
-        vk::InstanceCreateInfo instanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo, enabledLayers,
-                                                   enabledExtensions, kDebugUtils ? &debugCreateInfo : nullptr };
+        if (kDebugPrintfShader)
+        {
+            enabledValidationFeatures.emplace_back(vk::ValidationFeatureEnableEXT::eDebugPrintf);
+        }
+
+        if (kGpuAssistedValidation)
+        {
+            enabledValidationFeatures.emplace_back(vk::ValidationFeatureEnableEXT::eGpuAssisted);
+        }
+
+        vk::ValidationFeaturesEXT validationFeatures(enabledValidationFeatures);
+
+        vk::StructureChain<vk::InstanceCreateInfo, vk::DebugUtilsMessengerCreateInfoEXT, vk::ValidationFeaturesEXT>
+            instanceCreateInfo = { vk::InstanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo, enabledLayers,
+                                                           enabledExtensions },
+                                   { vk::DebugUtilsMessengerCreateFlagsEXT{}, debugMessageSeverity, debugMessageType,
+                                     &VulkanDebugCallback, static_cast<void*>(this) },
+                                   { enabledValidationFeatures }
+            };
+
+        if (enabledValidationFeatures.size() == 0)
+        {
+            instanceCreateInfo.unlink<vk::ValidationFeaturesEXT>();
+        }
+
+        if (!kDebugUtils)
+        {
+            instanceCreateInfo.unlink<vk::DebugUtilsMessengerCreateInfoEXT>();
+        }
     #else
-        vk::InstanceCreateInfo instanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo, enabledLayers,
+        vk::StructureChain<vk::InstanceCreateInfo> instanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo, enabledLayers,
                                                    enabledExtensions, nullptr };
     #endif
 
-        _instance = vk::createInstanceUnique(instanceCreateInfo);
+        _instance = vk::createInstanceUnique(instanceCreateInfo.get());
 
         _vulkanDynamicDispatch = vk::detail::DispatchLoaderDynamic(*_instance, vkGetInstanceProcAddr);
 
         if (kDebugUtils)
         {
     #if VK_HEADER_VERSION >= 304
+            auto debugCreateInfo = instanceCreateInfo.get<vk::DebugUtilsMessengerCreateInfoEXT>();
+
             debugCreateInfo.messageSeverity &= ~(vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose);
 
             _debugMessanger = _instance->createDebugUtilsMessengerEXTUnique(debugCreateInfo, nullptr, _vulkanDynamicDispatch);
@@ -382,11 +411,18 @@ namespace OpenRCT2::Ui::Vulkan
             layers.push_back(lunargMonitorLayerName);
         }
 
+        auto extensions = kRequiredExtensions;
+
+        if (kDebugPrintfShader)
+        {
+            extensions.push_back(vk::KHRShaderNonSemanticInfoExtensionName);
+        }
+
         vk::StructureChain<
             vk::DeviceCreateInfo, vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features,
             vk::PhysicalDeviceVulkan12Features, vk::PhysicalDeviceRobustness2FeaturesEXT>
             deviceCreateInfo(
-                vk::DeviceCreateInfo{ vk::DeviceCreateFlags{}, queueCreateInfos, layers, kRequiredExtensions },
+                vk::DeviceCreateInfo{ vk::DeviceCreateFlags{}, queueCreateInfos, layers, extensions },
                 vk::PhysicalDeviceFeatures2{}, vk::PhysicalDeviceVulkan13Features{}, vk::PhysicalDeviceVulkan12Features{},
                 vk::PhysicalDeviceRobustness2FeaturesEXT{ false, false, true });
 
@@ -405,6 +441,11 @@ namespace OpenRCT2::Ui::Vulkan
 
             deviceCreateInfo.get<vk::PhysicalDeviceRobustness2FeaturesEXT>().robustBufferAccess2 = true;
             deviceCreateInfo.get<vk::PhysicalDeviceRobustness2FeaturesEXT>().robustImageAccess2 = true;
+        }
+
+        if (kDebugPrintfShader)
+        {
+            deviceCreateInfo.get<vk::PhysicalDeviceFeatures2>().features.sampleRateShading = true;
         }
 
         _device = _physicalDevice.createDeviceUnique(deviceCreateInfo.get());

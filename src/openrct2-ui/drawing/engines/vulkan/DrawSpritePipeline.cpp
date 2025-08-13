@@ -13,7 +13,7 @@ namespace OpenRCT2::Ui::Vulkan
     namespace
     {
         constexpr uint32_t initialDescriptorCount = 1000000;
-        constexpr uint32_t paletteSizeInBytes = 256 * 4;
+        constexpr uint32_t shaderPaletteSizeInBytes = 256 * 4 * 4;
 
         vk::VertexInputBindingDescription GetBindingDescription()
         {
@@ -274,7 +274,7 @@ namespace OpenRCT2::Ui::Vulkan
                 _uniformBufferDescriptorSets[i], 1, 0, vk::DescriptorType::eSampler, { samplerImageInfo }, {}, {});
 
             vk::DescriptorBufferInfo paletteInfo(
-                _paletteBufferObjectBuffer[i], vk::DeviceSize(0), vk::DeviceSize(paletteSizeInBytes));
+                _paletteBufferObjectBuffer[i], vk::DeviceSize(0), vk::DeviceSize(shaderPaletteSizeInBytes));
 
             vk::WriteDescriptorSet paletteDescriptorWrite(
                 _uniformBufferDescriptorSets[i], 2, 0, vk::DescriptorType::eUniformBuffer, {}, { paletteInfo }, {});
@@ -293,7 +293,7 @@ namespace OpenRCT2::Ui::Vulkan
                 vk::BufferCreateFlags{}, uniformBufferSize, vk::BufferUsageFlagBits::eUniformBuffer,
                 vk::SharingMode::eExclusive, {});
             vk::BufferCreateInfo paletteBufferInfo(
-                vk::BufferCreateFlags{}, vk::DeviceSize(paletteSizeInBytes), vk::BufferUsageFlagBits::eUniformBuffer,
+                vk::BufferCreateFlags{}, vk::DeviceSize(shaderPaletteSizeInBytes), vk::BufferUsageFlagBits::eUniformBuffer,
                 vk::SharingMode::eExclusive, {});
 
             VmaAllocationCreateInfo allocInfo = {};
@@ -390,6 +390,20 @@ namespace OpenRCT2::Ui::Vulkan
         }
     }
 
+    std::vector<glm::vec4> DrawSpritePipeline::TransformPalette(OpenRCT2::Drawing::GamePalette& palette)
+    {
+        std::vector<glm::vec4> temp;
+
+        for (auto& entry : palette)
+        {
+            temp.push_back(glm::vec4(
+                (float)entry.Red / (float)256, (float)entry.Green / (float)256, (float)entry.Blue / (float)256,
+                (float)entry.Alpha / (float)256));
+        }
+
+        return temp;
+    }
+
     void DrawSpritePipeline::BeginDraw(uint32_t currentFrame)
     {
         // we can delete any images that were added during the last cycle
@@ -408,12 +422,15 @@ namespace OpenRCT2::Ui::Vulkan
 
         UploadSprites();
 
-        std::memcpy(_paletteBufferObjectMappedMemory[currentFrame], _palette.data(), sizeof(_palette));
+        auto shaderPalette = TransformPalette(_palette);
+
+        std::memcpy(_paletteBufferObjectMappedMemory[currentFrame], shaderPalette.data(), shaderPaletteSizeInBytes);
 
         // TODO: Update descriptor set for frame
         vk::DescriptorImageInfo descImageInfo(nullptr, _sampleImageView, vk::ImageLayout::eShaderReadOnlyOptimal);
 
-        vk::DescriptorBufferInfo paletteInfo(_paletteBufferObjectBuffer[currentFrame], 0, vk::DeviceSize(paletteSizeInBytes));
+        vk::DescriptorBufferInfo paletteInfo(
+            _paletteBufferObjectBuffer[currentFrame], 0, vk::DeviceSize(shaderPaletteSizeInBytes));
 
         vk::WriteDescriptorSet writeSampleImageDesc(
             _descriptorIndexSets[currentFrame], 0, 0, vk::DescriptorType::eSampledImage, { descImageInfo }, nullptr, nullptr);
@@ -680,7 +697,7 @@ namespace OpenRCT2::Ui::Vulkan
         std::ignore = uniqueCommandBuffer.release();
 
         vk::ImageViewCreateInfo imageViewCreateInfo(
-            vk::ImageViewCreateFlags(), _sampleImage, vk::ImageViewType::e2D, vk::Format::eR8Srgb, {},
+            vk::ImageViewCreateFlags(), _sampleImage, vk::ImageViewType::e2D, vk::Format::eR8Uint, {},
             vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
         _sampleImageView = _device.createImageView(imageViewCreateInfo);
@@ -691,7 +708,7 @@ namespace OpenRCT2::Ui::Vulkan
         std::vector<uint32_t> queueIndicies{ _graphicsQueueIndex };
 
         vk::ImageCreateInfo imageCreateInfo(
-            vk::ImageCreateFlags{}, vk::ImageType::e2D, vk::Format::eR8Srgb, vk::Extent3D{ extent, 1 }, 1u, 1u,
+            vk::ImageCreateFlags{}, vk::ImageType::e2D, vk::Format::eR8Uint, vk::Extent3D{ extent, 1 }, 1u, 1u,
             vk::SampleCountFlagBits::e1, vk::ImageTiling::eOptimal,
             vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled, vk::SharingMode::eExclusive, queueIndicies,
             vk::ImageLayout::eUndefined);
@@ -806,7 +823,7 @@ namespace OpenRCT2::Ui::Vulkan
                 TransitionImageToFragmentReadOpt(*(uniqueCommandBuffer.value()), image);
 
                 vk::ImageViewCreateInfo imageViewCreateInfo(
-                    vk::ImageViewCreateFlags(), image, vk::ImageViewType::e2D, vk::Format::eR8Srgb, {},
+                    vk::ImageViewCreateFlags(), image, vk::ImageViewType::e2D, vk::Format::eR8Uint, {},
                     vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
                 auto imageView = _device.createImageView(imageViewCreateInfo);
