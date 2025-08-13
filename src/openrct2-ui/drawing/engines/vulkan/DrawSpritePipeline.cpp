@@ -232,7 +232,8 @@ namespace OpenRCT2::Ui::Vulkan
 
     void DrawSpritePipeline::CreateDescriptorPool()
     {
-        vk::DescriptorPoolSize poolSizeUniformBuffer(vk::DescriptorType::eUniformBuffer, static_cast<uint32_t>(_framesInFlight * 2));
+        vk::DescriptorPoolSize poolSizeUniformBuffer(
+            vk::DescriptorType::eUniformBuffer, static_cast<uint32_t>(_framesInFlight * 2));
         vk::DescriptorPoolSize poolSizeSampler(vk::DescriptorType::eSampler, static_cast<uint32_t>(_framesInFlight));
 
         std::vector<vk::DescriptorPoolSize> poolSizes{ poolSizeUniformBuffer, poolSizeSampler };
@@ -396,9 +397,10 @@ namespace OpenRCT2::Ui::Vulkan
 
         for (auto& entry : palette)
         {
-            temp.push_back(glm::vec4(
-                (float)entry.Red / (float)256, (float)entry.Green / (float)256, (float)entry.Blue / (float)256,
-                (float)entry.Alpha / (float)256));
+            temp.push_back(
+                glm::vec4(
+                    (float)entry.Red / (float)256, (float)entry.Green / (float)256, (float)entry.Blue / (float)256,
+                    (float)entry.Alpha / (float)256));
         }
 
         return temp;
@@ -408,7 +410,7 @@ namespace OpenRCT2::Ui::Vulkan
     {
         // we can delete any images that were added during the last cycle
         ReleaseUploadedSprites(_queuedImageInvalidation[currentFrame]);
-        
+
         _queuedImageInvalidation[currentFrame].clear();
 
         // move the just received invalidations so that we will clear them on the next cycle
@@ -626,8 +628,7 @@ namespace OpenRCT2::Ui::Vulkan
 
     void DrawSpritePipeline::CreateCommandPool()
     {
-        vk::CommandPoolCreateInfo commandPoolCreate(
-            vk::CommandPoolCreateFlagBits::eResetCommandBuffer, _graphicsQueueIndex);
+        vk::CommandPoolCreateInfo commandPoolCreate(vk::CommandPoolCreateFlagBits::eResetCommandBuffer, _graphicsQueueIndex);
 
         _commandPool = _device.createCommandPoolUnique(commandPoolCreate);
     }
@@ -719,7 +720,8 @@ namespace OpenRCT2::Ui::Vulkan
         return vmaCreateImage(_alloc, &*imageCreateInfo, &allocCreateInfo, &image, &vmaAllocation, nullptr);
     }
 
-    VkResult DrawSpritePipeline::CreateStagingBuffer(void* data, vk::DeviceSize size, VkBuffer& buffer, VmaAllocation& vmaAllocation)
+    VkResult DrawSpritePipeline::CreateStagingBuffer(
+        void* data, vk::DeviceSize size, VkBuffer& buffer, VmaAllocation& vmaAllocation)
     {
         vk::BufferCreateInfo bufferInfo(
             vk::BufferCreateFlags{}, size, vk::BufferUsageFlagBits::eTransferSrc, vk::SharingMode::eExclusive, {});
@@ -727,8 +729,6 @@ namespace OpenRCT2::Ui::Vulkan
         VmaAllocationCreateInfo allocInfo = {};
         allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
         allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
-        //allocInfo.requiredFlags = (VkMemoryPropertyFlags)vk::MemoryPropertyFlagBits::eHostVisible;
-        //allocInfo.preferredFlags = (VkMemoryPropertyFlags)vk::MemoryPropertyFlagBits::eHostCoherent;
 
         VmaAllocationInfo allocationInfo;
 
@@ -774,7 +774,7 @@ namespace OpenRCT2::Ui::Vulkan
     }
 
     void DrawSpritePipeline::UploadSprites()
-{
+    {
         // Don't create the command buffer if we don't need it
         std::optional<vk::UniqueCommandBuffer> uniqueCommandBuffer;
 
@@ -810,7 +810,8 @@ namespace OpenRCT2::Ui::Vulkan
                 VkBuffer stagingBuffer;
                 VmaAllocation stagingAllocation;
                 auto stagingResult = CreateStagingBuffer(
-                    sprite.second.data.get(), vk::DeviceSize(sprite.second.size.width * sprite.second.size.height), stagingBuffer, stagingAllocation);
+                    sprite.second.data.get(), vk::DeviceSize(sprite.second.size.width * sprite.second.size.height),
+                    stagingBuffer, stagingAllocation);
                 if (stagingResult != VK_SUCCESS)
                 {
                     throw std::runtime_error("Could not create staging buffer for image");
@@ -828,12 +829,12 @@ namespace OpenRCT2::Ui::Vulkan
 
                 auto imageView = _device.createImageView(imageViewCreateInfo);
                 
-                _uploadedSprites.insert(std::make_pair(
-                    sprite.first, UploadedSpriteInfo(stagingBuffer, stagingAllocation, image, imageAllocation, imageView)));
+                _uploadedSprites.insert(
+                    std::make_pair(
+                        sprite.first, UploadedSpriteInfo(stagingBuffer, stagingAllocation, image, imageAllocation, imageView)));
             }
         }
 
-        
         if (uniqueCommandBuffer)
         {
             (*uniqueCommandBuffer)->end();
@@ -846,7 +847,8 @@ namespace OpenRCT2::Ui::Vulkan
     }
 
     // imageid to descriptor number and return the vector of descriptors
-    void DrawSpritePipeline::GetSpriteDescriptors(std::unordered_map<ImageId, uint32_t, ImageIdHasher>& descriptorMap, std::vector<vk::DescriptorImageInfo>& descriptors)
+    void DrawSpritePipeline::GetSpriteDescriptors(
+        std::unordered_map<ImageId, uint32_t, ImageIdHasher>& descriptorMap, std::vector<vk::DescriptorImageInfo>& descriptors)
     {
         descriptorMap.clear();
         descriptors.clear();
@@ -854,7 +856,8 @@ namespace OpenRCT2::Ui::Vulkan
         for (auto& uploadedSprite : _uploadedSprites)
         {
             descriptors.emplace_back(vk::Sampler{}, uploadedSprite.second.imageView, vk::ImageLayout::eShaderReadOnlyOptimal);
-            descriptorMap[uploadedSprite.first] = static_cast<uint32_t>(descriptors.size());// this intentionally starts at 1, we have a placeholder for zero
+            descriptorMap[uploadedSprite.first] = static_cast<uint32_t>(
+                descriptors.size());// this intentionally starts at 1, we have a placeholder for zero
         }
     }
 } // namespace OpenRCT2::Ui::Vulkan

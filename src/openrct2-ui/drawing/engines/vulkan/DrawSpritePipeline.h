@@ -73,7 +73,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         vk::UniqueDescriptorSetLayout _descriptorSetLayout;
         vk::UniqueDescriptorSetLayout _descriptorIndexSetLayout;
-        
+
         vk::UniquePipelineLayout _pipelineLayout;
         vk::UniquePipeline _pipeline;
 
@@ -86,7 +86,7 @@ namespace OpenRCT2::Ui::Vulkan
         std::vector<VmaAllocation> _paletteBufferObjectMemory;
         std::vector<VkBuffer> _paletteBufferObjectBuffer;
         std::vector<void*> _paletteBufferObjectMappedMemory;
-        
+
         std::vector<VmaAllocation> _vertexDeviceMemory;
         std::vector<VkBuffer> _vertexBuffers;
         std::vector<void*> _vertexMappedMemory;
@@ -170,7 +170,8 @@ namespace OpenRCT2::Ui::Vulkan
 
         void UploadSprites();
         void GetSpriteDescriptors(
-            std::unordered_map<ImageId, uint32_t, ImageIdHasher>& descriptorMap, std::vector<vk::DescriptorImageInfo>& descriptors);
+            std::unordered_map<ImageId, uint32_t, ImageIdHasher>& descriptorMap,
+            std::vector<vk::DescriptorImageInfo>& descriptors);
 
         void ReleaseUploadedSprites(std::vector<DrawSpritePipeline::UploadedSpriteInfo>& sprites);
 

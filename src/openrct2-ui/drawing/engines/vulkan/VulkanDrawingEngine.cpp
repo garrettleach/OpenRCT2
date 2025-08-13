@@ -240,8 +240,7 @@ namespace OpenRCT2::Ui::Vulkan
                                                            enabledExtensions },
                                    { vk::DebugUtilsMessengerCreateFlagsEXT{}, debugMessageSeverity, debugMessageType,
                                      &VulkanDebugCallback, static_cast<void*>(this) },
-                                   { enabledValidationFeatures }
-            };
+                                   { enabledValidationFeatures } };
 
         if (enabledValidationFeatures.size() == 0)
         {
@@ -253,8 +252,8 @@ namespace OpenRCT2::Ui::Vulkan
             instanceCreateInfo.unlink<vk::DebugUtilsMessengerCreateInfoEXT>();
         }
     #else
-        vk::StructureChain<vk::InstanceCreateInfo> instanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo, enabledLayers,
-                                                   enabledExtensions, nullptr };
+        vk::StructureChain<vk::InstanceCreateInfo> instanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo,
+                                                   enabledLayers, enabledExtensions, nullptr };
     #endif
 
         _instance = vk::createInstanceUnique(instanceCreateInfo.get());

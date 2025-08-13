@@ -60,7 +60,8 @@ namespace OpenRCT2::Ui::Vulkan
 
     public:
         DrawRectPipeline(
-            const vk::PhysicalDevice physicalDevice, const vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight);
+            const vk::PhysicalDevice physicalDevice, const vk::Device device, const vk::RenderPass& renderPass,
+            size_t framesInFlight);
 
         DrawRectPipeline& operator=(const DrawRectPipeline&) = delete;
         DrawRectPipeline(const DrawRectPipeline&) = delete;

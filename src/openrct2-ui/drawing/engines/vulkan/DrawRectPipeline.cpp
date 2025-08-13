@@ -127,7 +127,8 @@ namespace OpenRCT2::Ui::Vulkan
     }
 
     DrawRectPipeline::DrawRectPipeline(
-        const vk::PhysicalDevice physicalDevice, const vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight)
+        const vk::PhysicalDevice physicalDevice, const vk::Device device, const vk::RenderPass& renderPass,
+        size_t framesInFlight)
         : _physicalDevice(physicalDevice)
         , _device(device)
         , _framesInFlight(framesInFlight)
