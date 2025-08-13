@@ -3830,6 +3830,16 @@ STR_6788    :Sensitivity:
 STR_6789    :Analogue stick sensitivity multiplier
 STR_6790    :Deadzone: {COMMA32}%
 STR_6791    :Sensitivity: {COMMA32}%
-
-
+STR_6792    :Entrance Buildings
+STR_6793    :Guests and Staff
+STR_6794    :Scenery and Themes
+STR_6795    :{MOVE_X}{10}{STRINGID}
+STR_6796    :•{MOVE_X}{10}{STRINGID}
+STR_6797    :No preview
+STR_6798    :Screenshot
+STR_6799    :Mini map
 STR_6900    :Vulkan
+STR_7000    :or
+STR_7001    :Ride name
+STR_7002    :{STRINGID} {STRINGID}
+STR_7003    :Audio file ‘{STRING}’ is truncated. Expected sample {INT32}, but only {INT32} are available. Consider reinstalling RCT2.

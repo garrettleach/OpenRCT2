@@ -687,7 +687,7 @@ STR_1290    :{COMMA16} barcos
 STR_1291    :Barco {COMMA16}
 STR_1292    :cabina
 STR_1293    :cabinas
-STR_1294    ​​​​:Cabina
+STR_1294    :Cabina
 STR_1295    :Cabinas
 STR_1296    :{COMMA16} cabina
 STR_1297    :{COMMA16} cabinas
@@ -1855,7 +1855,7 @@ STR_2519    :Amosar información do parque
 STR_2520    :Amosar lista de visitantes
 STR_2521    :Amosar lista de persoal
 STR_2522    :Amosar mensaxes recentes
-STR_2523 ​​​​   :Amosar mapa
+STR_2523    :Amosar mapa
 STR_2524    :captura de pantalla
 STR_2533    :tecla RETROCESO
 STR_2534    :Tab
@@ -2694,7 +2694,6 @@ STR_5549    :Ano/Mes/Día
 STR_5550    :{POP16}{POP16}Ano {COMMA16}, {PUSH16}{PUSH16}{MONTH} {PUSH16}{PUSH16}{STRINGID}
 STR_5551    :Ano/Día/Mes
 STR_5552    :{POP16}{POP16}Ano {COMMA16}, {PUSH16}{PUSH16}{PUSH16}{STRINGID} {MONTH}
-STR_5553    :Pausar xogo ao abrir a superposición de Steam
 STR_5554    :Activar ferramenta de montaña
 STR_5555    :Amosar vehículos doutros tipos de vía
 STR_5556    :Expulsar xogador
@@ -3821,3 +3820,19 @@ STR_6781    :Capturas de pantalla
 STR_6782    :Notificacións do parque
 STR_6783    :Notificacións das atraccións
 STR_6784    :Notificacións dos visitantes
+STR_6785    :Mando
+STR_6786    :Zona morta:
+STR_6787    :Zona morta do mando analóxico (movemento mínimo requirido)
+STR_6788    :Sensibilidade:
+STR_6789    :Multiplicador de sensibilidade do mando analóxico
+STR_6790    :Zona morta: {COMMA32}%
+STR_6791    :Sensibilidade: {COMMA32}%
+STR_6792    :Edificios de entrada
+STR_6793    :Visitantes e persoal
+STR_6794    :Decoración e temáticas
+STR_6795    :{MOVE_X}{10}{STRINGID}
+STR_6796    :•{MOVE_X}{10}{STRINGID}
+STR_6797    :Sen vista previa
+STR_6798    :Captura de pantalla
+STR_6799    :Minimapa
+STR_7000    :ou
