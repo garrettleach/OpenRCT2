@@ -154,7 +154,7 @@ namespace OpenRCT2::Ui::Vulkan
 
     void DrawRectPipeline::CreateDescriptorSets()
     {
-        std::vector<vk::DescriptorSetLayout> layouts(_framesInFlight, GetDescriptorSetLayout());
+        std::vector<vk::DescriptorSetLayout> layouts(_framesInFlight, *_descriptorSetLayout);
 
         vk::DescriptorSetAllocateInfo allocInfo(*_uniformBufferDescriptorPool, layouts);
 
@@ -237,11 +237,6 @@ namespace OpenRCT2::Ui::Vulkan
             _vertexDeviceMemorySize.push_back(initialVertexBufferSize);
             _vertexMappedMemory.push_back(mappedBuffer);
         }
-    }
-
-    vk::DescriptorSetLayout DrawRectPipeline::GetDescriptorSetLayout()
-    {
-        return *_descriptorSetLayout;
     }
 
     void DrawRectPipeline::Draw(const vk::CommandBuffer& commandBuffer, const RenderTarget& renderTarget, uint32_t currentFrame)

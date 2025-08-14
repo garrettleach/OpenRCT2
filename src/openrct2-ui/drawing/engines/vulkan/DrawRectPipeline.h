@@ -71,8 +71,6 @@ namespace OpenRCT2::Ui::Vulkan
 
         ~DrawRectPipeline() = default;
 
-        vk::DescriptorSetLayout GetDescriptorSetLayout();
-
         void Draw(const vk::CommandBuffer& commandBuffer, const RenderTarget& renderTarget, uint32_t currentFrame);
 
         void SetPalette(const OpenRCT2::Drawing::GamePalette& palette);

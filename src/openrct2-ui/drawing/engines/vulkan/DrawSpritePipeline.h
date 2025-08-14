@@ -130,8 +130,6 @@ namespace OpenRCT2::Ui::Vulkan
 
         ~DrawSpritePipeline();
 
-        vk::DescriptorSetLayout GetDescriptorSetLayout();
-
         void BeginDraw(uint32_t currentFrame);
         void Draw(const vk::CommandBuffer& commandBuffer, const RenderTarget& renderTarget, uint32_t currentFrame);
 

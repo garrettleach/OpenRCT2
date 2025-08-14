@@ -246,7 +246,7 @@ namespace OpenRCT2::Ui::Vulkan
 
     void DrawSpritePipeline::CreateDescriptorSets()
     {
-        std::vector<vk::DescriptorSetLayout> layouts(_framesInFlight, GetDescriptorSetLayout());
+        std::vector<vk::DescriptorSetLayout> layouts(_framesInFlight, *_descriptorSetLayout);
 
         vk::DescriptorSetAllocateInfo allocInfo(*_uniformBufferDescriptorPool, layouts);
 
@@ -374,11 +374,6 @@ namespace OpenRCT2::Ui::Vulkan
                 throw std::runtime_error("Vulkan memory error");
             }
         }
-    }
-
-    vk::DescriptorSetLayout DrawSpritePipeline::GetDescriptorSetLayout()
-    {
-        return *_descriptorSetLayout;
     }
 
     void DrawSpritePipeline::ReleaseUploadedSprites(std::vector<UploadedSpriteInfo>& sprites)
