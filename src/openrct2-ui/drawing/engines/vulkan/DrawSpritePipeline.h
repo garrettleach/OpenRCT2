@@ -12,6 +12,14 @@ namespace OpenRCT2::Ui::Vulkan
 {
     class DrawSpritePipeline
     {
+        enum class DrawType : uint8_t
+        {
+            DrawSprite,
+            DrawSpriteRawMasked,
+            DrawSpriteSolid,
+            DrawGlyph
+        };
+
         struct DrawCommand
         {
             ImageId imageId;
@@ -19,6 +27,8 @@ namespace OpenRCT2::Ui::Vulkan
             int32_t top;
             int32_t right;
             int32_t bottom;
+            DrawType drawType;
+            PaletteMap paletteMap; // for DrawGlyph
         };
 
         struct SpriteUpload
@@ -136,6 +146,7 @@ namespace OpenRCT2::Ui::Vulkan
         void SetPalette(const OpenRCT2::Drawing::GamePalette& palette);
 
         void QueueDraw(RenderTarget& rt, ImageId imageId, int32_t x, int32_t y);
+        void QueueGlyph(RenderTarget& rt, const ImageId image, int32_t x, int32_t y, const PaletteMap& palette);
 
         void InvalidateImage(uint32_t image);
 

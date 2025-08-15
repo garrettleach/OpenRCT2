@@ -40,6 +40,7 @@ void VulkanDrawingContext::DrawSpriteSolid(RenderTarget& rt, const ImageId image
 
 void VulkanDrawingContext::DrawGlyph(RenderTarget& rt, const ImageId image, int32_t x, int32_t y, const PaletteMap& palette)
 {
+    _engine.GetDrawSpritePipeline().QueueGlyph(rt, image, x, y, palette);
 }
 
 void VulkanDrawingContext::DrawTTFBitmap(

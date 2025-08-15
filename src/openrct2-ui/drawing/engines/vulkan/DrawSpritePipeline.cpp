@@ -448,13 +448,26 @@ namespace OpenRCT2::Ui::Vulkan
             auto top = (float)(data.top) / (float)renderTarget.height;
             auto bottom = (float)(data.bottom) / (float)renderTarget.height;
 
-            auto descriptorMapItem = _tmpDescriptorMap.find(data.imageId);
-
             uint32_t imageIndex = 0;
 
-            if (descriptorMapItem != _tmpDescriptorMap.end())
+            if (data.drawType == DrawType::DrawSprite)
             {
-                imageIndex = descriptorMapItem->second;
+                auto descriptorMapItem = _tmpDescriptorMap.find(data.imageId);
+
+                if (descriptorMapItem != _tmpDescriptorMap.end())
+                {
+                    imageIndex = descriptorMapItem->second;
+                }
+
+            }
+            else if (data.drawType == DrawType::DrawGlyph)
+            {
+                auto descriptorMapItem = _tmpDescriptorMap.find(ImageId(data.imageId.GetIndex()));
+
+                if (descriptorMapItem != _tmpDescriptorMap.end())
+                {
+                    imageIndex = descriptorMapItem->second;
+                }
             }
 
             _workingVerticies.push_back(
@@ -603,7 +616,75 @@ namespace OpenRCT2::Ui::Vulkan
 
         // TODO: palette?
 
-        _inProgressSprites.emplace_back(baseImage, left, top, right, bottom);
+        _inProgressSprites.emplace_back(baseImage, left, top, right, bottom, DrawType::DrawSprite);
+    }
+
+    std::unique_ptr<uint8_t[]> GlyphImageIdToData(ImageId image, vk::Extent2D& extent, const PaletteMap& palette)
+    {
+        auto g1Element = GfxGetG1Element(image);
+        if (g1Element == nullptr)
+        {
+            throw std::runtime_error("Failed to load image due to missing G1Element");
+        }
+
+        int32_t width = g1Element->width;
+        int32_t height = g1Element->height;
+
+        size_t numPixels = width * height;
+        auto pixels8 = make_unique<uint8_t[]>(numPixels);
+        std::fill_n(pixels8.get(), numPixels, 0);
+
+        RenderTarget rt;
+        rt.bits = pixels8.get();
+        rt.pitch = 0;
+        rt.x = 0;
+        rt.y = 0;
+        rt.width = width;
+        rt.height = height;
+        rt.zoom_level = ZoomLevel{ 0 };
+
+        const auto glyphCoords = ScreenCoordsXY{ -g1Element->x_offset, -g1Element->y_offset };
+        GfxDrawSpritePaletteSetSoftware(rt, image, glyphCoords, palette);
+
+        extent = vk::Extent2D(width, height);
+        return pixels8;
+    }
+
+    void DrawSpritePipeline::QueueGlyph(RenderTarget& rt, const ImageId image, int32_t x, int32_t y, const PaletteMap& palette)
+    {
+        auto g1Element = GfxGetG1Element(image);
+        if (g1Element == nullptr)
+        {
+            return;
+        }
+
+        int32_t left = x + g1Element->x_offset;
+        int32_t top = y + g1Element->y_offset;
+        int32_t right = left + static_cast<uint16_t>(g1Element->width);
+        int32_t bottom = top + static_cast<uint16_t>(g1Element->height);
+
+        // ???!!!
+        if (left > right)
+        {
+            std::swap(left, right);
+        }
+        if (top > bottom)
+        {
+            std::swap(top, bottom);
+        }
+
+        ImageId baseImage = ImageId(image.GetIndex());
+        if (!_uploadedSprites.contains(baseImage) && !_spritesToUpload.contains(baseImage))
+        {
+            vk::Extent2D extent;
+            auto imgData = GlyphImageIdToData(
+                image,
+                extent, palette);
+
+            _spritesToUpload.insert(std::make_pair(baseImage, SpriteUpload(std::move(imgData), extent)));
+        }
+
+        _inProgressSprites.emplace_back(image, left, top, right, bottom, DrawType::DrawGlyph, palette);
     }
 
     void DrawSpritePipeline::InvalidateImage(uint32_t image)
