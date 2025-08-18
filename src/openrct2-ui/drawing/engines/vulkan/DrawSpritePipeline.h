@@ -84,6 +84,7 @@ namespace OpenRCT2::Ui::Vulkan
         {
             None = 0,
             ColourOnly = 1, // use colour instead of image index
+            MaskSelf = 2, // use masking logic against the image itself (DrawSprite only)
         };
 
         struct Vertex

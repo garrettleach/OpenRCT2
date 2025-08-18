@@ -474,6 +474,7 @@ namespace OpenRCT2::Ui::Vulkan
                     imageIndex = descriptorMapItem->second;
                 }
 
+                flags = VertexFlags::MaskSelf;
             }
             else if (data.drawType == DrawType::DrawGlyph)
             {
@@ -483,6 +484,8 @@ namespace OpenRCT2::Ui::Vulkan
                 {
                     imageIndex = descriptorMapItem->second;
                 }
+
+                flags = VertexFlags::MaskSelf; // double check this
             }
             else if (data.drawType == DrawType::FillRect)
             {
