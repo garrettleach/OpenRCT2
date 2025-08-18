@@ -4,10 +4,6 @@
 
 namespace OpenRCT2::Ui::Vulkan
 {
-    VKAPI_ATTR vk::Bool32 VKAPI_CALL VulkanDebugCallback(
-        vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::DebugUtilsMessageTypeFlagsEXT messageType,
-        const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
-
     class VulkanInstance
     {
         vk::UniqueInstance _instance;
@@ -18,7 +14,7 @@ namespace OpenRCT2::Ui::Vulkan
         bool _enabledGpuDebugPrintf = false;
 
     public:
-        VulkanInstance(SDL_Window* window);
+        VulkanInstance(SDL_Window* window, uint32_t authoredVulkanApiVersion);
         explicit VulkanInstance();
         ~VulkanInstance() = default;
 

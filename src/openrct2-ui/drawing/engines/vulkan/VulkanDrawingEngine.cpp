@@ -32,120 +32,12 @@ namespace OpenRCT2::Ui
 
 namespace OpenRCT2::Ui::Vulkan
 {
-    #if DEBUG_VULKAN
-    constexpr bool kDebugUtils = true;
-    constexpr bool kValidationLayer = true;
-    constexpr bool kMonitorIfPresent = true;
-    constexpr bool kDebugPrintfShader = true;
-    constexpr bool kGpuAssistedValidation = true;
-    #else
-    constexpr bool kDebugUtils = false;
-    constexpr bool kValidationLayer = false;
-    constexpr bool kMonitorIfPresent = false;
-    constexpr bool kDebugPrintfShader = false;
-    constexpr bool kGpuAssistedValidation = false;
-    #endif
-
     namespace
     {
         constexpr uint32_t authoredVulkanApiVersion = vk::ApiVersion13;
 
         vector<const char*> kRequiredExtensions{ vk::KHRSwapchainExtensionName };
     } // namespace
-
-    #if VK_HEADER_VERSION >= 304
-    std::array<int32_t, 8> messageIdsToIgnore{
-        1424876368, // "BestPractices-vkCreateSwapchainKHR-suboptimal-swapchain-image-count": we are intentionally only double
-                    // buffering
-        -40745094,  // "BestPractices-vkAllocateMemory-small-allocation": for testing
-        280337739,  // "BestPractices-vkBindBufferMemory-small-dedicated-allocation": for testing
-        141128897,  // "BestPractices-vkCreateCommandPool-command-buffer-reset": resolve for better efficiency
-
-        2132353751, // "VALIDATION-SETTINGS": we expect lots of debug messages
-        1734198062, // "BestPractices-specialuse-extension": we know we are using debug tools
-        601872502,  // "WARNING-CreateInstance-status-message"
-        615892639,  // "WARNING-GPU-Assisted-Validation": Some options are forced on when GPUAV is on
-    };
-
-    VKAPI_ATTR vk::Bool32 VKAPI_CALL VulkanDebugCallback(
-        vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::DebugUtilsMessageTypeFlagsEXT messageType,
-        const vk::DebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
-    {
-        if (pCallbackData->messageIdNumber == 0 && pCallbackData->pMessageIdName
-            && std::strcmp("Loader Message", pCallbackData->pMessageIdName) == 0)
-        {
-            return vk::False;
-        }
-
-        if (std::find(messageIdsToIgnore.begin(), messageIdsToIgnore.end(), pCallbackData->messageIdNumber)
-            != messageIdsToIgnore.end())
-        {
-            return vk::False;
-        }
-
-        if (pCallbackData->messageIdNumber == 0x4fe1fef9)
-        {
-            return vk::False;
-        }
-
-        string msg;
-        vk::DebugUtilsMessageSeverityFlagsEXT sev(severity);
-        if (vk::DebugUtilsMessageSeverityFlagBitsEXT::eError & sev)
-        {
-            msg += "[ERR]";
-        }
-        if (vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning & sev)
-        {
-            msg += "[WAR]";
-        }
-        if (vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose & sev)
-        {
-            msg += "[VER]";
-        }
-        if (vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo & sev)
-        {
-            msg += "[INF]";
-        }
-
-        vk::DebugUtilsMessageTypeFlagsEXT msgType(messageType);
-
-        if (vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral & msgType)
-        {
-            msg += "[gen]";
-        }
-        if (vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation & msgType)
-        {
-            msg += "[val]";
-        }
-        if (vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance & msgType)
-        {
-            msg += "[per]";
-        }
-        if (vk::DebugUtilsMessageTypeFlagBitsEXT::eDeviceAddressBinding & msgType)
-        {
-            msg += "[dab]";
-        }
-
-        if (pCallbackData && pCallbackData->pMessage)
-        {
-            msg += pCallbackData->pMessage;
-        }
-
-        msg += "\n";
-
-        #if _WIN32
-        OutputDebugStringA(msg.c_str());
-        #endif
-
-        return vk::False;
-    }
-
-    static_assert(
-        is_same_v<decltype(&VulkanDebugCallback), vk::PFN_DebugUtilsMessengerCallbackEXT>,
-        "Debug function does not match prototype");
-    #endif
-
-    
 
     inline VulkanDrawingEngine::VulkanDrawingEngine(IUiContext& uiContext)
         : _uiContext(uiContext)
@@ -158,28 +50,14 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::CreateInstance()
     {
-        _instance = VulkanInstance(_window);
+        _instance = VulkanInstance(_window, authoredVulkanApiVersion);
         if (_instance.DebugUtilsEnabled())
         {
-            auto debugMessageSeverity = vk::DebugUtilsMessageSeverityFlagBitsEXT::eError
-                | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose
-                | vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo;
-
-            auto debugMessageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral
-                | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
-
-            _vulkanDynamicDispatch = vk::detail::DispatchLoaderDynamic(*_instance, vkGetInstanceProcAddr);
-
-    #if VK_HEADER_VERSION >= 304
-            vk::DebugUtilsMessengerCreateInfoEXT debugCreateInfo{ vk::DebugUtilsMessengerCreateFlagsEXT{},
-                                                                    debugMessageSeverity, debugMessageType,
-                                                                    &VulkanDebugCallback, static_cast<void*>(this) };
-
-            debugCreateInfo.messageSeverity &= ~(vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose);
-
-            _debugMessanger = _instance->createDebugUtilsMessengerEXTUnique(
-                debugCreateInfo, nullptr, _vulkanDynamicDispatch);
-    #endif
+            _debug = std::make_unique<VulkanDebug>(*_instance);
+        }
+        else
+        {
+            _debug = std::make_unique<DummyDebug>();
         }
     }
 
@@ -478,7 +356,7 @@ namespace OpenRCT2::Ui::Vulkan
     {
         _rectPipeline = std::make_unique<DrawRectPipeline>(_physicalDevice, *_device, *_renderPass, _framesInFlight);
         _drawSpritePipeline = std::make_unique<DrawSpritePipeline>(
-            _physicalDevice, *_device, *_renderPass, _framesInFlight, *_vmaAllocator, _graphicsQueue, _queueIndicies.graphics);
+            *_debug, _physicalDevice, *_device, *_renderPass, _framesInFlight, *_vmaAllocator, _graphicsQueue, _queueIndicies.graphics);
     }
 
     void VulkanDrawingEngine::CreateFramebuffers()

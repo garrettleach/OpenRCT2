@@ -152,9 +152,11 @@ namespace OpenRCT2::Ui::Vulkan
     }
 
     DrawSpritePipeline::DrawSpritePipeline(
-        const vk::PhysicalDevice physicalDevice, const vk::Device device, const vk::RenderPass& renderPass,
+        const IVulkanDebug& vulkanDebug, const vk::PhysicalDevice physicalDevice, const vk::Device device,
+        const vk::RenderPass& renderPass,
         size_t framesInFlight, VulkanMemoryAllocator& vma, vk::Queue graphicsQueue, uint32_t graphicsQueueIndex)
-        : _physicalDevice(physicalDevice)
+        : _vulkanDebug(vulkanDebug)
+        , _physicalDevice(physicalDevice)
         , _device(device)
         , _framesInFlight(framesInFlight)
         , _graphicsQueue(graphicsQueue)

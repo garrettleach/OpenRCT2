@@ -1,3 +1,4 @@
+#include "VulkanDebug.h"
 #include "VulkanInstance.h"
 #include <SDL2/SDL_vulkan.h>
 #include <set>
@@ -23,7 +24,6 @@ namespace
     const uint32_t applicationVersion = 1;
     const char* engineName = "No Engine";
     const uint32_t engineVersion = 0;
-    const uint32_t authoredVulkanApiVersion = vk::ApiVersion13;
 
     // some miscelaneous debug-ish settings
     constexpr bool robustAccess = whenDebugBuild;
@@ -228,7 +228,7 @@ namespace OpenRCT2::Ui::Vulkan
         return settings;
     }
 
-    VulkanInstance::VulkanInstance(SDL_Window* window)
+    VulkanInstance::VulkanInstance(SDL_Window* window, uint32_t authoredVulkanApiVersion)
     {
         vk::ApplicationInfo applicationInfo{ applicationName, applicationVersion, engineName, engineVersion,
                                              authoredVulkanApiVersion };
@@ -261,13 +261,13 @@ namespace OpenRCT2::Ui::Vulkan
             }
         }
 
-        auto validationLayerSettings = GetValidationLayerSettings();
+        auto validationLayerSettings = enableValidationLayer ? GetValidationLayerSettings() : std::vector<vk::LayerSettingEXT>{};
 
         vk::StructureChain<vk::InstanceCreateInfo, vk::DebugUtilsMessengerCreateInfoEXT, vk::LayerSettingsCreateInfoEXT>
             createInfo{ vk::InstanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo, enabledLayers, enabledExtensions },
                         vk::DebugUtilsMessengerCreateInfoEXT{ vk::DebugUtilsMessengerCreateFlagsEXT{}, instanceCreateDebugUtilsMsgSeverityFlags,
                             instanceCreateDebugUtilsMsgTypeFlags,
-                                                              &VulkanDebugCallback, nullptr },
+                                                              &VulkanDebug::VulkanDebugCallback, nullptr },
                         vk::LayerSettingsCreateInfoEXT{ validationLayerSettings } };
 
         if (validationLayerSettings.size() == 0)

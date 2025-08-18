@@ -3,6 +3,7 @@
 #include "DrawRectPipeline.h"
 #include "DrawSpritePipeline.h"
 #include "SwapchainSync.h"
+#include "VulkanDebug.h"
 #include "VulkanInstance.h"
 #include "VulkanMemoryAllocator.h"
 
@@ -40,7 +41,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         vk::detail::DispatchLoaderDynamic _vulkanDynamicDispatch;
         VulkanInstance _instance;
-        vk::UniqueHandle<vk::DebugUtilsMessengerEXT, vk::detail::DispatchLoaderDynamic> _debugMessanger;
+        std::unique_ptr<IVulkanDebug> _debug;
         vk::UniqueSurfaceKHR _surface;
         vk::PhysicalDevice _physicalDevice;
         detail::QueueIndicies _queueIndicies{};
