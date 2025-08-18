@@ -71,6 +71,7 @@
     <ClInclude Include="drawing\engines\vulkan\SwapchainSync.h" />
     <ClInclude Include="drawing\engines\vulkan\VulkanDrawingContext.h" />
     <ClInclude Include="drawing\engines\vulkan\VulkanDrawingEngine.h" />
+    <ClInclude Include="drawing\engines\vulkan\VulkanInstance.h" />
     <ClInclude Include="drawing\engines\vulkan\VulkanMemoryAllocator.h" />
     <ClInclude Include="input\InputManager.h" />
     <ClInclude Include="input\MouseInput.h" />
@@ -146,6 +147,7 @@
     <ClCompile Include="drawing\engines\vulkan\vma.cpp" />
     <ClCompile Include="drawing\engines\vulkan\VulkanDrawingContext.cpp" />
     <ClCompile Include="drawing\engines\vulkan\VulkanDrawingEngine.cpp" />
+    <ClCompile Include="drawing\engines\vulkan\VulkanInstance.cpp" />
     <ClCompile Include="drawing\engines\vulkan\VulkanMemoryAllocator.cpp" />
     <ClCompile Include="input\InputManager.cpp" />
     <ClCompile Include="input\Shortcuts.cpp" />

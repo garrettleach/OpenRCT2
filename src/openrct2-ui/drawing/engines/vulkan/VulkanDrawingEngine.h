@@ -3,6 +3,7 @@
 #include "DrawRectPipeline.h"
 #include "DrawSpritePipeline.h"
 #include "SwapchainSync.h"
+#include "VulkanInstance.h"
 #include "VulkanMemoryAllocator.h"
 
 #include <SDL2/SDL.h>
@@ -25,11 +26,6 @@ namespace OpenRCT2::Ui::Vulkan
             uint32_t graphics;
             uint32_t presentation;
         };
-
-        struct InstanceLayers
-        {
-            bool debugMonitorPresent = false;
-        };
     } // namespace detail
 
     class VulkanDrawingEngine final : public OpenRCT2::Drawing::IDrawingEngine
@@ -43,8 +39,7 @@ namespace OpenRCT2::Ui::Vulkan
         RenderTarget _mainRT = {};
 
         vk::detail::DispatchLoaderDynamic _vulkanDynamicDispatch;
-        detail::InstanceLayers _instanceLayers{};
-        vk::UniqueInstance _instance;
+        VulkanInstance _instance;
         vk::UniqueHandle<vk::DebugUtilsMessengerEXT, vk::detail::DispatchLoaderDynamic> _debugMessanger;
         vk::UniqueSurfaceKHR _surface;
         vk::PhysicalDevice _physicalDevice;
