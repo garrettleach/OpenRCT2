@@ -12,7 +12,7 @@ void VulkanDrawingContext::Clear(RenderTarget& rt, uint8_t paletteIndex)
 
 void VulkanDrawingContext::FillRect(RenderTarget& rt, uint32_t colour, int32_t left, int32_t top, int32_t right, int32_t bottom)
 {
-    _engine.GetDrawRectPipeline().QueueRect(rt, colour, left, top, right, bottom);
+    _engine.GetDrawSpritePipeline().QueueRect(rt, colour, left, top, right, bottom);
 }
 
 void VulkanDrawingContext::FilterRect(

@@ -64,7 +64,6 @@
     <ClInclude Include="drawing\engines\opengl\SwapFramebuffer.h" />
     <ClInclude Include="drawing\engines\opengl\TextureCache.h" />
     <ClInclude Include="drawing\engines\opengl\TransparencyDepth.h" />
-    <ClInclude Include="drawing\engines\vulkan\DrawRectPipeline.h" />
     <ClInclude Include="drawing\engines\vulkan\DrawSpritePipeline.h" />
     <ClInclude Include="drawing\engines\vulkan\MemoryType.h" />
     <ClInclude Include="drawing\engines\vulkan\SpirV.h" />
@@ -140,7 +139,6 @@
     <ClCompile Include="drawing\engines\opengl\SwapFramebuffer.cpp" />
     <ClCompile Include="drawing\engines\opengl\TextureCache.cpp" />
     <ClCompile Include="drawing\engines\opengl\TransparencyDepth.cpp" />
-    <ClCompile Include="drawing\engines\vulkan\DrawRectPipeline.cpp" />
     <ClCompile Include="drawing\engines\vulkan\DrawSpritePipeline.cpp" />
     <ClCompile Include="drawing\engines\vulkan\MemoryType.cpp" />
     <ClCompile Include="drawing\engines\vulkan\SpirV.cpp" />

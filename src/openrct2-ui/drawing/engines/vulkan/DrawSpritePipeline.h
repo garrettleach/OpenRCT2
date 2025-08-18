@@ -15,6 +15,7 @@ namespace OpenRCT2::Ui::Vulkan
     {
         enum class DrawType : uint8_t
         {
+            FillRect, // ignore the image id, use color
             DrawSprite,
             DrawSpriteRawMasked,
             DrawSpriteSolid,
@@ -23,13 +24,35 @@ namespace OpenRCT2::Ui::Vulkan
 
         struct DrawCommand
         {
-            ImageId imageId;
             int32_t left;
             int32_t top;
             int32_t right;
             int32_t bottom;
             DrawType drawType;
-            PaletteMap paletteMap; // for DrawGlyph
+            ImageId imageId; // ignored for fillrect
+            uint64_t paletteMap; // PaletteMap paletteMap; // for DrawGlyph
+            colour_t colour; // for fillrect
+        };
+
+        struct GlyphIdentifier
+        {
+            ImageIndex imageIndex;
+            uint64_t palette{ }; // used for glyphs, 0s otherwise
+
+            auto operator<=>(const GlyphIdentifier&) const = default; 
+        };
+
+        struct GlyphIdentifierHash
+        {
+            inline size_t operator()(const GlyphIdentifier& glyphIdentifier) const
+            {
+                size_t imageIndexHash = std::hash<uint32_t>{}(glyphIdentifier.imageIndex);
+                uint64_t paletteData = 0;
+                std::memcpy(&paletteData, reinterpret_cast<const uint8_t*>(&glyphIdentifier.palette), sizeof(glyphIdentifier.palette));
+                size_t paletteHash = std::hash<uint64_t>{}(paletteData);
+
+                return imageIndexHash ^ paletteHash;
+            }
         };
 
         struct SpriteUpload
@@ -57,10 +80,17 @@ namespace OpenRCT2::Ui::Vulkan
             alignas(16) glm::mat4 proj;
         };
 
+        enum class VertexFlags : uint32_t
+        {
+            None = 0,
+            ColourOnly = 1, // use colour instead of image index
+        };
+
         struct Vertex
         {
             glm::vec2 pos;
-            uint32_t index;
+            VertexFlags flags;
+            uint32_t index; // index is the palette colour when type is fillrect
             glm::vec2 texCoord;
         };
 
@@ -114,10 +144,13 @@ namespace OpenRCT2::Ui::Vulkan
         std::vector<DrawCommand> _inProgressSprites;
 
         std::unordered_map<ImageId, SpriteUpload, ImageIdHasher> _spritesToUpload;
+        std::unordered_map<GlyphIdentifier, SpriteUpload, GlyphIdentifierHash> _glyphsToUpload;
 
         std::unordered_map<ImageId, UploadedSpriteInfo, ImageIdHasher> _uploadedSprites;
+        std::unordered_map<GlyphIdentifier, UploadedSpriteInfo, GlyphIdentifierHash> _uploadedGlyphs;
 
-        std::unordered_map<ImageId, uint32_t, ImageIdHasher> _tmpDescriptorMap;
+        std::unordered_map<ImageId, uint32_t, ImageIdHasher> _tmpImageDescriptorMap;
+        std::unordered_map<GlyphIdentifier, uint32_t, GlyphIdentifierHash> _tmpGlyphDescriptorMap;
         std::vector<vk::DescriptorImageInfo> _tmpDescriptors;
 
         // when an image is no longer needed we have to wait until the first frame it is not used comes back around
@@ -149,6 +182,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         void QueueDraw(RenderTarget& rt, ImageId imageId, int32_t x, int32_t y);
         void QueueGlyph(RenderTarget& rt, const ImageId image, int32_t x, int32_t y, const PaletteMap& palette);
+        void QueueRect(const RenderTarget& rt, uint32_t colour, int32_t left, int32_t top, int32_t right, int32_t bottom);
 
         void InvalidateImage(uint32_t image);
 
@@ -179,10 +213,14 @@ namespace OpenRCT2::Ui::Vulkan
         void CopyBufferToImage(vk::CommandBuffer& commandBuffer, VkBuffer& buffer, VkImage& image, vk::Extent2D extent);
         void TransitionImageToFragmentReadOpt(vk::CommandBuffer& commandBuffer, VkImage& image);
 
+        vk::ImageView AddUpload(
+            vk::CommandBuffer& commandBuffer, uint8_t* data, vk::Extent2D extent, VkImage& image,
+            VmaAllocation& imageAllocation, VkBuffer& stagingBuffer, VmaAllocation& stagingAllocation);
         void UploadSprites();
         void GetSpriteDescriptors(
-            std::unordered_map<ImageId, uint32_t, ImageIdHasher>& descriptorMap,
-            std::vector<vk::DescriptorImageInfo>& descriptors);
+            size_t descriptorStartIndex, std::vector<vk::DescriptorImageInfo>& descriptors,
+            std::unordered_map<ImageId, uint32_t, ImageIdHasher>& descriptorMapImages,
+            std::unordered_map<GlyphIdentifier, uint32_t, GlyphIdentifierHash>& descriptorMapGlyphs);
 
         void ReleaseUploadedSprites(std::vector<DrawSpritePipeline::UploadedSpriteInfo>& sprites);
 

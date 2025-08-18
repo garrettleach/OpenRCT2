@@ -13,11 +13,21 @@ layout(set = 1, binding = 0) uniform utexture2D textures[];
 
 layout(location = 0) flat in uint textureIndex;
 layout(location = 1) in vec2 texCoord;
+layout(location = 2) flat in uint flags;
 
 layout(location = 0) out vec4 outColor;
 
 void main() {
-    uint upaletteindex = texture(usampler2D(textures[textureIndex], singleSampler), texCoord).r;
+    uint upaletteindex;
+
+    if(flags == 0)
+    {
+        upaletteindex = texture(usampler2D(textures[textureIndex], singleSampler), texCoord).r;
+    }
+    else
+    {
+        upaletteindex = textureIndex;
+    }
 
     outColor = drawInfo.palette[upaletteindex];
 }

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "DrawRectPipeline.h"
 #include "DrawSpritePipeline.h"
 #include "SwapchainSync.h"
 #include "VulkanDebug.h"
@@ -59,7 +58,6 @@ namespace OpenRCT2::Ui::Vulkan
         std::vector<vk::Image> _swapchainImages{};               // [0,_swapchainImageCount)
         std::vector<vk::UniqueImageView> _swapchainImageViews{}; // [0,_swapchainImageCount)
         vk::UniqueRenderPass _renderPass;
-        std::unique_ptr<DrawRectPipeline> _rectPipeline;
         std::unique_ptr<DrawSpritePipeline> _drawSpritePipeline;
         std::vector<vk::UniqueFramebuffer> _swapchainFramebuffers{};
         vk::UniqueCommandPool _commandPool;
@@ -114,7 +112,6 @@ namespace OpenRCT2::Ui::Vulkan
 
         void InvalidateImage(uint32_t image) override;
 
-        DrawRectPipeline& GetDrawRectPipeline();
         DrawSpritePipeline& GetDrawSpritePipeline();
 
     private:

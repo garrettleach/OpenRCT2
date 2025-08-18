@@ -20,14 +20,16 @@ namespace OpenRCT2::Ui::Vulkan
             return { 0, sizeof(DrawSpritePipeline::Vertex), vk::VertexInputRate::eVertex };
         }
 
-        std::array<vk::VertexInputAttributeDescription, 3> GetAttributeDescriptions()
+        std::array<vk::VertexInputAttributeDescription, 4> GetAttributeDescriptions()
         {
             return {
                 vk::VertexInputAttributeDescription{ 0, 0, vk::Format::eR32G32Sfloat,
                                                      offsetof(DrawSpritePipeline::Vertex, pos) },
-                vk::VertexInputAttributeDescription{ 1, 0, vk::Format::eR32Uint, offsetof(DrawSpritePipeline::Vertex, index) },
-                vk::VertexInputAttributeDescription{ 2, 0, vk::Format::eR32G32Sfloat,
-                                                     offsetof(DrawSpritePipeline::Vertex, texCoord) },
+                vk::VertexInputAttributeDescription{
+                    1, 0, vk::Format::eR32Uint, offsetof(DrawSpritePipeline::Vertex, flags) },
+                vk::VertexInputAttributeDescription{ 2, 0, vk::Format::eR32Uint, offsetof(DrawSpritePipeline::Vertex, index) },
+                vk::VertexInputAttributeDescription{ 3, 0, vk::Format::eR32G32Sfloat,
+                                                     offsetof(DrawSpritePipeline::Vertex, texCoord) }
             };
         }
     } // namespace
@@ -223,6 +225,13 @@ namespace OpenRCT2::Ui::Vulkan
             _device.destroyImageView(uploadedSprite.second.imageView);
             vmaDestroyImage(_alloc, uploadedSprite.second.image, uploadedSprite.second.imageAllocation);
             vmaDestroyBuffer(_alloc, uploadedSprite.second.buffer, uploadedSprite.second.bufferAllocation);
+        }
+
+        for (auto& uploadedGlyph : _uploadedGlyphs)
+        {
+            _device.destroyImageView(uploadedGlyph.second.imageView);
+            vmaDestroyImage(_alloc, uploadedGlyph.second.image, uploadedGlyph.second.imageAllocation);
+            vmaDestroyBuffer(_alloc, uploadedGlyph.second.buffer, uploadedGlyph.second.bufferAllocation);
         }
 
         _device.destroyImageView(_sampleImageView);
@@ -434,10 +443,13 @@ namespace OpenRCT2::Ui::Vulkan
         vk::WriteDescriptorSet writeSampleImageDesc(
             _descriptorIndexSets[currentFrame], 0, 0, vk::DescriptorType::eSampledImage, { descImageInfo }, nullptr, nullptr);
 
-        GetSpriteDescriptors(_tmpDescriptorMap, _tmpDescriptors);
+        uint32_t descriptorStartIndex = 1;
+
+        GetSpriteDescriptors(descriptorStartIndex, _tmpDescriptors, _tmpImageDescriptorMap, _tmpGlyphDescriptorMap);
 
         vk::WriteDescriptorSet writeAllImageDesc(
-            _descriptorIndexSets[currentFrame], 0, 1, vk::DescriptorType::eSampledImage, _tmpDescriptors, {}, {});
+            _descriptorIndexSets[currentFrame], 0, descriptorStartIndex, vk::DescriptorType::eSampledImage, _tmpDescriptors, {},
+            {});
 
         vk::WriteDescriptorSet writePaletteDesc(
             _uniformBufferDescriptorSets[currentFrame], 2, 0, vk::DescriptorType::eUniformBuffer, {}, { paletteInfo });
@@ -451,12 +463,13 @@ namespace OpenRCT2::Ui::Vulkan
             auto bottom = (float)(data.bottom) / (float)renderTarget.height;
 
             uint32_t imageIndex = 0;
+            VertexFlags flags = VertexFlags::None;
 
             if (data.drawType == DrawType::DrawSprite)
             {
-                auto descriptorMapItem = _tmpDescriptorMap.find(data.imageId);
+                auto descriptorMapItem = _tmpImageDescriptorMap.find(data.imageId);
 
-                if (descriptorMapItem != _tmpDescriptorMap.end())
+                if (descriptorMapItem != _tmpImageDescriptorMap.end())
                 {
                     imageIndex = descriptorMapItem->second;
                 }
@@ -464,26 +477,31 @@ namespace OpenRCT2::Ui::Vulkan
             }
             else if (data.drawType == DrawType::DrawGlyph)
             {
-                auto descriptorMapItem = _tmpDescriptorMap.find(ImageId(data.imageId.GetIndex()));
+                auto descriptorMapItem = _tmpGlyphDescriptorMap.find(GlyphIdentifier(data.imageId.GetIndex(), data.paletteMap));
 
-                if (descriptorMapItem != _tmpDescriptorMap.end())
+                if (descriptorMapItem != _tmpGlyphDescriptorMap.end())
                 {
                     imageIndex = descriptorMapItem->second;
                 }
             }
+            else if (data.drawType == DrawType::FillRect)
+            {
+                flags = VertexFlags::ColourOnly;
+                imageIndex = data.colour;
+            }
 
-            _workingVerticies.push_back(
-                DrawSpritePipeline::Vertex{ .pos = { right, top }, .index = imageIndex, .texCoord = { 1.0, 0.0 } });
-            _workingVerticies.push_back(
-                DrawSpritePipeline::Vertex{ .pos = { left, top }, .index = imageIndex, .texCoord = { 0.0, 0.0 } });
-            _workingVerticies.push_back(
-                DrawSpritePipeline::Vertex{ .pos = { right, bottom }, .index = imageIndex, .texCoord = { 1.0, 1.0 } });
-            _workingVerticies.push_back(
-                DrawSpritePipeline::Vertex{ .pos = { right, bottom }, .index = imageIndex, .texCoord = { 1.0, 1.0 } });
-            _workingVerticies.push_back(
-                DrawSpritePipeline::Vertex{ .pos = { left, top }, .index = imageIndex, .texCoord = { 0.0, 0.0 } });
-            _workingVerticies.push_back(
-                DrawSpritePipeline::Vertex{ .pos = { left, bottom }, .index = imageIndex, .texCoord = { 0.0, 1.0 } });
+            _workingVerticies.push_back(DrawSpritePipeline::Vertex{
+                .pos = { right, top }, .flags = flags, .index = imageIndex, .texCoord = { 1.0, 0.0 } });
+            _workingVerticies.push_back(DrawSpritePipeline::Vertex{
+                .pos = { left, top }, .flags = flags, .index = imageIndex, .texCoord = { 0.0, 0.0 } });
+            _workingVerticies.push_back(DrawSpritePipeline::Vertex{
+                .pos = { right, bottom }, .flags = flags, .index = imageIndex, .texCoord = { 1.0, 1.0 } });
+            _workingVerticies.push_back(DrawSpritePipeline::Vertex{
+                .pos = { right, bottom }, .flags = flags, .index = imageIndex, .texCoord = { 1.0, 1.0 } });
+            _workingVerticies.push_back(DrawSpritePipeline::Vertex{
+                .pos = { left, top }, .flags = flags, .index = imageIndex, .texCoord = { 0.0, 0.0 } });
+            _workingVerticies.push_back(DrawSpritePipeline::Vertex{
+                .pos = { left, bottom }, .flags = flags, .index = imageIndex, .texCoord = { 0.0, 1.0 } });
         }
         _inProgressSprites.clear();
 
@@ -599,8 +617,11 @@ namespace OpenRCT2::Ui::Vulkan
             }
         }
 
-        int32_t left = x + g1Element->x_offset;
-        int32_t top = y + g1Element->y_offset;
+        auto rtDownShift = reinterpret_cast<intptr_t>(rt.bits) / (rt.width + rt.pitch);
+        auto rtRightShift = reinterpret_cast<intptr_t>(rt.bits) - (rtDownShift * (rt.width + rt.pitch));
+
+        int32_t left = x + g1Element->x_offset + rtRightShift; // TODO: is this shift correct?
+        int32_t top = y + g1Element->y_offset + rtDownShift;
         int32_t right = left + g1Element->width;
         int32_t bottom = top + g1Element->height;
 
@@ -618,7 +639,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         // TODO: palette?
 
-        _inProgressSprites.emplace_back(baseImage, left, top, right, bottom, DrawType::DrawSprite);
+        _inProgressSprites.emplace_back(left, top, right, bottom, DrawType::DrawSprite, baseImage);
     }
 
     std::unique_ptr<uint8_t[]> GlyphImageIdToData(ImageId image, vk::Extent2D& extent, const PaletteMap& palette)
@@ -660,8 +681,11 @@ namespace OpenRCT2::Ui::Vulkan
             return;
         }
 
-        int32_t left = x + g1Element->x_offset;
-        int32_t top = y + g1Element->y_offset;
+        auto rtDownShift = reinterpret_cast<intptr_t>(rt.bits) / (rt.width + rt.pitch);
+        auto rtRightShift = reinterpret_cast<intptr_t>(rt.bits) - (rtDownShift * (rt.width + rt.pitch));
+
+        int32_t left = x + g1Element->x_offset + rtRightShift;
+        int32_t top = y + g1Element->y_offset + rtDownShift;
         int32_t right = left + static_cast<uint16_t>(g1Element->width);
         int32_t bottom = top + static_cast<uint16_t>(g1Element->height);
 
@@ -675,18 +699,32 @@ namespace OpenRCT2::Ui::Vulkan
             std::swap(top, bottom);
         }
 
-        ImageId baseImage = ImageId(image.GetIndex());
-        if (!_uploadedSprites.contains(baseImage) && !_spritesToUpload.contains(baseImage))
+        uint8_t paletteCopy[8];
+        for (size_t i = 0; i < 4; i++)
+        {
+            paletteCopy[i] = palette[i];
+        }
+
+        GlyphIdentifier glyphId{image.GetIndex()};
+        std::copy_n(paletteCopy, sizeof(glyphId.palette), reinterpret_cast<uint8_t*>(&glyphId.palette));
+
+        if (!_uploadedGlyphs.contains(glyphId) && !_glyphsToUpload.contains(glyphId))
         {
             vk::Extent2D extent;
             auto imgData = GlyphImageIdToData(
                 image,
                 extent, palette);
 
-            _spritesToUpload.insert(std::make_pair(baseImage, SpriteUpload(std::move(imgData), extent)));
+            _glyphsToUpload.insert(std::make_pair(glyphId, SpriteUpload(std::move(imgData), extent)));
         }
 
-        _inProgressSprites.emplace_back(image, left, top, right, bottom, DrawType::DrawGlyph, palette);
+        _inProgressSprites.emplace_back(left, top, right, bottom, DrawType::DrawGlyph, image, glyphId.palette, colour_t{});
+    }
+
+    void DrawSpritePipeline::QueueRect(
+        const RenderTarget& rt, uint32_t colour, int32_t left, int32_t top, int32_t right, int32_t bottom)
+    {
+        _inProgressSprites.emplace_back(left, top, right, bottom, DrawType::FillRect, ImageId(), uint8_t{}, colour);
     }
 
     void DrawSpritePipeline::InvalidateImage(uint32_t image)
@@ -851,6 +889,37 @@ namespace OpenRCT2::Ui::Vulkan
             vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, nullptr, postCopyBarrier);
     }
 
+    vk::ImageView DrawSpritePipeline::AddUpload(vk::CommandBuffer& commandBuffer, uint8_t* data, vk::Extent2D extent, VkImage& image,
+                   VmaAllocation& imageAllocation, VkBuffer& stagingBuffer,
+                   VmaAllocation& stagingAllocation)
+    {
+        auto imageResult = CreateImage(extent, image, imageAllocation);
+        if (imageResult != VK_SUCCESS)
+        {
+            throw std::runtime_error("Could not create image");
+        }
+
+        auto stagingResult = CreateStagingBuffer(
+            data, vk::DeviceSize(extent.width * extent.height), stagingBuffer,
+            stagingAllocation);
+        if (stagingResult != VK_SUCCESS)
+        {
+            throw std::runtime_error("Could not create staging buffer for image");
+        }
+
+        TransitionImageToTransferDst(commandBuffer, image);
+
+        CopyBufferToImage(commandBuffer, stagingBuffer, image, extent);
+
+        TransitionImageToFragmentReadOpt(commandBuffer, image);
+
+        vk::ImageViewCreateInfo imageViewCreateInfo(
+            vk::ImageViewCreateFlags(), image, vk::ImageViewType::e2D, vk::Format::eR8Uint, {},
+            vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
+
+        return _device.createImageView(imageViewCreateInfo);
+    }
+
     void DrawSpritePipeline::UploadSprites()
     {
         // Don't create the command buffer if we don't need it
@@ -879,37 +948,52 @@ namespace OpenRCT2::Ui::Vulkan
 
                 VkImage image;
                 VmaAllocation imageAllocation;
-                auto imageResult = CreateImage(sprite.second.size, image, imageAllocation);
-                if (imageResult != VK_SUCCESS)
-                {
-                    throw std::runtime_error("Could not create image");
-                }
-
+                
                 VkBuffer stagingBuffer;
                 VmaAllocation stagingAllocation;
-                auto stagingResult = CreateStagingBuffer(
-                    sprite.second.data.get(), vk::DeviceSize(sprite.second.size.width * sprite.second.size.height),
-                    stagingBuffer, stagingAllocation);
-                if (stagingResult != VK_SUCCESS)
-                {
-                    throw std::runtime_error("Could not create staging buffer for image");
-                }
 
-                TransitionImageToTransferDst(*(uniqueCommandBuffer.value()), image);
-
-                CopyBufferToImage(*(uniqueCommandBuffer.value()), stagingBuffer, image, sprite.second.size);
-
-                TransitionImageToFragmentReadOpt(*(uniqueCommandBuffer.value()), image);
-
-                vk::ImageViewCreateInfo imageViewCreateInfo(
-                    vk::ImageViewCreateFlags(), image, vk::ImageViewType::e2D, vk::Format::eR8Uint, {},
-                    vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
-
-                auto imageView = _device.createImageView(imageViewCreateInfo);
+                auto imageView = AddUpload(commandBuffer, sprite.second.data.get(), sprite.second.size, image, imageAllocation, stagingBuffer, stagingAllocation);
 
                 _uploadedSprites.insert(
                     std::make_pair(
                         sprite.first, UploadedSpriteInfo(stagingBuffer, stagingAllocation, image, imageAllocation, imageView)));
+            }
+        }
+
+        for (auto& glyph : _glyphsToUpload)
+        {
+            if (glyph.second.size.width == 0 || glyph.second.size.height == 0)
+            {
+                continue;
+            }
+
+            if (!_uploadedGlyphs.contains(glyph.first))
+            {
+                // We will need to write a command buffer now
+                if (!uniqueCommandBuffer)
+                {
+                    vk::CommandBufferAllocateInfo allocInfo(*_commandPool, vk::CommandBufferLevel::ePrimary, 1);
+                    uniqueCommandBuffer = std::move(_device.allocateCommandBuffersUnique(allocInfo).front());
+
+                    vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+                    (*uniqueCommandBuffer)->begin(beginInfo);
+                }
+
+                vk::CommandBuffer commandBuffer = **uniqueCommandBuffer;
+
+                VkImage image;
+                VmaAllocation imageAllocation;
+                
+                VkBuffer stagingBuffer;
+                VmaAllocation stagingAllocation;
+
+                auto imageView = AddUpload(
+                    commandBuffer, glyph.second.data.get(), glyph.second.size, image, imageAllocation, stagingBuffer,
+                    stagingAllocation);
+
+                _uploadedGlyphs.insert(
+                    std::make_pair(
+                    glyph.first, UploadedSpriteInfo(stagingBuffer, stagingAllocation, image, imageAllocation, imageView)));
             }
         }
 
@@ -926,16 +1010,30 @@ namespace OpenRCT2::Ui::Vulkan
 
     // imageid to descriptor number and return the vector of descriptors
     void DrawSpritePipeline::GetSpriteDescriptors(
-        std::unordered_map<ImageId, uint32_t, ImageIdHasher>& descriptorMap, std::vector<vk::DescriptorImageInfo>& descriptors)
+        size_t descriptorStartIndex, std::vector<vk::DescriptorImageInfo>& descriptors,
+        std::unordered_map<ImageId, uint32_t, ImageIdHasher>& descriptorMapImages,
+        std::unordered_map<GlyphIdentifier, uint32_t, GlyphIdentifierHash>& descriptorMapGlyphs)
     {
-        descriptorMap.clear();
         descriptors.clear();
+        descriptorMapImages.clear();
+        descriptorMapGlyphs.clear();
+
+        size_t descriptorIndex = descriptorStartIndex;
+
+        for (auto& uploadedGlyph : _uploadedGlyphs)
+        {
+            descriptorMapGlyphs[uploadedGlyph.first] = static_cast<uint32_t>(
+                descriptorIndex++);
+
+            descriptors.emplace_back(vk::Sampler{}, uploadedGlyph.second.imageView, vk::ImageLayout::eShaderReadOnlyOptimal);
+        }
 
         for (auto& uploadedSprite : _uploadedSprites)
         {
+            descriptorMapImages[uploadedSprite.first] = static_cast<uint32_t>(
+                descriptorIndex++);
+
             descriptors.emplace_back(vk::Sampler{}, uploadedSprite.second.imageView, vk::ImageLayout::eShaderReadOnlyOptimal);
-            descriptorMap[uploadedSprite.first] = static_cast<uint32_t>(
-                descriptors.size()); // this intentionally starts at 1, we have a placeholder for zero
         }
     }
 } // namespace OpenRCT2::Ui::Vulkan

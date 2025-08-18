@@ -354,7 +354,6 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::CreateGraphicsPipelines()
     {
-        _rectPipeline = std::make_unique<DrawRectPipeline>(_physicalDevice, *_device, *_renderPass, _framesInFlight);
         _drawSpritePipeline = std::make_unique<DrawSpritePipeline>(
             *_debug, _physicalDevice, *_device, *_renderPass, _framesInFlight, *_vmaAllocator, _graphicsQueue, _queueIndicies.graphics);
     }
@@ -442,7 +441,6 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::SetPalette(const OpenRCT2::Drawing::GamePalette& colours)
     {
-        _rectPipeline->SetPalette(colours);
         _drawSpritePipeline->SetPalette(colours);
     }
 
@@ -517,8 +515,6 @@ namespace OpenRCT2::Ui::Vulkan
         currentFrameCommandBuffer->setScissor(0, scissor);
 
         _drawSpritePipeline->Draw(*currentFrameCommandBuffer, _mainRT, _currentFrame);
-
-        _rectPipeline->Draw(*currentFrameCommandBuffer, _mainRT, _currentFrame);
 
         currentFrameCommandBuffer->endRenderPass();
 
@@ -605,11 +601,6 @@ namespace OpenRCT2::Ui::Vulkan
     void VulkanDrawingEngine::InvalidateImage(uint32_t image)
     {
         _drawSpritePipeline->InvalidateImage(image);
-    }
-
-    DrawRectPipeline& VulkanDrawingEngine::GetDrawRectPipeline()
-    {
-        return *_rectPipeline;
     }
 
     DrawSpritePipeline& VulkanDrawingEngine::GetDrawSpritePipeline()
