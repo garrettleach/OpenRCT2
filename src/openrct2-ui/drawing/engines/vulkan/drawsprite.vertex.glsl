@@ -8,15 +8,17 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
     mat4 proj;
 } ubo;
 
-layout(location = 0) in vec2 inPosition;
-layout(location = 1) in uint flags;
-layout(location = 2) in uint index;
-layout(location = 3) in vec2 texCoord;
+layout(location = 0) in uint flags;
+layout(location = 1) in vec2 inPosition;
+layout(location = 2) in vec2 texCoord;
+layout(location = 3) in uint index;
+layout(location = 4) in uint maskIndex;
 
 
 layout(location = 0) flat out uint outTextureIndex;
 layout(location = 1) out vec2 outTexCoord;
 layout(location = 2) flat out uint outFlags;
+layout(location = 3) flat out uint outMaskIndex;
 
 void main() {
     //if (gl_VertexIndex == 0) {
@@ -27,4 +29,5 @@ void main() {
     outFlags = flags;
     outTextureIndex = index;
     outTexCoord = texCoord;
+    outMaskIndex = maskIndex;
 }

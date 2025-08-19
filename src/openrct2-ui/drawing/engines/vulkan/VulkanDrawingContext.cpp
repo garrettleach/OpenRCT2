@@ -22,6 +22,7 @@ void VulkanDrawingContext::FilterRect(
 
 void VulkanDrawingContext::DrawLine(RenderTarget& rt, uint32_t colour, const ScreenLine& line)
 {
+    // We need a pipeline that uses vk::PrimitiveTopology::eLineList or can be converted into triagles
 }
 
 void VulkanDrawingContext::DrawSprite(RenderTarget& rt, const ImageId image, int32_t x, int32_t y)
@@ -32,6 +33,7 @@ void VulkanDrawingContext::DrawSprite(RenderTarget& rt, const ImageId image, int
 void VulkanDrawingContext::DrawSpriteRawMasked(
     RenderTarget& rt, int32_t x, int32_t y, const ImageId maskImage, const ImageId colourImage)
 {
+    _engine.GetDrawSpritePipeline().QueueRawMasked(rt, x, y, maskImage, colourImage);
 }
 
 void VulkanDrawingContext::DrawSpriteSolid(RenderTarget& rt, const ImageId image, int32_t x, int32_t y, uint8_t colour)

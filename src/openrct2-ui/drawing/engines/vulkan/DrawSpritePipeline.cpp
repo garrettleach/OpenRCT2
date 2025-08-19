@@ -20,16 +20,16 @@ namespace OpenRCT2::Ui::Vulkan
             return { 0, sizeof(DrawSpritePipeline::Vertex), vk::VertexInputRate::eVertex };
         }
 
-        std::array<vk::VertexInputAttributeDescription, 4> GetAttributeDescriptions()
+        std::array<vk::VertexInputAttributeDescription, 5> GetAttributeDescriptions()
         {
             return {
-                vk::VertexInputAttributeDescription{ 0, 0, vk::Format::eR32G32Sfloat,
+                vk::VertexInputAttributeDescription{ 0, 0, vk::Format::eR32Uint, offsetof(DrawSpritePipeline::Vertex, flags) },
+                vk::VertexInputAttributeDescription{ 1, 0, vk::Format::eR32G32Sfloat,
                                                      offsetof(DrawSpritePipeline::Vertex, pos) },
-                vk::VertexInputAttributeDescription{
-                    1, 0, vk::Format::eR32Uint, offsetof(DrawSpritePipeline::Vertex, flags) },
-                vk::VertexInputAttributeDescription{ 2, 0, vk::Format::eR32Uint, offsetof(DrawSpritePipeline::Vertex, index) },
-                vk::VertexInputAttributeDescription{ 3, 0, vk::Format::eR32G32Sfloat,
-                                                     offsetof(DrawSpritePipeline::Vertex, texCoord) }
+                vk::VertexInputAttributeDescription{ 2, 0, vk::Format::eR32G32Sfloat,
+                                                     offsetof(DrawSpritePipeline::Vertex, texCoord) },
+                vk::VertexInputAttributeDescription{ 3, 0, vk::Format::eR32Uint, offsetof(DrawSpritePipeline::Vertex, index) },
+                vk::VertexInputAttributeDescription{ 4, 0, vk::Format::eR32Uint, offsetof(DrawSpritePipeline::Vertex, maskIndex) },
             };
         }
     } // namespace
@@ -463,6 +463,7 @@ namespace OpenRCT2::Ui::Vulkan
             auto bottom = (float)(data.bottom) / (float)renderTarget.height;
 
             uint32_t imageIndex = 0;
+            uint32_t maskIndex = 0;
             VertexFlags flags = VertexFlags::None;
 
             if (data.drawType == DrawType::DrawSprite)
@@ -474,7 +475,25 @@ namespace OpenRCT2::Ui::Vulkan
                     imageIndex = descriptorMapItem->second;
                 }
 
-                flags = VertexFlags::MaskSelf;
+                maskIndex = imageIndex;
+                flags = VertexFlags::Mask;
+            }
+            else if (data.drawType == DrawType::DrawSpriteRawMasked)
+            {
+                auto descriptorMaskMapItem = _tmpImageDescriptorMap.find(data.maskImageId);
+                auto descriptorColourMapItem = _tmpImageDescriptorMap.find(data.imageId);
+
+                if (descriptorColourMapItem != _tmpImageDescriptorMap.end())
+                {
+                    imageIndex = descriptorColourMapItem->second;
+                }
+
+                if (descriptorMaskMapItem != _tmpImageDescriptorMap.end())
+                {
+                    maskIndex = descriptorMaskMapItem->second;
+                }
+
+                flags = VertexFlags::Mask;
             }
             else if (data.drawType == DrawType::DrawGlyph)
             {
@@ -485,7 +504,8 @@ namespace OpenRCT2::Ui::Vulkan
                     imageIndex = descriptorMapItem->second;
                 }
 
-                flags = VertexFlags::MaskSelf; // double check this
+                maskIndex = imageIndex;
+                flags = VertexFlags::Mask; // double check this
             }
             else if (data.drawType == DrawType::FillRect)
             {
@@ -494,17 +514,17 @@ namespace OpenRCT2::Ui::Vulkan
             }
 
             _workingVerticies.push_back(DrawSpritePipeline::Vertex{
-                .pos = { right, top }, .flags = flags, .index = imageIndex, .texCoord = { 1.0, 0.0 } });
+                .flags = flags, .pos = { right, top }, .texCoord = { 1.0, 0.0 }, .index = imageIndex, .maskIndex = maskIndex });
             _workingVerticies.push_back(DrawSpritePipeline::Vertex{
-                .pos = { left, top }, .flags = flags, .index = imageIndex, .texCoord = { 0.0, 0.0 } });
+                .flags = flags, .pos = { left, top }, .texCoord = { 0.0, 0.0 }, .index = imageIndex, .maskIndex = maskIndex });
             _workingVerticies.push_back(DrawSpritePipeline::Vertex{
-                .pos = { right, bottom }, .flags = flags, .index = imageIndex, .texCoord = { 1.0, 1.0 } });
+                .flags = flags, .pos = { right, bottom }, .texCoord = { 1.0, 1.0 }, .index = imageIndex, .maskIndex = maskIndex });
             _workingVerticies.push_back(DrawSpritePipeline::Vertex{
-                .pos = { right, bottom }, .flags = flags, .index = imageIndex, .texCoord = { 1.0, 1.0 } });
+                .flags = flags, .pos = { right, bottom }, .texCoord = { 1.0, 1.0 }, .index = imageIndex, .maskIndex = maskIndex });
             _workingVerticies.push_back(DrawSpritePipeline::Vertex{
-                .pos = { left, top }, .flags = flags, .index = imageIndex, .texCoord = { 0.0, 0.0 } });
+                .flags = flags, .pos = { left, top }, .texCoord = { 0.0, 0.0 }, .index = imageIndex, .maskIndex = maskIndex });
             _workingVerticies.push_back(DrawSpritePipeline::Vertex{
-                .pos = { left, bottom }, .flags = flags, .index = imageIndex, .texCoord = { 0.0, 1.0 } });
+                .flags = flags, .pos = { left, bottom }, .texCoord = { 0.0, 1.0 }, .index = imageIndex, .maskIndex = maskIndex });
         }
         _inProgressSprites.clear();
 
@@ -645,6 +665,45 @@ namespace OpenRCT2::Ui::Vulkan
         _inProgressSprites.emplace_back(left, top, right, bottom, DrawType::DrawSprite, baseImage);
     }
 
+    void DrawSpritePipeline::QueueRawMasked(
+        RenderTarget& rt, int32_t x, int32_t y, const ImageId maskImage, const ImageId colourImage)
+    {
+        auto g1MaskElement = GfxGetG1Element(maskImage);
+        auto g1ColourElement = GfxGetG1Element(colourImage);
+        if (g1MaskElement == nullptr || g1ColourElement == nullptr)
+        {
+            return;
+        }
+
+        auto rtDownShift = reinterpret_cast<intptr_t>(rt.bits) / (rt.width + rt.pitch);
+        auto rtRightShift = reinterpret_cast<intptr_t>(rt.bits) - (rtDownShift * (rt.width + rt.pitch));
+
+        int32_t left = x + g1MaskElement->x_offset + rtRightShift; // TODO: is this shift correct?
+        int32_t top = y + g1MaskElement->y_offset + rtDownShift;
+        int32_t right = left + std::min(g1MaskElement->width, g1ColourElement->width);
+        int32_t bottom = top + std::min(g1MaskElement->height, g1ColourElement->height);
+
+        ImageId baseMaskImage = ImageId(maskImage.GetIndex());
+        if (!_uploadedSprites.contains(baseMaskImage) && !_spritesToUpload.contains(baseMaskImage))
+        {
+            vk::Extent2D extent;
+            auto imgData = ImageIdToData(maskImage, extent);
+
+            _spritesToUpload.insert(std::make_pair(baseMaskImage, SpriteUpload(std::move(imgData), extent)));
+        }
+
+        ImageId baseColourImage = ImageId(colourImage.GetIndex());
+        if (!_uploadedSprites.contains(baseColourImage) && !_spritesToUpload.contains(baseColourImage))
+        {
+            vk::Extent2D extent;
+            auto imgData = ImageIdToData(colourImage, extent);
+
+            _spritesToUpload.insert(std::make_pair(baseColourImage, SpriteUpload(std::move(imgData), extent)));
+        }
+
+        _inProgressSprites.emplace_back(left, top, right, bottom, DrawType::DrawSpriteRawMasked, baseColourImage, baseMaskImage);
+    }
+
     std::unique_ptr<uint8_t[]> GlyphImageIdToData(ImageId image, vk::Extent2D& extent, const PaletteMap& palette)
     {
         auto g1Element = GfxGetG1Element(image);
@@ -721,13 +780,14 @@ namespace OpenRCT2::Ui::Vulkan
             _glyphsToUpload.insert(std::make_pair(glyphId, SpriteUpload(std::move(imgData), extent)));
         }
 
-        _inProgressSprites.emplace_back(left, top, right, bottom, DrawType::DrawGlyph, image, glyphId.palette, colour_t{});
+        _inProgressSprites.emplace_back(
+            left, top, right, bottom, DrawType::DrawGlyph, image, ImageId(), glyphId.palette, colour_t{});
     }
 
     void DrawSpritePipeline::QueueRect(
         const RenderTarget& rt, uint32_t colour, int32_t left, int32_t top, int32_t right, int32_t bottom)
     {
-        _inProgressSprites.emplace_back(left, top, right, bottom, DrawType::FillRect, ImageId(), uint8_t{}, colour);
+        _inProgressSprites.emplace_back(left, top, right, bottom, DrawType::FillRect, ImageId(), ImageId(), uint8_t{}, colour);
     }
 
     void DrawSpritePipeline::InvalidateImage(uint32_t image)

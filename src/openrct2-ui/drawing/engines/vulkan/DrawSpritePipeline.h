@@ -30,6 +30,7 @@ namespace OpenRCT2::Ui::Vulkan
             int32_t bottom;
             DrawType drawType;
             ImageId imageId; // ignored for fillrect
+            ImageId maskImageId; // used for SpriteRawMasked
             uint64_t paletteMap; // PaletteMap paletteMap; // for DrawGlyph
             colour_t colour; // for fillrect
         };
@@ -84,15 +85,16 @@ namespace OpenRCT2::Ui::Vulkan
         {
             None = 0,
             ColourOnly = 1, // use colour instead of image index
-            MaskSelf = 2, // use masking logic against the image itself (DrawSprite only)
+            Mask = 2, // use masking logic against an image (DrawSprite and DrawSpriteRawMask only)
         };
 
         struct Vertex
         {
-            glm::vec2 pos;
             VertexFlags flags;
-            uint32_t index; // index is the palette colour when type is fillrect
+            glm::vec2 pos;
             glm::vec2 texCoord;
+            uint32_t index; // index is the palette colour when type is fillrect
+            uint32_t maskIndex;
         };
 
     private:
@@ -182,6 +184,7 @@ namespace OpenRCT2::Ui::Vulkan
         void SetPalette(const OpenRCT2::Drawing::GamePalette& palette);
 
         void QueueDraw(RenderTarget& rt, ImageId imageId, int32_t x, int32_t y);
+        void QueueRawMasked(RenderTarget& rt, int32_t x, int32_t y, const ImageId maskImage, const ImageId colourImage);
         void QueueGlyph(RenderTarget& rt, const ImageId image, int32_t x, int32_t y, const PaletteMap& palette);
         void QueueRect(const RenderTarget& rt, uint32_t colour, int32_t left, int32_t top, int32_t right, int32_t bottom);
 
