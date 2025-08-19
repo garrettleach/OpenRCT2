@@ -1,6 +1,8 @@
 #if _WIN32
     #include <windows.h>
+#endif
 
+#if _WIN32
     #include <debugapi.h>
 #endif
 #include "VulkanDebug.h"
@@ -54,8 +56,7 @@ namespace OpenRCT2::Ui::Vulkan
     {
         commandBuffer.endDebugUtilsLabelEXT(_vulkanDynamicDispatch);
     }
-    void VulkanDebug::insertDebugUtilsLabel(
-        vk::CommandBuffer& commandBuffer, const char* labelName, array<float, 4> colour)
+    void VulkanDebug::insertDebugUtilsLabel(vk::CommandBuffer& commandBuffer, const char* labelName, array<float, 4> colour)
     {
         commandBuffer.insertDebugUtilsLabelEXT({ labelName, colour }, _vulkanDynamicDispatch);
     }

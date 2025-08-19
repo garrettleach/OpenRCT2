@@ -24,11 +24,13 @@ namespace OpenRCT2::Ui::Vulkan
         {
             return {
                 vk::VertexInputAttributeDescription{ 0, 0, vk::Format::eR32Uint, offsetof(DrawSpritePipeline::Vertex, flags) },
-                vk::VertexInputAttributeDescription{ 1, 0, vk::Format::eR32G32Sfloat, offsetof(DrawSpritePipeline::Vertex, pos) },
+                vk::VertexInputAttributeDescription{ 1, 0, vk::Format::eR32G32Sfloat,
+                                                     offsetof(DrawSpritePipeline::Vertex, pos) },
                 vk::VertexInputAttributeDescription{ 2, 0, vk::Format::eR32G32Sfloat,
                                                      offsetof(DrawSpritePipeline::Vertex, texCoord) },
                 vk::VertexInputAttributeDescription{ 3, 0, vk::Format::eR32Uint, offsetof(DrawSpritePipeline::Vertex, index) },
-                vk::VertexInputAttributeDescription{ 4, 0, vk::Format::eR32Uint, offsetof(DrawSpritePipeline::Vertex, maskIndex) },
+                vk::VertexInputAttributeDescription{ 4, 0, vk::Format::eR32Uint,
+                                                     offsetof(DrawSpritePipeline::Vertex, maskIndex) },
             };
         }
     } // namespace
@@ -512,18 +514,42 @@ namespace OpenRCT2::Ui::Vulkan
                 imageIndex = data.colour;
             }
 
-            _workingVerticies.push_back(DrawSpritePipeline::Vertex{
-                .flags = flags, .pos = { right, top }, .texCoord = { 1.0, 0.0 }, .index = imageIndex, .maskIndex = maskIndex });
-            _workingVerticies.push_back(DrawSpritePipeline::Vertex{
-                .flags = flags, .pos = { left, top }, .texCoord = { 0.0, 0.0 }, .index = imageIndex, .maskIndex = maskIndex });
-            _workingVerticies.push_back(DrawSpritePipeline::Vertex{
-                .flags = flags, .pos = { right, bottom }, .texCoord = { 1.0, 1.0 }, .index = imageIndex, .maskIndex = maskIndex });
-            _workingVerticies.push_back(DrawSpritePipeline::Vertex{
-                .flags = flags, .pos = { right, bottom }, .texCoord = { 1.0, 1.0 }, .index = imageIndex, .maskIndex = maskIndex });
-            _workingVerticies.push_back(DrawSpritePipeline::Vertex{
-                .flags = flags, .pos = { left, top }, .texCoord = { 0.0, 0.0 }, .index = imageIndex, .maskIndex = maskIndex });
-            _workingVerticies.push_back(DrawSpritePipeline::Vertex{
-                .flags = flags, .pos = { left, bottom }, .texCoord = { 0.0, 1.0 }, .index = imageIndex, .maskIndex = maskIndex });
+            _workingVerticies.push_back(
+                DrawSpritePipeline::Vertex{ .flags = flags,
+                                            .pos = { right, top },
+                                            .texCoord = { 1.0, 0.0 },
+                                            .index = imageIndex,
+                                            .maskIndex = maskIndex });
+            _workingVerticies.push_back(
+                DrawSpritePipeline::Vertex{ .flags = flags,
+                                            .pos = { left, top },
+                                            .texCoord = { 0.0, 0.0 },
+                                            .index = imageIndex,
+                                            .maskIndex = maskIndex });
+            _workingVerticies.push_back(
+                DrawSpritePipeline::Vertex{ .flags = flags,
+                                            .pos = { right, bottom },
+                                            .texCoord = { 1.0, 1.0 },
+                                            .index = imageIndex,
+                                            .maskIndex = maskIndex });
+            _workingVerticies.push_back(
+                DrawSpritePipeline::Vertex{ .flags = flags,
+                                            .pos = { right, bottom },
+                                            .texCoord = { 1.0, 1.0 },
+                                            .index = imageIndex,
+                                            .maskIndex = maskIndex });
+            _workingVerticies.push_back(
+                DrawSpritePipeline::Vertex{ .flags = flags,
+                                            .pos = { left, top },
+                                            .texCoord = { 0.0, 0.0 },
+                                            .index = imageIndex,
+                                            .maskIndex = maskIndex });
+            _workingVerticies.push_back(
+                DrawSpritePipeline::Vertex{ .flags = flags,
+                                            .pos = { left, bottom },
+                                            .texCoord = { 0.0, 1.0 },
+                                            .index = imageIndex,
+                                            .maskIndex = maskIndex });
         }
         _inProgressSprites.clear();
 
@@ -700,7 +726,8 @@ namespace OpenRCT2::Ui::Vulkan
             _spritesToUpload.insert(std::make_pair(baseColourImage, SpriteUpload(std::move(imgData), extent)));
         }
 
-        _inProgressSprites.emplace_back(left, top, right, bottom, DrawType::DrawSpriteRawMasked, baseColourImage, baseMaskImage);
+        _inProgressSprites.emplace_back(
+            left, top, right, bottom, DrawType::DrawSpriteRawMasked, baseColourImage, baseMaskImage);
     }
 
     std::unique_ptr<uint8_t[]> GlyphImageIdToData(ImageId image, vk::Extent2D& extent, const PaletteMap& palette)
@@ -1007,7 +1034,7 @@ namespace OpenRCT2::Ui::Vulkan
 
                 VkImage image;
                 VmaAllocation imageAllocation;
-                
+
                 VkBuffer stagingBuffer;
                 VmaAllocation stagingAllocation;
 
@@ -1044,7 +1071,7 @@ namespace OpenRCT2::Ui::Vulkan
 
                 VkImage image;
                 VmaAllocation imageAllocation;
-                
+
                 VkBuffer stagingBuffer;
                 VmaAllocation stagingAllocation;
 
