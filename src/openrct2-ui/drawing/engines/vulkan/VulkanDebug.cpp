@@ -1,8 +1,10 @@
 #if _WIN32
     #include <windows.h>
+
     #include <debugapi.h>
 #endif
 #include "VulkanDebug.h"
+
 #include <string>
 
 using namespace std;
@@ -12,11 +14,11 @@ namespace OpenRCT2::Ui::Vulkan
     namespace
     {
         // debug utils configuration
-        const vk::DebugUtilsMessageSeverityFlagsEXT debugUtilsMsgSeverityFlags
-            = vk::DebugUtilsMessageSeverityFlagBitsEXT::eError | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning
-            | vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose | vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo;
-        const vk::DebugUtilsMessageTypeFlagsEXT debugUtilsMsgTypeFlags = vk::DebugUtilsMessageTypeFlagBitsEXT::
-                                                                                           eGeneral
+        const vk::DebugUtilsMessageSeverityFlagsEXT debugUtilsMsgSeverityFlags = vk::DebugUtilsMessageSeverityFlagBitsEXT::
+                                                                                     eError
+            | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose
+            | vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo;
+        const vk::DebugUtilsMessageTypeFlagsEXT debugUtilsMsgTypeFlags = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral
             | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
     } // namespace
 

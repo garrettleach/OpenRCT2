@@ -24,8 +24,7 @@ namespace OpenRCT2::Ui::Vulkan
         {
             return {
                 vk::VertexInputAttributeDescription{ 0, 0, vk::Format::eR32Uint, offsetof(DrawSpritePipeline::Vertex, flags) },
-                vk::VertexInputAttributeDescription{ 1, 0, vk::Format::eR32G32Sfloat,
-                                                     offsetof(DrawSpritePipeline::Vertex, pos) },
+                vk::VertexInputAttributeDescription{ 1, 0, vk::Format::eR32G32Sfloat, offsetof(DrawSpritePipeline::Vertex, pos) },
                 vk::VertexInputAttributeDescription{ 2, 0, vk::Format::eR32G32Sfloat,
                                                      offsetof(DrawSpritePipeline::Vertex, texCoord) },
                 vk::VertexInputAttributeDescription{ 3, 0, vk::Format::eR32Uint, offsetof(DrawSpritePipeline::Vertex, index) },
@@ -155,8 +154,8 @@ namespace OpenRCT2::Ui::Vulkan
 
     DrawSpritePipeline::DrawSpritePipeline(
         const IVulkanDebug& vulkanDebug, const vk::PhysicalDevice physicalDevice, const vk::Device device,
-        const vk::RenderPass& renderPass,
-        size_t framesInFlight, VulkanMemoryAllocator& vma, vk::Queue graphicsQueue, uint32_t graphicsQueueIndex)
+        const vk::RenderPass& renderPass, size_t framesInFlight, VulkanMemoryAllocator& vma, vk::Queue graphicsQueue,
+        uint32_t graphicsQueueIndex)
         : _vulkanDebug(vulkanDebug)
         , _physicalDevice(physicalDevice)
         , _device(device)
@@ -767,15 +766,13 @@ namespace OpenRCT2::Ui::Vulkan
             paletteCopy[i] = palette[i];
         }
 
-        GlyphIdentifier glyphId{image.GetIndex()};
+        GlyphIdentifier glyphId{ image.GetIndex() };
         std::copy_n(paletteCopy, sizeof(glyphId.palette), reinterpret_cast<uint8_t*>(&glyphId.palette));
 
         if (!_uploadedGlyphs.contains(glyphId) && !_glyphsToUpload.contains(glyphId))
         {
             vk::Extent2D extent;
-            auto imgData = GlyphImageIdToData(
-                image,
-                extent, palette);
+            auto imgData = GlyphImageIdToData(image, extent, palette);
 
             _glyphsToUpload.insert(std::make_pair(glyphId, SpriteUpload(std::move(imgData), extent)));
         }
@@ -952,9 +949,9 @@ namespace OpenRCT2::Ui::Vulkan
             vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, nullptr, postCopyBarrier);
     }
 
-    vk::ImageView DrawSpritePipeline::AddUpload(vk::CommandBuffer& commandBuffer, uint8_t* data, vk::Extent2D extent, VkImage& image,
-                   VmaAllocation& imageAllocation, VkBuffer& stagingBuffer,
-                   VmaAllocation& stagingAllocation)
+    vk::ImageView DrawSpritePipeline::AddUpload(
+        vk::CommandBuffer& commandBuffer, uint8_t* data, vk::Extent2D extent, VkImage& image, VmaAllocation& imageAllocation,
+        VkBuffer& stagingBuffer, VmaAllocation& stagingAllocation)
     {
         auto imageResult = CreateImage(extent, image, imageAllocation);
         if (imageResult != VK_SUCCESS)
@@ -963,8 +960,7 @@ namespace OpenRCT2::Ui::Vulkan
         }
 
         auto stagingResult = CreateStagingBuffer(
-            data, vk::DeviceSize(extent.width * extent.height), stagingBuffer,
-            stagingAllocation);
+            data, vk::DeviceSize(extent.width * extent.height), stagingBuffer, stagingAllocation);
         if (stagingResult != VK_SUCCESS)
         {
             throw std::runtime_error("Could not create staging buffer for image");
@@ -1015,7 +1011,9 @@ namespace OpenRCT2::Ui::Vulkan
                 VkBuffer stagingBuffer;
                 VmaAllocation stagingAllocation;
 
-                auto imageView = AddUpload(commandBuffer, sprite.second.data.get(), sprite.second.size, image, imageAllocation, stagingBuffer, stagingAllocation);
+                auto imageView = AddUpload(
+                    commandBuffer, sprite.second.data.get(), sprite.second.size, image, imageAllocation, stagingBuffer,
+                    stagingAllocation);
 
                 _uploadedSprites.insert(
                     std::make_pair(
@@ -1056,7 +1054,7 @@ namespace OpenRCT2::Ui::Vulkan
 
                 _uploadedGlyphs.insert(
                     std::make_pair(
-                    glyph.first, UploadedSpriteInfo(stagingBuffer, stagingAllocation, image, imageAllocation, imageView)));
+                        glyph.first, UploadedSpriteInfo(stagingBuffer, stagingAllocation, image, imageAllocation, imageView)));
             }
         }
 
@@ -1085,16 +1083,14 @@ namespace OpenRCT2::Ui::Vulkan
 
         for (auto& uploadedGlyph : _uploadedGlyphs)
         {
-            descriptorMapGlyphs[uploadedGlyph.first] = static_cast<uint32_t>(
-                descriptorIndex++);
+            descriptorMapGlyphs[uploadedGlyph.first] = static_cast<uint32_t>(descriptorIndex++);
 
             descriptors.emplace_back(vk::Sampler{}, uploadedGlyph.second.imageView, vk::ImageLayout::eShaderReadOnlyOptimal);
         }
 
         for (auto& uploadedSprite : _uploadedSprites)
         {
-            descriptorMapImages[uploadedSprite.first] = static_cast<uint32_t>(
-                descriptorIndex++);
+            descriptorMapImages[uploadedSprite.first] = static_cast<uint32_t>(descriptorIndex++);
 
             descriptors.emplace_back(vk::Sampler{}, uploadedSprite.second.imageView, vk::ImageLayout::eShaderReadOnlyOptimal);
         }

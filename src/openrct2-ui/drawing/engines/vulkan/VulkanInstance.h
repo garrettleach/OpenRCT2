@@ -24,7 +24,6 @@ namespace OpenRCT2::Ui::Vulkan
         VulkanInstance(VulkanInstance&& instance)
             : _instance(std::move(instance._instance))
         {
-
         }
 
         VulkanInstance& operator=(VulkanInstance&& other)
@@ -72,4 +71,4 @@ namespace OpenRCT2::Ui::Vulkan
     private:
         std::vector<vk::LayerSettingEXT> GetValidationLayerSettings();
     };
-}
+} // namespace OpenRCT2::Ui::Vulkan

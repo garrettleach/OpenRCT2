@@ -1,9 +1,12 @@
-#include "VulkanDebug.h"
 #include "VulkanInstance.h"
+
+#include "VulkanDebug.h"
+
 #include <SDL2/SDL_vulkan.h>
 #include <set>
 #if _WIN32
     #include <windows.h>
+
     #include <debugapi.h>
 #endif
 
@@ -34,10 +37,9 @@ namespace
     const vk::Bool32 tryEnableMonitorLayer = whenDebugBuild;
 
     // debug utils configuration
-    const vk::DebugUtilsMessageSeverityFlagsEXT instanceCreateDebugUtilsMsgSeverityFlags = vk::DebugUtilsMessageSeverityFlagBitsEXT::
-                                                                                     eError
-        | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose
-        | vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo;
+    const vk::DebugUtilsMessageSeverityFlagsEXT instanceCreateDebugUtilsMsgSeverityFlags
+        = vk::DebugUtilsMessageSeverityFlagBitsEXT::eError | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning
+        | vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose | vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo;
     const vk::DebugUtilsMessageTypeFlagsEXT instanceCreateDebugUtilsMsgTypeFlags = vk::DebugUtilsMessageTypeFlagBitsEXT::
                                                                                        eGeneral
         | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
@@ -155,7 +157,7 @@ namespace OpenRCT2::Ui::Vulkan
                     &validate_core_shaders_checkcaching_value);
             }
         }
-        
+
         settings.emplace_back(
             khronosValidationLayerName, "unique_handles", vk::LayerSettingTypeEXT::eBool32, 1, &validate_handles_value);
 
@@ -261,13 +263,14 @@ namespace OpenRCT2::Ui::Vulkan
             }
         }
 
-        auto validationLayerSettings = enableValidationLayer ? GetValidationLayerSettings() : std::vector<vk::LayerSettingEXT>{};
+        auto validationLayerSettings = enableValidationLayer ? GetValidationLayerSettings()
+                                                             : std::vector<vk::LayerSettingEXT>{};
 
         vk::StructureChain<vk::InstanceCreateInfo, vk::DebugUtilsMessengerCreateInfoEXT, vk::LayerSettingsCreateInfoEXT>
             createInfo{ vk::InstanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo, enabledLayers, enabledExtensions },
-                        vk::DebugUtilsMessengerCreateInfoEXT{ vk::DebugUtilsMessengerCreateFlagsEXT{}, instanceCreateDebugUtilsMsgSeverityFlags,
-                            instanceCreateDebugUtilsMsgTypeFlags,
-                                                              &VulkanDebug::VulkanDebugCallback, nullptr },
+                        vk::DebugUtilsMessengerCreateInfoEXT{
+                            vk::DebugUtilsMessengerCreateFlagsEXT{}, instanceCreateDebugUtilsMsgSeverityFlags,
+                            instanceCreateDebugUtilsMsgTypeFlags, &VulkanDebug::VulkanDebugCallback, nullptr },
                         vk::LayerSettingsCreateInfoEXT{ validationLayerSettings } };
 
         if (validationLayerSettings.size() == 0)

@@ -29,18 +29,18 @@ namespace OpenRCT2::Ui::Vulkan
             int32_t right;
             int32_t bottom;
             DrawType drawType;
-            ImageId imageId; // ignored for fillrect
+            ImageId imageId;     // ignored for fillrect
             ImageId maskImageId; // used for SpriteRawMasked
             uint64_t paletteMap; // PaletteMap paletteMap; // for DrawGlyph
-            colour_t colour; // for fillrect
+            colour_t colour;     // for fillrect
         };
 
         struct GlyphIdentifier
         {
             ImageIndex imageIndex;
-            uint64_t palette{ }; // used for glyphs, 0s otherwise
+            uint64_t palette{}; // used for glyphs, 0s otherwise
 
-            auto operator<=>(const GlyphIdentifier&) const = default; 
+            auto operator<=>(const GlyphIdentifier&) const = default;
         };
 
         struct GlyphIdentifierHash
@@ -49,7 +49,8 @@ namespace OpenRCT2::Ui::Vulkan
             {
                 size_t imageIndexHash = std::hash<uint32_t>{}(glyphIdentifier.imageIndex);
                 uint64_t paletteData = 0;
-                std::memcpy(&paletteData, reinterpret_cast<const uint8_t*>(&glyphIdentifier.palette), sizeof(glyphIdentifier.palette));
+                std::memcpy(
+                    &paletteData, reinterpret_cast<const uint8_t*>(&glyphIdentifier.palette), sizeof(glyphIdentifier.palette));
                 size_t paletteHash = std::hash<uint64_t>{}(paletteData);
 
                 return imageIndexHash ^ paletteHash;
@@ -167,8 +168,9 @@ namespace OpenRCT2::Ui::Vulkan
 
     public:
         DrawSpritePipeline(
-            const IVulkanDebug& vulkanDebug, const vk::PhysicalDevice physicalDevice, vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight,
-            VulkanMemoryAllocator& vma, vk::Queue graphicsQueue, uint32_t graphicsQueueIndex);
+            const IVulkanDebug& vulkanDebug, const vk::PhysicalDevice physicalDevice, vk::Device device,
+            const vk::RenderPass& renderPass, size_t framesInFlight, VulkanMemoryAllocator& vma, vk::Queue graphicsQueue,
+            uint32_t graphicsQueueIndex);
 
         DrawSpritePipeline& operator=(const DrawSpritePipeline&) = delete;
         DrawSpritePipeline(const DrawSpritePipeline&) = delete;
