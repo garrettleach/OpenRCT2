@@ -527,7 +527,7 @@ namespace OpenRCT2::Ui::Vulkan
         vk::CommandBufferBeginInfo beginInfoPrimary{};
         currentFramePrimaryCommandBuffer->begin(beginInfoPrimary);
 
-        vk::ClearValue clearColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+        vk::ClearValue clearColor({ 0.0f, 0.0f, 0.0f, 0.0f });
 
         vk::RenderPassBeginInfo renderPassInfo(
             *_renderPass, *_swapchainFramebuffers[_imageIndex], { { 0, 0 }, _swapchainExtent }, clearColor);
