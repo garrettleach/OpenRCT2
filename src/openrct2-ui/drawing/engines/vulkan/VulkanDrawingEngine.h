@@ -61,7 +61,8 @@ namespace OpenRCT2::Ui::Vulkan
         std::unique_ptr<DrawSpritePipeline> _drawSpritePipeline;
         std::vector<vk::UniqueFramebuffer> _swapchainFramebuffers{};
         vk::UniqueCommandPool _commandPool;
-        std::vector<vk::UniqueCommandBuffer> _commandBuffers; //[0,_framesInFlight)
+        std::vector<vk::UniqueCommandBuffer> _primaryCommandBuffers; //[0,_framesInFlight)
+        std::vector<vk::UniqueCommandBuffer> _secondaryCommandBuffers; //[0,_framesInFlight)
         SwapchainSync _swapchainSync = nullptr;
 
         bool _framebufferResized = false;

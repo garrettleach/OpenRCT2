@@ -382,9 +382,11 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::CreateCommandBuffers()
     {
-        vk::CommandBufferAllocateInfo allocInfo(*_commandPool, vk::CommandBufferLevel::ePrimary, _swapchainImageCount);
+        vk::CommandBufferAllocateInfo primaryAllocInfo(*_commandPool, vk::CommandBufferLevel::ePrimary, _swapchainImageCount);
+        vk::CommandBufferAllocateInfo secondaryAllocInfo(*_commandPool, vk::CommandBufferLevel::eSecondary, _swapchainImageCount);
 
-        _commandBuffers = _device->allocateCommandBuffersUnique(allocInfo);
+        _primaryCommandBuffers = _device->allocateCommandBuffersUnique(primaryAllocInfo);
+        _secondaryCommandBuffers = _device->allocateCommandBuffersUnique(secondaryAllocInfo);
     }
 
     void VulkanDrawingEngine::CreateSyncObjects()
@@ -486,45 +488,62 @@ namespace OpenRCT2::Ui::Vulkan
 
         _imageIndex = nextImageResult.value;
 
+        _device->resetFences({ _swapchainSync.InFlightFence(_currentFrame) });
+
+        auto& currentFramePrimaryCommandBuffer = _primaryCommandBuffers[_currentFrame];
+        auto& currentFrameSecondaryCommandBuffer = _secondaryCommandBuffers[_currentFrame];
+
+        currentFramePrimaryCommandBuffer->reset(vk::CommandBufferResetFlags{});
+        currentFrameSecondaryCommandBuffer->reset(vk::CommandBufferResetFlags{});
+
         _drawSpritePipeline->BeginDraw(_currentFrame);
     }
 
     void VulkanDrawingEngine::EndDraw()
     {
-        _device->resetFences({ _swapchainSync.InFlightFence(_currentFrame) });
+        auto& currentFramePrimaryCommandBuffer = _primaryCommandBuffers[_currentFrame];
+        auto& currentFrameSecondaryCommandBuffer = _secondaryCommandBuffers[_currentFrame];
 
-        auto& currentFrameCommandBuffer = _commandBuffers[_currentFrame];
+        vk::CommandBufferInheritanceInfo secondaryInheritance(
+            *_renderPass, 0, *_swapchainFramebuffers[_imageIndex], false, vk::QueryControlFlags(),
+            vk::QueryPipelineStatisticFlags());
 
-        currentFrameCommandBuffer->reset(vk::CommandBufferResetFlags{});
+        vk::CommandBufferBeginInfo beginInfoSecondary{ vk::CommandBufferUsageFlagBits::eRenderPassContinue,
+                                                       &secondaryInheritance };
+        currentFrameSecondaryCommandBuffer->begin(beginInfoSecondary);
 
-        vk::CommandBufferBeginInfo beginInfo{};
-        currentFrameCommandBuffer->begin(beginInfo);
+        vk::Viewport viewport(0.0f, 0.0f, _swapchainExtent.width, _swapchainExtent.height, 0.0f, 1.0f);
+
+        currentFrameSecondaryCommandBuffer->setViewport(0, { viewport });
+
+        vk::Rect2D scissor({ 0, 0 }, _swapchainExtent);
+
+        currentFrameSecondaryCommandBuffer->setScissor(0, scissor);
+
+        _drawSpritePipeline->Draw(*currentFrameSecondaryCommandBuffer, _mainRT, _currentFrame);
+
+        currentFrameSecondaryCommandBuffer->end();
+
+        vk::CommandBufferBeginInfo beginInfoPrimary{};
+        currentFramePrimaryCommandBuffer->begin(beginInfoPrimary);
 
         vk::ClearValue clearColor({ 1.0f, 1.0f, 1.0f, 1.0f });
 
         vk::RenderPassBeginInfo renderPassInfo(
             *_renderPass, *_swapchainFramebuffers[_imageIndex], { { 0, 0 }, _swapchainExtent }, clearColor);
 
-        currentFrameCommandBuffer->beginRenderPass(renderPassInfo, vk::SubpassContents::eInline);
+        currentFramePrimaryCommandBuffer->beginRenderPass(renderPassInfo, vk::SubpassContents::eSecondaryCommandBuffers);
 
-        vk::Viewport viewport(0.0f, 0.0f, _swapchainExtent.width, _swapchainExtent.height, 0.0f, 1.0f);
+        std::vector<vk::CommandBuffer> secondaryCommandBuffer{ { *_secondaryCommandBuffers[_currentFrame] } };
+        currentFramePrimaryCommandBuffer->executeCommands(secondaryCommandBuffer);
 
-        currentFrameCommandBuffer->setViewport(0, { viewport });
-
-        vk::Rect2D scissor({ 0, 0 }, _swapchainExtent);
-
-        currentFrameCommandBuffer->setScissor(0, scissor);
-
-        _drawSpritePipeline->Draw(*currentFrameCommandBuffer, _mainRT, _currentFrame);
-
-        currentFrameCommandBuffer->endRenderPass();
-
-        currentFrameCommandBuffer->end();
+        currentFramePrimaryCommandBuffer->endRenderPass();
+        currentFramePrimaryCommandBuffer->end();
 
         std::vector<vk::Semaphore> imageAvailableSemaphores = { _swapchainSync.AcquireSemaphore(_currentFrame) };
         std::vector<vk::PipelineStageFlags> pipelineStageFlags{ (
             vk::PipelineStageFlags)vk::PipelineStageFlagBits::eColorAttachmentOutput };
-        std::vector<vk::CommandBuffer> commandBuffers = { *currentFrameCommandBuffer };
+        std::vector<vk::CommandBuffer> commandBuffers = { *currentFramePrimaryCommandBuffer };
         std::vector<vk::Semaphore> submitSemaphores = { _swapchainSync.CommandSubmitSemaphore(_imageIndex) };
 
         vk::SubmitInfo submitInfo(imageAvailableSemaphores, pipelineStageFlags, commandBuffers, submitSemaphores);
