@@ -38,6 +38,7 @@ void VulkanDrawingContext::DrawSpriteRawMasked(
 
 void VulkanDrawingContext::DrawSpriteSolid(RenderTarget& rt, const ImageId image, int32_t x, int32_t y, uint8_t colour)
 {
+    _engine.GetDrawSpritePipeline().QueueSpriteSolid(rt, image, x, y, colour);
 }
 
 void VulkanDrawingContext::DrawGlyph(RenderTarget& rt, const ImageId image, int32_t x, int32_t y, const PaletteMap& palette)

@@ -496,6 +496,17 @@ namespace OpenRCT2::Ui::Vulkan
 
                 flags = VertexFlags::Mask;
             }
+            else if (data.drawType == DrawType::DrawSpriteSolid)
+            {
+                auto descriptorMaskMapItem = _tmpImageDescriptorMap.find(data.maskImageId);
+
+                if (descriptorMaskMapItem != _tmpImageDescriptorMap.end())
+                {
+                    maskIndex = descriptorMaskMapItem->second;
+                }
+                imageIndex = data.colour;
+                flags = (VertexFlags)((uint32_t)VertexFlags::Mask | (uint32_t)VertexFlags::ColourOnly);
+            }
             else if (data.drawType == DrawType::DrawGlyph)
             {
                 auto descriptorMapItem = _tmpGlyphDescriptorMap.find(GlyphIdentifier(data.imageId.GetIndex(), data.paletteMap));
@@ -728,6 +739,35 @@ namespace OpenRCT2::Ui::Vulkan
 
         _inProgressSprites.emplace_back(
             left, top, right, bottom, DrawType::DrawSpriteRawMasked, baseColourImage, baseMaskImage);
+    }
+
+    void DrawSpritePipeline::QueueSpriteSolid(RenderTarget& rt, const ImageId image, int32_t x, int32_t y, uint8_t colour)
+    {
+        auto g1MaskElement = GfxGetG1Element(image);
+
+        if (g1MaskElement == nullptr)
+        {
+            return;
+        }
+
+        auto rtDownShift = reinterpret_cast<intptr_t>(rt.bits) / (rt.width + rt.pitch);
+        auto rtRightShift = reinterpret_cast<intptr_t>(rt.bits) - (rtDownShift * (rt.width + rt.pitch));
+
+        int32_t left = x + g1MaskElement->x_offset + rtRightShift; // TODO: is this shift correct?
+        int32_t top = y + g1MaskElement->y_offset + rtDownShift;
+        int32_t right = left + g1MaskElement->width;
+        int32_t bottom = top + g1MaskElement->height;
+
+        ImageId baseMaskImage = ImageId(image.GetIndex());
+        if (!_uploadedSprites.contains(baseMaskImage) && !_spritesToUpload.contains(baseMaskImage))
+        {
+            vk::Extent2D extent;
+            auto imgData = ImageIdToData(image, extent);
+
+            _spritesToUpload.insert(std::make_pair(baseMaskImage, SpriteUpload(std::move(imgData), extent)));
+        }
+
+        _inProgressSprites.emplace_back(left, top, right, bottom, DrawType::DrawSpriteSolid, ImageId(0), baseMaskImage, 0, colour);
     }
 
     std::unique_ptr<uint8_t[]> GlyphImageIdToData(ImageId image, vk::Extent2D& extent, const PaletteMap& palette)
