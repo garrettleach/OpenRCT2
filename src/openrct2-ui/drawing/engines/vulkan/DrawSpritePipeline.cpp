@@ -155,10 +155,11 @@ namespace OpenRCT2::Ui::Vulkan
     }
 
     DrawSpritePipeline::DrawSpritePipeline(
-        const IVulkanDebug& vulkanDebug, const vk::PhysicalDevice physicalDevice, const vk::Device device,
-        const vk::RenderPass& renderPass, size_t framesInFlight, VulkanMemoryAllocator& vma, vk::Queue graphicsQueue,
-        uint32_t graphicsQueueIndex)
-        : _vulkanDebug(vulkanDebug)
+        OpenRCT2::Drawing::IDrawingEngine& engine, const IVulkanDebug& vulkanDebug,
+        const vk::PhysicalDevice physicalDevice, const vk::Device device, const vk::RenderPass& renderPass,
+        size_t framesInFlight, VulkanMemoryAllocator& vma, vk::Queue graphicsQueue, uint32_t graphicsQueueIndex)
+        : _engine(engine)
+        , _vulkanDebug(vulkanDebug)
         , _physicalDevice(physicalDevice)
         , _device(device)
         , _framesInFlight(framesInFlight)
@@ -676,11 +677,14 @@ namespace OpenRCT2::Ui::Vulkan
             }
         }
 
-        auto rtDownShift = reinterpret_cast<intptr_t>(rt.bits) / (rt.width + rt.pitch);
-        auto rtRightShift = reinterpret_cast<intptr_t>(rt.bits) - (rtDownShift * (rt.width + rt.pitch));
+        // these represents the x and y clipping in the opengl version and will need to be used to fix the lack of clipping
+        auto rtDownShift = static_cast<int32_t>(rt.bits - _engine.GetDrawingPixelInfo()->bits)
+            / (_engine.GetDrawingPixelInfo()->width + _engine.GetDrawingPixelInfo()->pitch);
+        auto rtRightShift = static_cast<int32_t>(rt.bits - _engine.GetDrawingPixelInfo()->bits)
+            - (rtDownShift * (_engine.GetDrawingPixelInfo()->width + _engine.GetDrawingPixelInfo()->pitch));
 
-        int32_t left = x + g1Element->x_offset + rtRightShift; // TODO: is this shift correct?
-        int32_t top = y + g1Element->y_offset + rtDownShift;
+        int32_t left = x + g1Element->x_offset + rtRightShift - rt.x;
+        int32_t top = y + g1Element->y_offset + rtDownShift - rt.y;
         int32_t right = left + g1Element->width;
         int32_t bottom = top + g1Element->height;
 
