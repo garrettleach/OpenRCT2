@@ -155,9 +155,9 @@ namespace OpenRCT2::Ui::Vulkan
     }
 
     DrawSpritePipeline::DrawSpritePipeline(
-        OpenRCT2::Drawing::IDrawingEngine& engine, const IVulkanDebug& vulkanDebug,
-        const vk::PhysicalDevice physicalDevice, const vk::Device device, const vk::RenderPass& renderPass,
-        size_t framesInFlight, VulkanMemoryAllocator& vma, vk::Queue graphicsQueue, uint32_t graphicsQueueIndex)
+        OpenRCT2::Drawing::IDrawingEngine& engine, const IVulkanDebug& vulkanDebug, const vk::PhysicalDevice physicalDevice,
+        const vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight, VulkanMemoryAllocator& vma,
+        vk::Queue graphicsQueue, uint32_t graphicsQueueIndex)
         : _engine(engine)
         , _vulkanDebug(vulkanDebug)
         , _physicalDevice(physicalDevice)
@@ -771,7 +771,8 @@ namespace OpenRCT2::Ui::Vulkan
             _spritesToUpload.insert(std::make_pair(baseMaskImage, SpriteUpload(std::move(imgData), extent)));
         }
 
-        _inProgressSprites.emplace_back(left, top, right, bottom, DrawType::DrawSpriteSolid, ImageId(0), baseMaskImage, 0, colour);
+        _inProgressSprites.emplace_back(
+            left, top, right, bottom, DrawType::DrawSpriteSolid, ImageId(0), baseMaskImage, 0, colour);
     }
 
     std::unique_ptr<uint8_t[]> GlyphImageIdToData(ImageId image, vk::Extent2D& extent, const PaletteMap& palette)

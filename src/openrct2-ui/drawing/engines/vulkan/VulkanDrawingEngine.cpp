@@ -383,7 +383,8 @@ namespace OpenRCT2::Ui::Vulkan
     void VulkanDrawingEngine::CreateCommandBuffers()
     {
         vk::CommandBufferAllocateInfo primaryAllocInfo(*_commandPool, vk::CommandBufferLevel::ePrimary, _swapchainImageCount);
-        vk::CommandBufferAllocateInfo secondaryAllocInfo(*_commandPool, vk::CommandBufferLevel::eSecondary, _swapchainImageCount);
+        vk::CommandBufferAllocateInfo secondaryAllocInfo(
+            *_commandPool, vk::CommandBufferLevel::eSecondary, _swapchainImageCount);
 
         _primaryCommandBuffers = _device->allocateCommandBuffersUnique(primaryAllocInfo);
         _secondaryCommandBuffers = _device->allocateCommandBuffersUnique(secondaryAllocInfo);

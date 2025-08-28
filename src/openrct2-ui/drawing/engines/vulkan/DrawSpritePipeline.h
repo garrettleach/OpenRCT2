@@ -3,9 +3,9 @@
 #include "VulkanMemoryAllocator.h"
 
 #include <glm/glm.hpp>
-#include <openrct2/drawing/IDrawingEngine.h>
 #include <openrct2/drawing/ColourPalette.h>
 #include <openrct2/drawing/Drawing.h>
+#include <openrct2/drawing/IDrawingEngine.h>
 #include <openrct2/drawing/ImageId.hpp>
 #include <unordered_map>
 #include <vulkan/vulkan_raii.hpp>
@@ -170,9 +170,9 @@ namespace OpenRCT2::Ui::Vulkan
 
     public:
         DrawSpritePipeline(
-            OpenRCT2::Drawing::IDrawingEngine& engine, const IVulkanDebug& vulkanDebug,
-            const vk::PhysicalDevice physicalDevice, vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight,
-            VulkanMemoryAllocator& vma, vk::Queue graphicsQueue, uint32_t graphicsQueueIndex);
+            OpenRCT2::Drawing::IDrawingEngine& engine, const IVulkanDebug& vulkanDebug, const vk::PhysicalDevice physicalDevice,
+            vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight, VulkanMemoryAllocator& vma,
+            vk::Queue graphicsQueue, uint32_t graphicsQueueIndex);
 
         DrawSpritePipeline& operator=(const DrawSpritePipeline&) = delete;
         DrawSpritePipeline(const DrawSpritePipeline&) = delete;
