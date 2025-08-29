@@ -25,10 +25,8 @@ namespace OpenRCT2::Ui::Vulkan
 
         struct DrawCommand
         {
-            int32_t left;
-            int32_t top;
-            int32_t right;
-            int32_t bottom;
+            glm::ivec4 bounds;
+            glm::ivec4 clip = { INT_MIN, INT_MIN, INT_MAX, INT_MAX };
             DrawType drawType;
             ImageId imageId;     // ignored for fillrect
             ImageId maskImageId; // used for SpriteRawMasked
@@ -90,13 +88,19 @@ namespace OpenRCT2::Ui::Vulkan
             Mask = 2,       // use masking logic against an image (DrawSprite and DrawSpriteRawMask only)
         };
 
-        struct Vertex
+        struct Rect
         {
+            glm::vec4 clip;
             VertexFlags flags;
-            glm::vec2 pos;
-            glm::vec2 texCoord;
             uint32_t index; // index is the palette colour when type is fillrect
             uint32_t maskIndex;
+        };
+
+        struct Vertex
+        {
+            Rect rect; // per rect data
+            glm::vec2 pos;
+            glm::vec2 texCoord;
         };
 
     private:
