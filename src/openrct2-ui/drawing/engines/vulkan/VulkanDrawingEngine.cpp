@@ -237,7 +237,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         auto findFormat = std::find_if(
             availableFormats.begin(), availableFormats.end(), [](vk::SurfaceFormatKHR& surfaceFormat) {
-                return surfaceFormat.format == vk::Format::eB8G8R8A8Srgb
+                return surfaceFormat.format == vk::Format::eB8G8R8A8Unorm
                     && surfaceFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear;
             });
 
