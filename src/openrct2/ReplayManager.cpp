@@ -21,7 +21,7 @@
 #include "actions/FootpathPlaceAction.h"
 #include "actions/GameAction.h"
 #include "actions/RideEntranceExitPlaceAction.h"
-#include "actions/RideSetSettingAction.h"
+// #include "actions/RideSetSettingAction.h"
 #include "actions/TileModifyAction.h"
 #include "actions/TrackPlaceAction.h"
 #include "config/Config.h"
@@ -37,6 +37,7 @@
 #include "object/ObjectManager.h"
 #include "object/ObjectRepository.h"
 #include "park/ParkFile.h"
+#include "scenario/Scenario.h"
 #include "world/Park.h"
 
 #include <chrono>
@@ -45,6 +46,8 @@
 
 namespace OpenRCT2
 {
+    using namespace OpenRCT2::GameActions;
+
     struct ReplayCommand
     {
         uint32_t tick = 0;
@@ -638,10 +641,10 @@ namespace OpenRCT2
 
         bool SerialiseParkParameters(DataSerialiser& serialiser)
         {
-            auto& gameState = getGameState();
+            auto& park = getGameState().park;
 
-            serialiser << gameState.guestGenerationProbability;
-            serialiser << gameState.suggestedGuestMaximum;
+            serialiser << park.guestGenerationProbability;
+            serialiser << park.suggestedGuestMaximum;
             serialiser << Config::Get().general.ShowRealNamesOfGuests;
 
             // To make this a little bit less volatile against updates
