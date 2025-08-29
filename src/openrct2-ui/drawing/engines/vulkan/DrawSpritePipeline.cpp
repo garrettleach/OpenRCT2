@@ -538,29 +538,17 @@ namespace OpenRCT2::Ui::Vulkan
             Rect rect(clip, flags, imageIndex, maskIndex);
 
             _workingVerticies.push_back(
-                DrawSpritePipeline::Vertex{ .rect = rect,
-                                            .pos = { right, top },
-                                            .texCoord = { 1.0, 0.0 }});
+                DrawSpritePipeline::Vertex{ .rect = rect, .pos = { right, top }, .texCoord = { 1.0, 0.0 } });
             _workingVerticies.push_back(
-                DrawSpritePipeline::Vertex{ .rect = rect,
-                                            .pos = { left, top },
-                                            .texCoord = { 0.0, 0.0 }});
+                DrawSpritePipeline::Vertex{ .rect = rect, .pos = { left, top }, .texCoord = { 0.0, 0.0 } });
             _workingVerticies.push_back(
-                DrawSpritePipeline::Vertex{ .rect = rect,
-                                            .pos = { right, bottom },
-                                            .texCoord = { 1.0, 1.0 }});
+                DrawSpritePipeline::Vertex{ .rect = rect, .pos = { right, bottom }, .texCoord = { 1.0, 1.0 } });
             _workingVerticies.push_back(
-                DrawSpritePipeline::Vertex{ .rect = rect,
-                                            .pos = { right, bottom },
-                                            .texCoord = { 1.0, 1.0 }});
+                DrawSpritePipeline::Vertex{ .rect = rect, .pos = { right, bottom }, .texCoord = { 1.0, 1.0 } });
             _workingVerticies.push_back(
-                DrawSpritePipeline::Vertex{ .rect = rect,
-                                            .pos = { left, top },
-                                            .texCoord = { 0.0, 0.0 }});
+                DrawSpritePipeline::Vertex{ .rect = rect, .pos = { left, top }, .texCoord = { 0.0, 0.0 } });
             _workingVerticies.push_back(
-                DrawSpritePipeline::Vertex{ .rect = rect,
-                                            .pos = { left, bottom },
-                                            .texCoord = { 0.0, 1.0 }});
+                DrawSpritePipeline::Vertex{ .rect = rect, .pos = { left, bottom }, .texCoord = { 0.0, 1.0 } });
         }
         _inProgressSprites.clear();
 
@@ -747,7 +735,8 @@ namespace OpenRCT2::Ui::Vulkan
             _spritesToUpload.insert(std::make_pair(baseColourImage, SpriteUpload(std::move(imgData), extent)));
         }
 
-        _inProgressSprites.emplace_back(glm::ivec4{ left, top, right, bottom }, clip, DrawType::DrawSpriteRawMasked, baseColourImage, baseMaskImage);
+        _inProgressSprites.emplace_back(
+            glm::ivec4{ left, top, right, bottom }, clip, DrawType::DrawSpriteRawMasked, baseColourImage, baseMaskImage);
     }
 
     void DrawSpritePipeline::QueueSpriteSolid(RenderTarget& rt, const ImageId image, int32_t x, int32_t y, uint8_t colour)
@@ -775,7 +764,8 @@ namespace OpenRCT2::Ui::Vulkan
             _spritesToUpload.insert(std::make_pair(baseMaskImage, SpriteUpload(std::move(imgData), extent)));
         }
 
-        _inProgressSprites.emplace_back(glm::ivec4{ left, top, right, bottom }, clip, DrawType::DrawSpriteSolid, ImageId(0), baseMaskImage, 0, colour);
+        _inProgressSprites.emplace_back(
+            glm::ivec4{ left, top, right, bottom }, clip, DrawType::DrawSpriteSolid, ImageId(0), baseMaskImage, 0, colour);
     }
 
     std::unique_ptr<uint8_t[]> GlyphImageIdToData(ImageId image, vk::Extent2D& extent, const PaletteMap& palette)
@@ -866,9 +856,8 @@ namespace OpenRCT2::Ui::Vulkan
         int32_t bottom2 = bottom + clip.y - rt.y;
 
         _inProgressSprites.emplace_back(
-            glm::ivec4{ left2, top2, right2, bottom2 }, glm::ivec4{ left2, top2, right2, bottom2 }, DrawType::FillRect, ImageId(),
-            ImageId(), uint8_t{},
-            colour);
+            glm::ivec4{ left2, top2, right2, bottom2 }, glm::ivec4{ left2, top2, right2, bottom2 }, DrawType::FillRect,
+            ImageId(), ImageId(), uint8_t{}, colour);
     }
 
     void DrawSpritePipeline::InvalidateImage(uint32_t image)
