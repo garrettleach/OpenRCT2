@@ -588,9 +588,9 @@ namespace OpenRCT2::Ui::Vulkan
         std::memcpy(_vertexMappedMemory[currentFrame], _workingVerticies.data(), neededMem);
 
         DrawSpritePipeline::UniformBufferObject ubo{
-            .model = glm::identity<glm::mat4>(),
-            .view = glm::lookAt(glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
-            .proj = glm::ortho(0.0f, 1.0f, 0.00f, 1.0f, -1.0f, 1.0f)
+            .transform = glm::ortho(0.0f, 1.0f, 0.00f, 1.0f, -1.0f, 1.0f)
+                * glm::lookAt(glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+            .renderTargetSize = { renderTarget.width, renderTarget.height }
         };
 
         std::memcpy(_uniformBufferObjectMappedMemory[currentFrame], &ubo, sizeof(ubo));

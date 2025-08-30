@@ -3,9 +3,8 @@
 #pragma shader_stage(vertex)
 
 layout(set = 0, binding = 0) uniform UniformBufferObject {
-    mat4 model;
-    mat4 view;
-    mat4 proj;
+    mat4 transform;
+    uvec2 renderTargetSize;
 } ubo;
 
 layout(location = 0) in vec4 clip;
@@ -25,7 +24,7 @@ void main() {
     //if (gl_VertexIndex == 0) {
     //    debugPrintfEXT("v");
     //}
-    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 0.0, 1.0);
+    gl_Position = ubo.transform * vec4(inPosition, 0.0, 1.0);
 
     outFlags = flags;
     outTextureIndex = index;
