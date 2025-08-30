@@ -24,7 +24,7 @@ namespace OpenRCT2::Ui::Vulkan
         {
             constexpr size_t rectOffset = offsetof(DrawSpritePipeline::Vertex, rect);
             return {
-                vk::VertexInputAttributeDescription{ 0, 0, vk::Format::eR32G32B32A32Sfloat,
+                vk::VertexInputAttributeDescription{ 0, 0, vk::Format::eR32G32B32A32Sint,
                                                      offsetof(DrawSpritePipeline::Rect, clip) + rectOffset },
                 vk::VertexInputAttributeDescription{ 1, 0, vk::Format::eR32Uint,
                                                      offsetof(DrawSpritePipeline::Rect, flags) + rectOffset },
@@ -32,7 +32,7 @@ namespace OpenRCT2::Ui::Vulkan
                                                      offsetof(DrawSpritePipeline::Rect, index) + rectOffset },
                 vk::VertexInputAttributeDescription{ 3, 0, vk::Format::eR32Uint,
                                                      offsetof(DrawSpritePipeline::Rect, maskIndex) + rectOffset },
-                vk::VertexInputAttributeDescription{ 4, 0, vk::Format::eR32G32Sfloat,
+                vk::VertexInputAttributeDescription{ 4, 0, vk::Format::eR32G32Sint,
                                                      offsetof(DrawSpritePipeline::Vertex, pos) },
                 vk::VertexInputAttributeDescription{ 5, 0, vk::Format::eR32G32Sfloat,
                                                      offsetof(DrawSpritePipeline::Vertex, texCoord) },
@@ -464,11 +464,6 @@ namespace OpenRCT2::Ui::Vulkan
 
         for (auto& data : _inProgressSprites)
         {
-            auto left = (float)(data.bounds.x) / (float)renderTarget.width;
-            auto top = (float)(data.bounds.y) / (float)renderTarget.height;
-            auto right = (float)(data.bounds.z) / (float)renderTarget.width;
-            auto bottom = (float)(data.bounds.w) / (float)renderTarget.height;
-
             uint32_t imageIndex = 0;
             uint32_t maskIndex = 0;
             VertexFlags flags = VertexFlags::None;
@@ -531,24 +526,20 @@ namespace OpenRCT2::Ui::Vulkan
                 imageIndex = data.colour;
             }
 
-            glm::vec4 clip(
-                data.clip.x / (float)renderTarget.width, data.clip.y / (float)renderTarget.height,
-                data.clip.z / (float)renderTarget.width, data.clip.w / (float)renderTarget.height);
-
-            Rect rect(clip, flags, imageIndex, maskIndex);
+            Rect rect(data.clip, flags, imageIndex, maskIndex);
 
             _workingVerticies.push_back(
-                DrawSpritePipeline::Vertex{ .rect = rect, .pos = { right, top }, .texCoord = { 1.0, 0.0 } });
+                DrawSpritePipeline::Vertex{ .rect = rect, .pos = { data.bounds.z, data.bounds.y }, .texCoord = { 1.0, 0.0 } });
             _workingVerticies.push_back(
-                DrawSpritePipeline::Vertex{ .rect = rect, .pos = { left, top }, .texCoord = { 0.0, 0.0 } });
+                DrawSpritePipeline::Vertex{ .rect = rect, .pos = { data.bounds.x, data.bounds.y }, .texCoord = { 0.0, 0.0 } });
             _workingVerticies.push_back(
-                DrawSpritePipeline::Vertex{ .rect = rect, .pos = { right, bottom }, .texCoord = { 1.0, 1.0 } });
+                DrawSpritePipeline::Vertex{ .rect = rect, .pos = { data.bounds.z, data.bounds.w }, .texCoord = { 1.0, 1.0 } });
             _workingVerticies.push_back(
-                DrawSpritePipeline::Vertex{ .rect = rect, .pos = { right, bottom }, .texCoord = { 1.0, 1.0 } });
+                DrawSpritePipeline::Vertex{ .rect = rect, .pos = { data.bounds.z, data.bounds.w }, .texCoord = { 1.0, 1.0 } });
             _workingVerticies.push_back(
-                DrawSpritePipeline::Vertex{ .rect = rect, .pos = { left, top }, .texCoord = { 0.0, 0.0 } });
+                DrawSpritePipeline::Vertex{ .rect = rect, .pos = { data.bounds.x, data.bounds.y }, .texCoord = { 0.0, 0.0 } });
             _workingVerticies.push_back(
-                DrawSpritePipeline::Vertex{ .rect = rect, .pos = { left, bottom }, .texCoord = { 0.0, 1.0 } });
+                DrawSpritePipeline::Vertex{ .rect = rect, .pos = { data.bounds.x, data.bounds.w }, .texCoord = { 0.0, 1.0 } });
         }
         _inProgressSprites.clear();
 

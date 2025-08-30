@@ -77,7 +77,7 @@ namespace OpenRCT2::Ui::Vulkan
         struct UniformBufferObject
         {
             alignas(16) glm::mat4 transform;
-            glm::uvec2 renderTargetSize;
+            alignas(8) glm::uvec2 renderTargetSize;
         };
 
         enum class VertexFlags : uint32_t
@@ -89,7 +89,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         struct Rect
         {
-            glm::vec4 clip;
+            glm::ivec4 clip;
             VertexFlags flags;
             uint32_t index; // index is the palette colour when type is fillrect
             uint32_t maskIndex;
@@ -98,7 +98,7 @@ namespace OpenRCT2::Ui::Vulkan
         struct Vertex
         {
             Rect rect; // per rect data
-            glm::vec2 pos;
+            glm::ivec2 pos;
             glm::vec2 texCoord;
         };
 

@@ -7,11 +7,11 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
     uvec2 renderTargetSize;
 } ubo;
 
-layout(location = 0) in vec4 clip;
+layout(location = 0) in ivec4 clip;
 layout(location = 1) in uint flags;
 layout(location = 2) in uint index;
 layout(location = 3) in uint maskIndex;
-layout(location = 4) in vec2 inPosition;
+layout(location = 4) in ivec2 inPosition;
 layout(location = 5) in vec2 texCoord;
 
 
@@ -24,7 +24,7 @@ void main() {
     //if (gl_VertexIndex == 0) {
     //    debugPrintfEXT("v");
     //}
-    gl_Position = ubo.transform * vec4(inPosition, 0.0, 1.0);
+    gl_Position = ubo.transform * vec4(vec2(inPosition)/vec2(ubo.renderTargetSize), 0.0, 1.0);
 
     outFlags = flags;
     outTextureIndex = index;
