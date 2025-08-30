@@ -7,12 +7,13 @@ layout(set = 0, binding = 0) uniform UniformBufferObject {
     uvec2 renderTargetSize;
 } ubo;
 
-layout(location = 0) in ivec4 clip;
-layout(location = 1) in uint flags;
-layout(location = 2) in uint index;
-layout(location = 3) in uint maskIndex;
-layout(location = 4) in ivec2 inPosition;
-layout(location = 5) in vec2 texCoord;
+layout(location = 0) in ivec4 bounds;
+layout(location = 1) in ivec4 clip;
+layout(location = 2) in uint flags;
+layout(location = 3) in uint index;
+layout(location = 4) in uint maskIndex;
+layout(location = 5) in ivec2 inPosition;
+layout(location = 6) in vec2 texCoord;
 
 
 layout(location = 0) flat out uint outTextureIndex;

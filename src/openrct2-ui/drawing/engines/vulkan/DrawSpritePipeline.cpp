@@ -20,21 +20,23 @@ namespace OpenRCT2::Ui::Vulkan
             return { 0, sizeof(DrawSpritePipeline::Vertex), vk::VertexInputRate::eVertex };
         }
 
-        std::array<vk::VertexInputAttributeDescription, 6> GetAttributeDescriptions()
+        std::array<vk::VertexInputAttributeDescription, 7> GetAttributeDescriptions()
         {
             constexpr size_t rectOffset = offsetof(DrawSpritePipeline::Vertex, rect);
             return {
                 vk::VertexInputAttributeDescription{ 0, 0, vk::Format::eR32G32B32A32Sint,
+                                                     offsetof(DrawSpritePipeline::Rect, bounds) + rectOffset },
+                vk::VertexInputAttributeDescription{ 1, 0, vk::Format::eR32G32B32A32Sint,
                                                      offsetof(DrawSpritePipeline::Rect, clip) + rectOffset },
-                vk::VertexInputAttributeDescription{ 1, 0, vk::Format::eR32Uint,
-                                                     offsetof(DrawSpritePipeline::Rect, flags) + rectOffset },
                 vk::VertexInputAttributeDescription{ 2, 0, vk::Format::eR32Uint,
-                                                     offsetof(DrawSpritePipeline::Rect, index) + rectOffset },
+                                                     offsetof(DrawSpritePipeline::Rect, flags) + rectOffset },
                 vk::VertexInputAttributeDescription{ 3, 0, vk::Format::eR32Uint,
+                                                     offsetof(DrawSpritePipeline::Rect, index) + rectOffset },
+                vk::VertexInputAttributeDescription{ 4, 0, vk::Format::eR32Uint,
                                                      offsetof(DrawSpritePipeline::Rect, maskIndex) + rectOffset },
-                vk::VertexInputAttributeDescription{ 4, 0, vk::Format::eR32G32Sint,
+                vk::VertexInputAttributeDescription{ 5, 0, vk::Format::eR32G32Sint,
                                                      offsetof(DrawSpritePipeline::Vertex, pos) },
-                vk::VertexInputAttributeDescription{ 5, 0, vk::Format::eR32G32Sfloat,
+                vk::VertexInputAttributeDescription{ 6, 0, vk::Format::eR32G32Sfloat,
                                                      offsetof(DrawSpritePipeline::Vertex, texCoord) },
             };
         }
@@ -526,7 +528,7 @@ namespace OpenRCT2::Ui::Vulkan
                 imageIndex = data.colour;
             }
 
-            Rect rect(data.clip, flags, imageIndex, maskIndex);
+            Rect rect(data.bounds, data.clip, flags, imageIndex, maskIndex);
 
             _workingVerticies.push_back(
                 DrawSpritePipeline::Vertex{ .rect = rect, .pos = { data.bounds.z, data.bounds.y }, .texCoord = { 1.0, 0.0 } });

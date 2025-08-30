@@ -89,6 +89,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         struct Rect
         {
+            glm::ivec4 bounds;
             glm::ivec4 clip;
             VertexFlags flags;
             uint32_t index; // index is the palette colour when type is fillrect
