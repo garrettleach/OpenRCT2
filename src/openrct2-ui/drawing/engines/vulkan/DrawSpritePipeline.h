@@ -100,7 +100,6 @@ namespace OpenRCT2::Ui::Vulkan
         {
             Rect rect; // per rect data
             glm::ivec2 pos;
-            glm::vec2 texCoord;
         };
 
     private:

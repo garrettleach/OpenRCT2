@@ -20,7 +20,7 @@ namespace OpenRCT2::Ui::Vulkan
             return { 0, sizeof(DrawSpritePipeline::Vertex), vk::VertexInputRate::eVertex };
         }
 
-        std::array<vk::VertexInputAttributeDescription, 7> GetAttributeDescriptions()
+        std::array<vk::VertexInputAttributeDescription, 6> GetAttributeDescriptions()
         {
             constexpr size_t rectOffset = offsetof(DrawSpritePipeline::Vertex, rect);
             return {
@@ -36,8 +36,6 @@ namespace OpenRCT2::Ui::Vulkan
                                                      offsetof(DrawSpritePipeline::Rect, maskIndex) + rectOffset },
                 vk::VertexInputAttributeDescription{ 5, 0, vk::Format::eR32G32Sint,
                                                      offsetof(DrawSpritePipeline::Vertex, pos) },
-                vk::VertexInputAttributeDescription{ 6, 0, vk::Format::eR32G32Sfloat,
-                                                     offsetof(DrawSpritePipeline::Vertex, texCoord) },
             };
         }
     } // namespace
@@ -530,18 +528,18 @@ namespace OpenRCT2::Ui::Vulkan
 
             Rect rect(data.bounds, data.clip, flags, imageIndex, maskIndex);
 
-            _workingVerticies.push_back(
-                DrawSpritePipeline::Vertex{ .rect = rect, .pos = { data.bounds.z, data.bounds.y }, .texCoord = { 1.0, 0.0 } });
-            _workingVerticies.push_back(
-                DrawSpritePipeline::Vertex{ .rect = rect, .pos = { data.bounds.x, data.bounds.y }, .texCoord = { 0.0, 0.0 } });
-            _workingVerticies.push_back(
-                DrawSpritePipeline::Vertex{ .rect = rect, .pos = { data.bounds.z, data.bounds.w }, .texCoord = { 1.0, 1.0 } });
-            _workingVerticies.push_back(
-                DrawSpritePipeline::Vertex{ .rect = rect, .pos = { data.bounds.z, data.bounds.w }, .texCoord = { 1.0, 1.0 } });
-            _workingVerticies.push_back(
-                DrawSpritePipeline::Vertex{ .rect = rect, .pos = { data.bounds.x, data.bounds.y }, .texCoord = { 0.0, 0.0 } });
-            _workingVerticies.push_back(
-                DrawSpritePipeline::Vertex{ .rect = rect, .pos = { data.bounds.x, data.bounds.w }, .texCoord = { 0.0, 1.0 } });
+            _workingVerticies.push_back(DrawSpritePipeline::Vertex{
+                .rect = rect, .pos = { data.bounds.z, data.bounds.y } });
+            _workingVerticies.push_back(DrawSpritePipeline::Vertex{
+                .rect = rect, .pos = { data.bounds.x, data.bounds.y } });
+            _workingVerticies.push_back(DrawSpritePipeline::Vertex{
+                .rect = rect, .pos = { data.bounds.z, data.bounds.w } });
+            _workingVerticies.push_back(DrawSpritePipeline::Vertex{
+                .rect = rect, .pos = { data.bounds.z, data.bounds.w } });
+            _workingVerticies.push_back(DrawSpritePipeline::Vertex{
+                .rect = rect, .pos = { data.bounds.x, data.bounds.y } });
+            _workingVerticies.push_back(DrawSpritePipeline::Vertex{
+                .rect = rect, .pos = { data.bounds.x, data.bounds.w } });
         }
         _inProgressSprites.clear();
 
@@ -707,8 +705,8 @@ namespace OpenRCT2::Ui::Vulkan
 
         int32_t left = x + g1MaskElement->x_offset + clip.x - rt.x;
         int32_t top = y + g1MaskElement->y_offset + clip.y - rt.y;
-        int32_t right = left + std::min(g1MaskElement->width, g1ColourElement->width);
-        int32_t bottom = top + std::min(g1MaskElement->height, g1ColourElement->height);
+        int32_t right = left + g1MaskElement->width;
+        int32_t bottom = top + g1MaskElement->height;
 
         ImageId baseMaskImage = ImageId(maskImage.GetIndex());
         if (!_uploadedSprites.contains(baseMaskImage) && !_spritesToUpload.contains(baseMaskImage))

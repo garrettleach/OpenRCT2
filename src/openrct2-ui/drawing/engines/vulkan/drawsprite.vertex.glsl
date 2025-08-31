@@ -13,7 +13,6 @@ layout(location = 2) in uint flags;
 layout(location = 3) in uint index;
 layout(location = 4) in uint maskIndex;
 layout(location = 5) in ivec2 inPosition;
-layout(location = 6) in vec2 texCoord;
 
 
 layout(location = 0) flat out uint outTextureIndex;
@@ -25,7 +24,12 @@ void main() {
     //if (gl_VertexIndex == 0) {
     //    debugPrintfEXT("v");
     //}
-    gl_Position = ubo.transform * vec4(vec2(inPosition)/vec2(ubo.renderTargetSize), 0.0, 1.0);
+
+    ivec2 clippedBoundPosition = ivec2(clamp(inPosition.x, clip.x, clip.z),clamp(inPosition.y,clip.y, clip.w));
+
+    vec2 texCoord = vec2((float(clippedBoundPosition.x - bounds.x)/float(bounds.z - bounds.x)), (float(clippedBoundPosition.y - bounds.y)/float(bounds.w - bounds.y)));
+
+    gl_Position = ubo.transform * vec4(vec2(clippedBoundPosition)/vec2(ubo.renderTargetSize), 0.0, 1.0);
 
     outFlags = flags;
     outTextureIndex = index;
