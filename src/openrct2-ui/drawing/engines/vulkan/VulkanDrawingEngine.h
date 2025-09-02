@@ -55,11 +55,15 @@ namespace OpenRCT2::Ui::Vulkan
         vk::PresentModeKHR _presentationMode{};
         uint32_t _swapchainImageCount{};
         vk::UniqueSwapchainKHR _swapchain;
-        std::vector<vk::Image> _swapchainImages{};               // [0,_swapchainImageCount)
-        std::vector<vk::UniqueImageView> _swapchainImageViews{}; // [0,_swapchainImageCount)
+        std::vector<vk::Image> _swapchainImages{};                  // [0,_swapchainImageCount)
+        std::vector<VkImage> _intermediateImages{};                 // [0,_swapchainImageCount)
+        std::vector<VmaAllocation> _intermediateImageAllocations{}; // [0,_swapchainImageCount)
+        std::vector<vk::UniqueImageView> _swapchainImageViews{};    // [0,_swapchainImageCount)
+        std::vector<vk::UniqueImageView> _intermediateImageViews{}; // [0,_swapchainImageCount)
         vk::UniqueRenderPass _renderPass;
         std::unique_ptr<DrawSpritePipeline> _drawSpritePipeline;
         std::vector<vk::UniqueFramebuffer> _swapchainFramebuffers{};
+        std::vector<vk::UniqueFramebuffer> _intermediateFramebuffers{};
         vk::UniqueCommandPool _commandPool;
         std::vector<vk::UniqueCommandBuffer> _primaryCommandBuffers;   //[0,_framesInFlight)
         std::vector<vk::UniqueCommandBuffer> _secondaryCommandBuffers; //[0,_framesInFlight)
@@ -75,13 +79,7 @@ namespace OpenRCT2::Ui::Vulkan
     public:
         explicit VulkanDrawingEngine(IUiContext& uiContext);
 
-        ~VulkanDrawingEngine() override
-        {
-            if (_device)
-            {
-                _device->waitIdle();
-            }
-        }
+        ~VulkanDrawingEngine() override;
 
         void Initialise() override;
 
@@ -127,7 +125,9 @@ namespace OpenRCT2::Ui::Vulkan
         void ChoosePresentMode();
         void CreateSwapchain();
         void CreateSwapchainImages();
+        void CreateIntermediateImages();
         void CreateSwapchainImageViews();
+        void CreateIntermediateImageViews();
         void CreateRenderPass();
         void CreateGraphicsPipelines();
         void CreateFramebuffers();
