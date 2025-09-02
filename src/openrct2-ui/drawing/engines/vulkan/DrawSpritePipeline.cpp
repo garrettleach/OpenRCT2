@@ -631,7 +631,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         uint32_t neededInstanceMem = static_cast<uint32_t>(
             _workingInstances.size() * sizeof(std::remove_reference_t<decltype(_workingInstances)>::value_type));
-        
+
         ResizeBufferIfNeeded(
             neededInstanceMem, _alloc, _instanceBuffers[currentFrame], _instanceDeviceMemory[currentFrame],
             _instanceDeviceMemorySize[currentFrame], _instanceMappedMemory[currentFrame],
