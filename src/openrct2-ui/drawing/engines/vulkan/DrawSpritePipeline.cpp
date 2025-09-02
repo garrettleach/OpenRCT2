@@ -722,7 +722,15 @@ namespace OpenRCT2::Ui::Vulkan
         {
             if (g1Element->flags & G1_FLAG_HAS_ZOOM_SPRITE)
             {
-                // TODO
+                RenderTarget zoomedRT;
+                zoomedRT.bits = rt.bits;
+                zoomedRT.x = rt.x;
+                zoomedRT.y = rt.y;
+                zoomedRT.height = rt.height;
+                zoomedRT.width = rt.width;
+                zoomedRT.pitch = rt.pitch;
+                zoomedRT.zoom_level = rt.zoom_level - 1;
+                QueueDraw(zoomedRT, imageId.WithIndex(imageId.GetIndex() - g1Element->zoomed_offset), x >> 1, y >> 1);
                 return;
             }
             if (g1Element->flags & G1_FLAG_NO_ZOOM_DRAW)
