@@ -80,7 +80,7 @@ namespace OpenRCT2::Ui::Vulkan
             alignas(8) glm::uvec2 renderTargetSize;
         };
 
-        enum class VertexFlags : uint32_t
+        enum class RectFlags : uint32_t
         {
             None = 0,
             ColourOnly = 1, // use colour instead of image index
@@ -91,14 +91,13 @@ namespace OpenRCT2::Ui::Vulkan
         {
             glm::ivec4 bounds;
             glm::ivec4 clip;
-            VertexFlags flags;
+            RectFlags flags;
             uint32_t index; // index is the palette colour when type is fillrect
             uint32_t maskIndex;
         };
 
         struct Vertex
         {
-            Rect rect; // per rect data
             glm::ivec2 pos;
         };
 
@@ -138,10 +137,18 @@ namespace OpenRCT2::Ui::Vulkan
         std::vector<VkBuffer> _paletteBufferObjectBuffer;
         std::vector<void*> _paletteBufferObjectMappedMemory;
 
-        std::vector<VmaAllocation> _vertexDeviceMemory;
-        std::vector<VkBuffer> _vertexBuffers;
-        std::vector<void*> _vertexMappedMemory;
-        std::vector<vk::DeviceSize> _vertexDeviceMemorySize;
+        std::vector<VmaAllocation> _instanceDeviceMemory;
+        std::vector<VkBuffer> _instanceBuffers;
+        std::vector<void*> _instanceMappedMemory;
+        std::vector<vk::DeviceSize> _instanceDeviceMemorySize;
+
+        VmaAllocation _vertexDeviceMemory;
+        VkBuffer _vertexBuffer;
+        void* _vertexMappedMemory;
+
+        VmaAllocation _indexDeviceMemory;
+        VkBuffer _indexBuffer;
+        void* _indexMappedMemory;
 
         std::vector<vk::DescriptorPool> _descriptorIndexPools;
         std::vector<vk::DescriptorSet> _descriptorIndexSets;
@@ -167,7 +174,7 @@ namespace OpenRCT2::Ui::Vulkan
         std::vector<std::vector<UploadedSpriteInfo>> _queuedImageInvalidation;
 
         // used to keep an appropriately sized vector ready between frames
-        std::vector<Vertex> _workingVerticies;
+        std::vector<Rect> _workingInstances;
 
         vk::UniqueCommandPool _commandPool;
 
@@ -211,7 +218,9 @@ namespace OpenRCT2::Ui::Vulkan
         void CreateDescriptorPool();
         void CreateDescriptorSets();
 
-        void CreateVertexBuffers();
+        void CreateInstanceBuffers();
+        void CreateVertexBuffer();
+        void CreateIndexBuffer();
 
         void CreateCommandPool();
 

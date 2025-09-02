@@ -25,7 +25,10 @@ void main() {
     //    debugPrintfEXT("v");
     //}
 
-    ivec2 clippedBoundPosition = ivec2(clamp(inPosition.x, clip.x, clip.z),clamp(inPosition.y,clip.y, clip.w));
+    int xPosition = (inPosition.x == 0 ? bounds.x : bounds.z);
+    int yPosition = (inPosition.y == 0 ? bounds.y : bounds.w);
+
+    ivec2 clippedBoundPosition = ivec2(clamp(xPosition, clip.x, clip.z),clamp(yPosition, clip.y, clip.w));
 
     vec2 texCoord = vec2((float(clippedBoundPosition.x - bounds.x)/float(bounds.z - bounds.x)), (float(clippedBoundPosition.y - bounds.y)/float(bounds.w - bounds.y)));
 

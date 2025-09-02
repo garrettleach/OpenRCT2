@@ -15,29 +15,57 @@ namespace OpenRCT2::Ui::Vulkan
         constexpr uint32_t initialDescriptorCount = 1000000;
         constexpr uint32_t shaderPaletteSizeInBytes = 256 * 4 * 4;
 
-        vk::VertexInputBindingDescription GetBindingDescription()
+        vk::VertexInputBindingDescription GetInstanceBindingDescription()
         {
-            return { 0, sizeof(DrawSpritePipeline::Vertex), vk::VertexInputRate::eVertex };
+            return { 0, sizeof(DrawSpritePipeline::Rect), vk::VertexInputRate::eInstance };
         }
 
-        std::array<vk::VertexInputAttributeDescription, 6> GetAttributeDescriptions()
+        std::array<vk::VertexInputAttributeDescription, 5> GetInstanceAttributeDescriptions()
         {
-            constexpr size_t rectOffset = offsetof(DrawSpritePipeline::Vertex, rect);
             return {
                 vk::VertexInputAttributeDescription{ 0, 0, vk::Format::eR32G32B32A32Sint,
-                                                     offsetof(DrawSpritePipeline::Rect, bounds) + rectOffset },
+                                                     offsetof(DrawSpritePipeline::Rect, bounds) },
                 vk::VertexInputAttributeDescription{ 1, 0, vk::Format::eR32G32B32A32Sint,
-                                                     offsetof(DrawSpritePipeline::Rect, clip) + rectOffset },
+                                                     offsetof(DrawSpritePipeline::Rect, clip) },
                 vk::VertexInputAttributeDescription{ 2, 0, vk::Format::eR32Uint,
-                                                     offsetof(DrawSpritePipeline::Rect, flags) + rectOffset },
+                                                     offsetof(DrawSpritePipeline::Rect, flags) },
                 vk::VertexInputAttributeDescription{ 3, 0, vk::Format::eR32Uint,
-                                                     offsetof(DrawSpritePipeline::Rect, index) + rectOffset },
+                                                     offsetof(DrawSpritePipeline::Rect, index) },
                 vk::VertexInputAttributeDescription{ 4, 0, vk::Format::eR32Uint,
-                                                     offsetof(DrawSpritePipeline::Rect, maskIndex) + rectOffset },
-                vk::VertexInputAttributeDescription{ 5, 0, vk::Format::eR32G32Sint,
+                                                     offsetof(DrawSpritePipeline::Rect, maskIndex) },
+            };
+        }
+
+        vk::VertexInputBindingDescription GetVertexBindingDescription()
+        {
+            return { 1, sizeof(DrawSpritePipeline::Vertex), vk::VertexInputRate::eVertex };
+        }
+
+        std::array<vk::VertexInputAttributeDescription, 1> GetVertexAttributeDescriptions()
+        {
+            return {
+                vk::VertexInputAttributeDescription{ 5, 1, vk::Format::eR32G32Sint,
                                                      offsetof(DrawSpritePipeline::Vertex, pos) },
             };
         }
+
+        constexpr std::array<glm::ivec2, 4> rectVerticies = {
+            glm::ivec2{ 1, 0 },
+            glm::ivec2{ 0, 0 },
+            glm::ivec2{ 1, 1 },
+            glm::ivec2{ 0, 1 } };
+
+        constexpr std::array<uint32_t, 6> rectIndicies = {
+            0, 1, 2, 2, 1, 3,
+        };
+
+        constexpr VmaAllocationCreateInfo hostMappedAllocInfo = {
+            .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
+            .usage = VMA_MEMORY_USAGE_AUTO,
+            .requiredFlags = (VkMemoryPropertyFlags)vk::MemoryPropertyFlagBits::eHostVisible,
+            .preferredFlags = (VkMemoryPropertyFlags)(vk::MemoryPropertyFlagBits::eHostCoherent
+                                                      | vk::MemoryPropertyFlagBits::eHostCached)
+        };
     } // namespace
 
     vk::UniqueDescriptorSetLayout DrawSpritePipeline::CreateDescriptorSetLayout(const vk::Device& device)
@@ -100,11 +128,22 @@ namespace OpenRCT2::Ui::Vulkan
 
         std::vector<vk::PipelineShaderStageCreateInfo> shaderStages = { vertexShaderStageInfo, fragmentShaderStageInfo };
 
-        auto bindingDesc = GetBindingDescription();
-        auto attrDesc = GetAttributeDescriptions();
+        auto instanceBindingDesc = GetInstanceBindingDescription();
+        auto instanceAttrDesc = GetInstanceAttributeDescriptions();
 
-        vk::PipelineVertexInputStateCreateInfo pipelineVertexInputStateCreate(
-            vk::PipelineVertexInputStateCreateFlags(), { bindingDesc }, attrDesc);
+        auto vertexBindingDesc = GetVertexBindingDescription();
+        auto vertexAttrDesc = GetVertexAttributeDescriptions();
+
+        std::vector<vk::VertexInputBindingDescription> vertexInputBindingDescription{ instanceBindingDesc, vertexBindingDesc };
+
+        std::vector<vk::VertexInputAttributeDescription> vertexInputAttributeDescription{ instanceAttrDesc.begin(),
+                                                                                          instanceAttrDesc.end() };
+        vertexInputAttributeDescription.insert(vertexInputAttributeDescription.end(), vertexAttrDesc.begin(), vertexAttrDesc.end());
+
+        vk::PipelineVertexInputStateCreateInfo pipelineVertexInputStateCreateInfo{ vk::PipelineVertexInputStateCreateFlags(),
+                                                                                   vertexInputBindingDescription,
+                                                                                   vertexInputAttributeDescription
+        };
 
         vk::PipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreate(
             vk::PipelineInputAssemblyStateCreateFlags(), vk::PrimitiveTopology::eTriangleList, false);
@@ -139,7 +178,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         vk::GraphicsPipelineCreateInfo graphicsPipelineCreate{ vk::PipelineCreateFlags{},
                                                                shaderStages,
-                                                               &pipelineVertexInputStateCreate,
+                                                               &pipelineVertexInputStateCreateInfo,
                                                                &pipelineInputAssemblyStateCreate,
                                                                nullptr,
                                                                &pipelineViewportStateCreate,
@@ -180,7 +219,9 @@ namespace OpenRCT2::Ui::Vulkan
         CreateBuffers();
         CreateDescriptorPool();
         CreateDescriptorSets();
-        CreateVertexBuffers();
+        CreateInstanceBuffers();
+        CreateVertexBuffer();
+        CreateIndexBuffer();
         CreateCommandPool();
         CreateIndexDescriptors();
         SetupSampleImage();
@@ -195,9 +236,12 @@ namespace OpenRCT2::Ui::Vulkan
             _device.destroyDescriptorPool(pool);
         }
 
-        for (size_t i = 0; i < _vertexBuffers.size(); i++)
+        vmaDestroyBuffer(_alloc, _indexBuffer, _indexDeviceMemory);
+        vmaDestroyBuffer(_alloc, _vertexBuffer, _vertexDeviceMemory);
+
+        for (size_t i = 0; i < _instanceBuffers.size(); i++)
         {
-            vmaDestroyBuffer(_alloc, _vertexBuffers[i], _vertexDeviceMemory[i]);
+            vmaDestroyBuffer(_alloc, _instanceBuffers[i], _instanceDeviceMemory[i]);
         }
 
         for (size_t i = 0; i < _uniformBufferObjectMemory.size(); i++)
@@ -359,39 +403,78 @@ namespace OpenRCT2::Ui::Vulkan
         }
     }
 
-    void DrawSpritePipeline::CreateVertexBuffers()
+    void CreateSingleBuffer(
+        VmaAllocator& allocator, vk::BufferCreateInfo bufferInfo, VmaAllocationCreateInfo allocInfo,
+        VkBuffer& buffer, VmaAllocation& allocation, void*& memoryMappedPointers)
     {
-        vk::DeviceSize initialVertexBufferSize = sizeof(DrawSpritePipeline::Vertex) * 6;
-        for (size_t i = 0; i < _framesInFlight; i++)
+        VmaAllocationInfo allocationInfo;
+
+        if (VK_SUCCESS == vmaCreateBuffer(allocator, bufferInfo, &allocInfo, &buffer, &allocation, &allocationInfo))
         {
-            vk::BufferCreateInfo bufferInfo(
-                vk::BufferCreateFlags{}, initialVertexBufferSize, vk::BufferUsageFlagBits::eVertexBuffer,
-                vk::SharingMode::eExclusive, {});
+            memoryMappedPointers = allocationInfo.pMappedData;
+        }
+        else
+        {
+            throw std::runtime_error("Vulkan memory error");
+        }
+    }
 
-            VmaAllocationCreateInfo allocInfo = {};
-            allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
-            allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
-            allocInfo.requiredFlags = (VkMemoryPropertyFlags)vk::MemoryPropertyFlagBits::eHostVisible;
-            allocInfo.preferredFlags = (VkMemoryPropertyFlags)(vk::MemoryPropertyFlagBits::eHostCoherent
-                                                               | vk::MemoryPropertyFlagBits::eHostCached);
-
+    void CreateMultipleBuffers(
+        VmaAllocator& allocator, size_t framesInFlight, vk::BufferCreateInfo bufferInfo, VmaAllocationCreateInfo allocInfo,
+        std::vector<VkBuffer>& buffers, std::vector<VmaAllocation>& allocations, std::vector<uint64_t>& sizes,
+        std::vector<void*>& memoryMappedPointers)
+    {
+        for (size_t i = 0; i < framesInFlight; i++)
+        {
             VkBuffer buffer;
             VmaAllocation allocation;
-            VmaAllocationInfo allocationInfo;
+            void* memoryMappedPointer = nullptr;
 
-            if (VK_SUCCESS == vmaCreateBuffer(_alloc, bufferInfo, &allocInfo, &buffer, &allocation, &allocationInfo))
-            {
-                // testing: using a host buffer
-                _vertexBuffers.push_back(buffer);
-                _vertexDeviceMemory.push_back(allocation);
-                _vertexDeviceMemorySize.push_back(initialVertexBufferSize);
-                _vertexMappedMemory.push_back(allocationInfo.pMappedData);
-            }
-            else
-            {
-                throw std::runtime_error("Vulkan memory error");
-            }
+            CreateSingleBuffer(allocator, bufferInfo, allocInfo, buffer, allocation, memoryMappedPointer);
+            buffers.push_back(buffer);
+            allocations.push_back(allocation);
+            sizes.push_back(bufferInfo.size);
+            memoryMappedPointers.push_back(memoryMappedPointer);
         }
+    }
+
+    void DrawSpritePipeline::CreateInstanceBuffers()
+    {
+        vk::DeviceSize initialInstanceBufferSize = sizeof(Rect) * 100;
+
+        vk::BufferCreateInfo bufferInfo(
+            vk::BufferCreateFlags{}, initialInstanceBufferSize, vk::BufferUsageFlagBits::eVertexBuffer,
+            vk::SharingMode::eExclusive, {});
+
+        CreateMultipleBuffers(
+            _alloc, _framesInFlight, bufferInfo, hostMappedAllocInfo, _instanceBuffers, _instanceDeviceMemory,
+            _instanceDeviceMemorySize, _instanceMappedMemory);
+    }
+
+    void DrawSpritePipeline::CreateVertexBuffer()
+    {
+        vk::DeviceSize initialVertexBufferSize = sizeof(DrawSpritePipeline::Vertex) * 4 * 100;
+
+        vk::BufferCreateInfo bufferInfo(
+            vk::BufferCreateFlags{}, initialVertexBufferSize, vk::BufferUsageFlagBits::eVertexBuffer,
+            vk::SharingMode::eExclusive, {});
+
+        CreateSingleBuffer(_alloc, bufferInfo, hostMappedAllocInfo, _vertexBuffer, _vertexDeviceMemory, _vertexMappedMemory);
+
+        std::memcpy(_vertexMappedMemory, rectVerticies.data(), rectVerticies.size() * sizeof(decltype(rectVerticies)::value_type));
+    }
+
+    void DrawSpritePipeline::CreateIndexBuffer()
+    {
+        vk::DeviceSize initialIndexBufferSize = sizeof(uint32_t) * 6 * 100;
+
+        vk::BufferCreateInfo bufferInfo(
+            vk::BufferCreateFlags{}, initialIndexBufferSize, vk::BufferUsageFlagBits::eIndexBuffer, vk::SharingMode::eExclusive,
+            {});
+
+        CreateSingleBuffer(_alloc, bufferInfo, hostMappedAllocInfo, _indexBuffer, _indexDeviceMemory, _indexMappedMemory);
+
+        std::memcpy(_indexMappedMemory, rectIndicies.data(), rectIndicies.size() * sizeof(decltype(rectIndicies)::value_type));
     }
 
     void DrawSpritePipeline::ReleaseUploadedSprites(std::vector<UploadedSpriteInfo>& sprites)
@@ -430,10 +513,30 @@ namespace OpenRCT2::Ui::Vulkan
         std::swap(_queuedImageInvalidation[currentFrame], _currentFrameQueuedImageInvalidation);
     }
 
+    void ResizeBufferIfNeeded(
+        uint32_t neededMem, VmaAllocator allocator, VkBuffer& buffer, VmaAllocation& memory, uint64_t& memSize,
+        void*& memoryMapLocation, vk::BufferUsageFlags bufferUsageFlags, VmaAllocationCreateInfo vmaAllocCreateInfo)
+    {
+        if (memSize < neededMem)
+        {
+            vmaDestroyBuffer(allocator, buffer, memory);
+
+            vk::BufferCreateInfo bufferInfo(vk::BufferCreateFlags{}, neededMem, bufferUsageFlags, vk::SharingMode::eExclusive, {});
+
+            VmaAllocationInfo allocationInfo;
+
+            if (VK_SUCCESS == vmaCreateBuffer(allocator, bufferInfo, &vmaAllocCreateInfo, &buffer, &memory, &allocationInfo))
+            {
+                memSize = neededMem;
+                memoryMapLocation = allocationInfo.pMappedData;
+            }
+        }
+    }
+
     void DrawSpritePipeline::Draw(
         const vk::CommandBuffer& commandBuffer, const RenderTarget& renderTarget, uint32_t currentFrame)
     {
-        _workingVerticies.clear();
+        _workingInstances.clear();
 
         UploadSprites();
 
@@ -466,7 +569,7 @@ namespace OpenRCT2::Ui::Vulkan
         {
             uint32_t imageIndex = 0;
             uint32_t maskIndex = 0;
-            VertexFlags flags = VertexFlags::None;
+            RectFlags flags = RectFlags::None;
 
             if (data.drawType == DrawType::DrawSprite)
             {
@@ -478,7 +581,7 @@ namespace OpenRCT2::Ui::Vulkan
                 }
 
                 maskIndex = imageIndex;
-                flags = VertexFlags::Mask;
+                flags = RectFlags::Mask;
             }
             else if (data.drawType == DrawType::DrawSpriteRawMasked)
             {
@@ -495,7 +598,7 @@ namespace OpenRCT2::Ui::Vulkan
                     maskIndex = descriptorMaskMapItem->second;
                 }
 
-                flags = VertexFlags::Mask;
+                flags = RectFlags::Mask;
             }
             else if (data.drawType == DrawType::DrawSpriteSolid)
             {
@@ -506,7 +609,7 @@ namespace OpenRCT2::Ui::Vulkan
                     maskIndex = descriptorMaskMapItem->second;
                 }
                 imageIndex = data.colour;
-                flags = (VertexFlags)((uint32_t)VertexFlags::Mask | (uint32_t)VertexFlags::ColourOnly);
+                flags = (RectFlags)((uint32_t)RectFlags::Mask | (uint32_t)RectFlags::ColourOnly);
             }
             else if (data.drawType == DrawType::DrawGlyph)
             {
@@ -518,65 +621,25 @@ namespace OpenRCT2::Ui::Vulkan
                 }
 
                 maskIndex = imageIndex;
-                flags = VertexFlags::Mask; // double check this
+                flags = RectFlags::Mask; // double check this
             }
             else if (data.drawType == DrawType::FillRect)
             {
-                flags = VertexFlags::ColourOnly;
+                flags = RectFlags::ColourOnly;
                 imageIndex = data.colour;
             }
 
-            Rect rect(data.bounds, data.clip, flags, imageIndex, maskIndex);
-
-            _workingVerticies.push_back(DrawSpritePipeline::Vertex{
-                .rect = rect, .pos = { data.bounds.z, data.bounds.y } });
-            _workingVerticies.push_back(DrawSpritePipeline::Vertex{
-                .rect = rect, .pos = { data.bounds.x, data.bounds.y } });
-            _workingVerticies.push_back(DrawSpritePipeline::Vertex{
-                .rect = rect, .pos = { data.bounds.z, data.bounds.w } });
-            _workingVerticies.push_back(DrawSpritePipeline::Vertex{
-                .rect = rect, .pos = { data.bounds.z, data.bounds.w } });
-            _workingVerticies.push_back(DrawSpritePipeline::Vertex{
-                .rect = rect, .pos = { data.bounds.x, data.bounds.y } });
-            _workingVerticies.push_back(DrawSpritePipeline::Vertex{
-                .rect = rect, .pos = { data.bounds.x, data.bounds.w } });
+            _workingInstances.emplace_back(data.bounds, data.clip, flags, imageIndex, maskIndex);
         }
         _inProgressSprites.clear();
 
-        auto neededMem = _workingVerticies.size() * sizeof(std::remove_reference_t<decltype(_workingVerticies)>::value_type);
+        uint32_t neededInstanceMem = static_cast<uint32_t>(_workingInstances.size() * sizeof(std::remove_reference_t<decltype(_workingInstances)>::value_type));
+        
+        ResizeBufferIfNeeded(
+            neededInstanceMem, _alloc, _instanceBuffers[currentFrame], _instanceDeviceMemory[currentFrame],
+            _instanceDeviceMemorySize[currentFrame], _instanceMappedMemory[currentFrame], vk::BufferUsageFlagBits::eVertexBuffer, hostMappedAllocInfo);
 
-        if (_vertexDeviceMemorySize[currentFrame] < neededMem)
-        {
-            vmaDestroyBuffer(_alloc, _vertexBuffers[currentFrame], _vertexDeviceMemory[currentFrame]);
-
-            vk::BufferCreateInfo bufferInfo(
-                vk::BufferCreateFlags{}, neededMem, vk::BufferUsageFlagBits::eVertexBuffer, vk::SharingMode::eExclusive, {});
-
-            VmaAllocationCreateInfo allocInfo = {};
-            allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
-            allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
-            allocInfo.requiredFlags = (VkMemoryPropertyFlags)vk::MemoryPropertyFlagBits::eHostVisible;
-            allocInfo.preferredFlags = (VkMemoryPropertyFlags)(vk::MemoryPropertyFlagBits::eHostCoherent
-                                                               | vk::MemoryPropertyFlagBits::eHostCached);
-
-            VkBuffer buffer;
-            VmaAllocation allocation;
-            VmaAllocationInfo allocationInfo;
-
-            if (VK_SUCCESS == vmaCreateBuffer(_alloc, bufferInfo, &allocInfo, &buffer, &allocation, &allocationInfo))
-            {
-                _vertexBuffers[currentFrame] = buffer;
-                _vertexDeviceMemory[currentFrame] = allocation;
-                _vertexDeviceMemorySize[currentFrame] = neededMem;
-                _vertexMappedMemory[currentFrame] = allocationInfo.pMappedData;
-            }
-            else
-            {
-                throw std::runtime_error("Failed to create larger vertex buffer");
-            }
-        }
-
-        std::memcpy(_vertexMappedMemory[currentFrame], _workingVerticies.data(), neededMem);
+        std::memcpy(_instanceMappedMemory[currentFrame], _workingInstances.data(), neededInstanceMem);
 
         DrawSpritePipeline::UniformBufferObject ubo{
             .transform = glm::ortho(0.0f, 1.0f, 0.00f, 1.0f, -1.0f, 1.0f)
@@ -588,15 +651,17 @@ namespace OpenRCT2::Ui::Vulkan
 
         commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *_pipeline);
 
-        commandBuffer.bindVertexBuffers(0, { (vk::Buffer)_vertexBuffers[currentFrame] }, { 0 });
+        commandBuffer.bindIndexBuffer(_indexBuffer, { 0 }, vk::IndexType::eUint32);
+
+        commandBuffer.bindVertexBuffers(0, { (vk::Buffer)_instanceBuffers[currentFrame], (vk::Buffer)_vertexBuffer }, { 0, 0 });
 
         commandBuffer.bindDescriptorSets(
             vk::PipelineBindPoint::eGraphics, *_pipelineLayout, 0,
             { _uniformBufferDescriptorSets[currentFrame], _descriptorIndexSets[currentFrame] }, {});
 
-        commandBuffer.draw(static_cast<uint32_t>(_workingVerticies.size()), 1, 0, 0);
+        commandBuffer.drawIndexed(static_cast<uint32_t>(rectIndicies.size()), static_cast<uint32_t>(_workingInstances.size()), 0, 0, 0);
 
-        _workingVerticies.clear();
+        _workingInstances.clear();
     }
 
     void DrawSpritePipeline::SetPalette(const OpenRCT2::Drawing::GamePalette& palette)
