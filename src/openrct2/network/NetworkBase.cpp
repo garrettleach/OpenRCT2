@@ -49,7 +49,7 @@ using namespace OpenRCT2;
 // It is used for making sure only compatible builds get connected, even within
 // single OpenRCT2 version.
 
-constexpr uint8_t kNetworkStreamVersion = 4;
+constexpr uint8_t kNetworkStreamVersion = 5;
 
 const std::string kNetworkStreamID = std::string(kOpenRCT2Version) + "-" + std::to_string(kNetworkStreamVersion);
 
@@ -2776,6 +2776,8 @@ void NetworkBase::Client_Handle_MAP([[maybe_unused]] NetworkConnection& connecti
 
         _serverTickData.clear();
         _clientMapLoaded = false;
+
+        OpenNetworkProgress(STR_MULTIPLAYER_DOWNLOADING_MAP);
     }
     if (size > chunk_buffer.size())
     {
@@ -2785,7 +2787,6 @@ void NetworkBase::Client_Handle_MAP([[maybe_unused]] NetworkConnection& connecti
     const auto currentProgressKiB = (offset + chunksize) / 1024;
     const auto totalSizeKiB = size / 1024;
 
-    OpenNetworkProgress(STR_MULTIPLAYER_DOWNLOADING_MAP);
     GetContext().SetProgress(currentProgressKiB, totalSizeKiB, STR_STRING_M_OF_N_KIB);
 
     std::memcpy(&chunk_buffer[offset], const_cast<void*>(static_cast<const void*>(packet.Read(chunksize))), chunksize);
