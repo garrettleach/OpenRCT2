@@ -27,10 +27,8 @@ namespace OpenRCT2::Ui::Vulkan
                                                      offsetof(DrawSpritePipeline::Rect, bounds) },
                 vk::VertexInputAttributeDescription{ 1, 0, vk::Format::eR32G32B32A32Sint,
                                                      offsetof(DrawSpritePipeline::Rect, clip) },
-                vk::VertexInputAttributeDescription{ 2, 0, vk::Format::eR32Uint,
-                                                     offsetof(DrawSpritePipeline::Rect, flags) },
-                vk::VertexInputAttributeDescription{ 3, 0, vk::Format::eR32Uint,
-                                                     offsetof(DrawSpritePipeline::Rect, index) },
+                vk::VertexInputAttributeDescription{ 2, 0, vk::Format::eR32Uint, offsetof(DrawSpritePipeline::Rect, flags) },
+                vk::VertexInputAttributeDescription{ 3, 0, vk::Format::eR32Uint, offsetof(DrawSpritePipeline::Rect, index) },
                 vk::VertexInputAttributeDescription{ 4, 0, vk::Format::eR32Uint,
                                                      offsetof(DrawSpritePipeline::Rect, maskIndex) },
             };
@@ -44,16 +42,12 @@ namespace OpenRCT2::Ui::Vulkan
         std::array<vk::VertexInputAttributeDescription, 1> GetVertexAttributeDescriptions()
         {
             return {
-                vk::VertexInputAttributeDescription{ 5, 1, vk::Format::eR32G32Sint,
-                                                     offsetof(DrawSpritePipeline::Vertex, pos) },
+                vk::VertexInputAttributeDescription{ 5, 1, vk::Format::eR32G32Sint, offsetof(DrawSpritePipeline::Vertex, pos) },
             };
         }
 
-        constexpr std::array<glm::ivec2, 4> rectVerticies = {
-            glm::ivec2{ 1, 0 },
-            glm::ivec2{ 0, 0 },
-            glm::ivec2{ 1, 1 },
-            glm::ivec2{ 0, 1 } };
+        constexpr std::array<glm::ivec2, 4> rectVerticies = { glm::ivec2{ 1, 0 }, glm::ivec2{ 0, 0 }, glm::ivec2{ 1, 1 },
+                                                              glm::ivec2{ 0, 1 } };
 
         constexpr std::array<uint32_t, 6> rectIndicies = {
             0, 1, 2, 2, 1, 3,
@@ -138,12 +132,12 @@ namespace OpenRCT2::Ui::Vulkan
 
         std::vector<vk::VertexInputAttributeDescription> vertexInputAttributeDescription{ instanceAttrDesc.begin(),
                                                                                           instanceAttrDesc.end() };
-        vertexInputAttributeDescription.insert(vertexInputAttributeDescription.end(), vertexAttrDesc.begin(), vertexAttrDesc.end());
+        vertexInputAttributeDescription.insert(
+            vertexInputAttributeDescription.end(), vertexAttrDesc.begin(), vertexAttrDesc.end());
 
         vk::PipelineVertexInputStateCreateInfo pipelineVertexInputStateCreateInfo{ vk::PipelineVertexInputStateCreateFlags(),
                                                                                    vertexInputBindingDescription,
-                                                                                   vertexInputAttributeDescription
-        };
+                                                                                   vertexInputAttributeDescription };
 
         vk::PipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreate(
             vk::PipelineInputAssemblyStateCreateFlags(), vk::PrimitiveTopology::eTriangleList, false);
@@ -404,8 +398,8 @@ namespace OpenRCT2::Ui::Vulkan
     }
 
     void CreateSingleBuffer(
-        VmaAllocator& allocator, vk::BufferCreateInfo bufferInfo, VmaAllocationCreateInfo allocInfo,
-        VkBuffer& buffer, VmaAllocation& allocation, void*& memoryMappedPointers)
+        VmaAllocator& allocator, vk::BufferCreateInfo bufferInfo, VmaAllocationCreateInfo allocInfo, VkBuffer& buffer,
+        VmaAllocation& allocation, void*& memoryMappedPointers)
     {
         VmaAllocationInfo allocationInfo;
 
@@ -461,7 +455,8 @@ namespace OpenRCT2::Ui::Vulkan
 
         CreateSingleBuffer(_alloc, bufferInfo, hostMappedAllocInfo, _vertexBuffer, _vertexDeviceMemory, _vertexMappedMemory);
 
-        std::memcpy(_vertexMappedMemory, rectVerticies.data(), rectVerticies.size() * sizeof(decltype(rectVerticies)::value_type));
+        std::memcpy(
+            _vertexMappedMemory, rectVerticies.data(), rectVerticies.size() * sizeof(decltype(rectVerticies)::value_type));
     }
 
     void DrawSpritePipeline::CreateIndexBuffer()
@@ -521,7 +516,8 @@ namespace OpenRCT2::Ui::Vulkan
         {
             vmaDestroyBuffer(allocator, buffer, memory);
 
-            vk::BufferCreateInfo bufferInfo(vk::BufferCreateFlags{}, neededMem, bufferUsageFlags, vk::SharingMode::eExclusive, {});
+            vk::BufferCreateInfo bufferInfo(
+                vk::BufferCreateFlags{}, neededMem, bufferUsageFlags, vk::SharingMode::eExclusive, {});
 
             VmaAllocationInfo allocationInfo;
 
@@ -633,11 +629,13 @@ namespace OpenRCT2::Ui::Vulkan
         }
         _inProgressSprites.clear();
 
-        uint32_t neededInstanceMem = static_cast<uint32_t>(_workingInstances.size() * sizeof(std::remove_reference_t<decltype(_workingInstances)>::value_type));
+        uint32_t neededInstanceMem = static_cast<uint32_t>(
+            _workingInstances.size() * sizeof(std::remove_reference_t<decltype(_workingInstances)>::value_type));
         
         ResizeBufferIfNeeded(
             neededInstanceMem, _alloc, _instanceBuffers[currentFrame], _instanceDeviceMemory[currentFrame],
-            _instanceDeviceMemorySize[currentFrame], _instanceMappedMemory[currentFrame], vk::BufferUsageFlagBits::eVertexBuffer, hostMappedAllocInfo);
+            _instanceDeviceMemorySize[currentFrame], _instanceMappedMemory[currentFrame],
+            vk::BufferUsageFlagBits::eVertexBuffer, hostMappedAllocInfo);
 
         std::memcpy(_instanceMappedMemory[currentFrame], _workingInstances.data(), neededInstanceMem);
 
@@ -659,7 +657,8 @@ namespace OpenRCT2::Ui::Vulkan
             vk::PipelineBindPoint::eGraphics, *_pipelineLayout, 0,
             { _uniformBufferDescriptorSets[currentFrame], _descriptorIndexSets[currentFrame] }, {});
 
-        commandBuffer.drawIndexed(static_cast<uint32_t>(rectIndicies.size()), static_cast<uint32_t>(_workingInstances.size()), 0, 0, 0);
+        commandBuffer.drawIndexed(
+            static_cast<uint32_t>(rectIndicies.size()), static_cast<uint32_t>(_workingInstances.size()), 0, 0, 0);
 
         _workingInstances.clear();
     }

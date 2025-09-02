@@ -355,8 +355,10 @@ namespace OpenRCT2::Ui::Vulkan
             VkImage image;
             VmaAllocation allocation;
 
-            if (VK_SUCCESS != vmaCreateImage(
-                static_cast<VmaAllocator>(*_vmaAllocator), imageCreateInfo, &vmaAllocCreateInfo, &image, &allocation, nullptr))
+            if (VK_SUCCESS
+                != vmaCreateImage(
+                    static_cast<VmaAllocator>(*_vmaAllocator), imageCreateInfo, &vmaAllocCreateInfo, &image, &allocation,
+                    nullptr))
             {
                 throw std::runtime_error("Could not create intermediate image");
             }
@@ -638,12 +640,12 @@ namespace OpenRCT2::Ui::Vulkan
         currentFramePrimaryCommandBuffer->endRenderPass();
 
         vk::ImageMemoryBarrier imageMemBarMakeGraphicsReadable(
-            vk::AccessFlagBits::eColorAttachmentWrite, vk::AccessFlagBits::eTransferRead,
-            vk::ImageLayout::ePresentSrcKHR /* this seems wrong ePresentSrcKHR */,
+            vk::AccessFlagBits::eColorAttachmentWrite, vk::AccessFlagBits::eTransferRead, vk::ImageLayout::ePresentSrcKHR,
             vk::ImageLayout::eTransferSrcOptimal, _queueIndicies.graphics, _queueIndicies.graphics,
             _intermediateImages[_imageIndex], vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
-        vk::ImageMemoryBarrier imageMemBarMakePresentationWritable(vk::AccessFlagBits::eNone, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eUndefined,
+        vk::ImageMemoryBarrier imageMemBarMakePresentationWritable(
+            vk::AccessFlagBits::eNone, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eUndefined,
             vk::ImageLayout::eTransferDstOptimal, _queueIndicies.graphics, _queueIndicies.graphics,
             _swapchainImages[_imageIndex], vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
@@ -653,8 +655,9 @@ namespace OpenRCT2::Ui::Vulkan
 
         currentFramePrimaryCommandBuffer->copyImage(
             _intermediateImages[_imageIndex], vk::ImageLayout::eTransferSrcOptimal, _swapchainImages[_imageIndex],
-            vk::ImageLayout::eTransferDstOptimal, { vk::ImageCopy(
-                vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor,0,0,1), vk::Offset3D(0,0,0),
+            vk::ImageLayout::eTransferDstOptimal,
+            { vk::ImageCopy(
+                vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), vk::Offset3D(0, 0, 0),
                 vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), vk::Offset3D(0, 0, 0),
                 vk::Extent3D(_swapchainExtent, 1)) });
 
