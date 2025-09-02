@@ -603,15 +603,7 @@ namespace OpenRCT2::Ui::Vulkan
                                                        &secondaryGraphicsInheritance };
         currentFrameSecondaryCommandBuffer->begin(beginInfoSecondary);
 
-        vk::Viewport viewport(0.0f, 0.0f, _swapchainExtent.width, _swapchainExtent.height, 0.0f, 1.0f);
-
-        currentFrameSecondaryCommandBuffer->setViewport(0, { viewport });
-
-        vk::Rect2D scissor({ 0, 0 }, _swapchainExtent);
-
-        currentFrameSecondaryCommandBuffer->setScissor(0, scissor);
-
-        _drawSpritePipeline->Draw(*currentFrameSecondaryCommandBuffer, _mainRT, _currentFrame);
+        _drawSpritePipeline->Draw(*currentFrameSecondaryCommandBuffer, _mainRT, _swapchainExtent, _currentFrame);
 
         currentFrameSecondaryCommandBuffer->end();
 

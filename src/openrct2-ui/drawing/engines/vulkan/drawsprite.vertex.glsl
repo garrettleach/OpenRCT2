@@ -32,7 +32,7 @@ void main() {
 
     vec2 texCoord = vec2((float(clippedBoundPosition.x - bounds.x)/float(bounds.z - bounds.x)), (float(clippedBoundPosition.y - bounds.y)/float(bounds.w - bounds.y)));
 
-    gl_Position = ubo.transform * vec4(vec2(clippedBoundPosition)/vec2(ubo.renderTargetSize), 0.0, 1.0);
+    gl_Position = ubo.transform * vec4(vec2(clippedBoundPosition), 0.0, 1.0);
 
     outFlags = flags;
     outTextureIndex = index;

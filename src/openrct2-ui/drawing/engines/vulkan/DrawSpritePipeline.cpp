@@ -530,7 +530,7 @@ namespace OpenRCT2::Ui::Vulkan
     }
 
     void DrawSpritePipeline::Draw(
-        const vk::CommandBuffer& commandBuffer, const RenderTarget& renderTarget, uint32_t currentFrame)
+        const vk::CommandBuffer& commandBuffer, const RenderTarget& renderTarget, vk::Extent2D extent, uint32_t currentFrame)
     {
         _workingInstances.clear();
 
@@ -640,12 +640,22 @@ namespace OpenRCT2::Ui::Vulkan
         std::memcpy(_instanceMappedMemory[currentFrame], _workingInstances.data(), neededInstanceMem);
 
         DrawSpritePipeline::UniformBufferObject ubo{
-            .transform = glm::ortho(0.0f, 1.0f, 0.00f, 1.0f, -1.0f, 1.0f)
-                * glm::lookAt(glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f)),
+            .transform = glm::ortho(0.0f, (float)renderTarget.width, 0.00f, (float)renderTarget.height, -1.0f, 1.0f)
+                * glm::lookAt(
+                             glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f),
+                             glm::vec3(0.0f, ((float)renderTarget.height), 0.0f)),
             .renderTargetSize = { renderTarget.width, renderTarget.height }
         };
 
         std::memcpy(_uniformBufferObjectMappedMemory[currentFrame], &ubo, sizeof(ubo));
+
+        vk::Viewport viewport(0.0f, 0.0f, extent.width, extent.height, 0.0f, 1.0f);
+
+        commandBuffer.setViewport(0, { viewport });
+
+        vk::Rect2D scissor({ 0, 0 }, vk::Extent2D(extent.width, extent.height));
+
+        commandBuffer.setScissor(0, scissor);
 
         commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *_pipeline);
 

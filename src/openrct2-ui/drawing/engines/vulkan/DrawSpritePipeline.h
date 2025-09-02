@@ -193,7 +193,7 @@ namespace OpenRCT2::Ui::Vulkan
         ~DrawSpritePipeline();
 
         void BeginDraw(uint32_t currentFrame);
-        void Draw(const vk::CommandBuffer& commandBuffer, const RenderTarget& renderTarget, uint32_t currentFrame);
+        void Draw(const vk::CommandBuffer& commandBuffer, const RenderTarget& renderTarget, vk::Extent2D extent, uint32_t currentFrame);
 
         void SetPalette(const OpenRCT2::Drawing::GamePalette& palette);
 
