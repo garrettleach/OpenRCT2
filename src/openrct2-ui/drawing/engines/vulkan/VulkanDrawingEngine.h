@@ -39,7 +39,7 @@ namespace OpenRCT2::Ui::Vulkan
         RenderTarget _mainRT = {};
 
         vk::detail::DispatchLoaderDynamic _vulkanDynamicDispatch;
-        VulkanInstance _instance;
+        std::unique_ptr<VulkanInstance> _instance;
         std::unique_ptr<IVulkanDebug> _debug;
         vk::UniqueSurfaceKHR _surface;
         vk::PhysicalDevice _physicalDevice;

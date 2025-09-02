@@ -21,17 +21,8 @@ namespace OpenRCT2::Ui::Vulkan
         VulkanInstance(const VulkanInstance& instance) = delete;
         VulkanInstance& operator=(const VulkanInstance& instance) = delete;
 
-        VulkanInstance(VulkanInstance&& instance)
-            : _instance(std::move(instance._instance))
-        {
-        }
-
-        VulkanInstance& operator=(VulkanInstance&& other)
-        {
-            _instance.reset();
-            _instance = std::move(other._instance);
-            return *this;
-        }
+        VulkanInstance(VulkanInstance&& instance) = delete;
+        VulkanInstance& operator=(VulkanInstance&& other) = delete;
 
         const vk::Instance& operator*() const
         {

@@ -50,10 +50,10 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::CreateInstance()
     {
-        _instance = VulkanInstance(_window, authoredVulkanApiVersion);
-        if (_instance.DebugUtilsEnabled())
+        _instance = std::make_unique<VulkanInstance>(_window, authoredVulkanApiVersion);
+        if (_instance->DebugUtilsEnabled())
         {
-            _debug = std::make_unique<VulkanDebug>(*_instance);
+            _debug = std::make_unique<VulkanDebug>(**_instance);
         }
         else
         {
@@ -64,13 +64,13 @@ namespace OpenRCT2::Ui::Vulkan
     void VulkanDrawingEngine::CreateSurface()
     {
         VkSurfaceKHR surfaceTemp{};
-        if (!SDL_Vulkan_CreateSurface(_window, *_instance, &surfaceTemp))
+        if (!SDL_Vulkan_CreateSurface(_window, **_instance, &surfaceTemp))
         {
             throw runtime_error("Failed to create SDL Vulkan surface");
         }
 
         _surface = vk::UniqueSurfaceKHR(
-            surfaceTemp, vk::detail::ObjectDestroy(*_instance, nullptr, VULKAN_HPP_DEFAULT_DISPATCHER));
+            surfaceTemp, vk::detail::ObjectDestroy(**_instance, nullptr, VULKAN_HPP_DEFAULT_DISPATCHER));
     }
 
     void VulkanDrawingEngine::PickPhysicalDevice()
@@ -79,7 +79,7 @@ namespace OpenRCT2::Ui::Vulkan
         int chosenRating = 0;
         QueueIndicies chosenIndicies{};
 
-        for (auto& physicalDevice : _instance->enumeratePhysicalDevices())
+        for (auto& physicalDevice : (*_instance)->enumeratePhysicalDevices())
         {
             auto queueFamilyProps = physicalDevice.getQueueFamilyProperties();
             optional<size_t> graphicsQueueIndex;
@@ -188,11 +188,11 @@ namespace OpenRCT2::Ui::Vulkan
             queueCreateInfos.emplace_back(vk::DeviceQueueCreateFlags(), _queueIndicies.presentation, priorities);
         }
 
-        vector<const char*> layers = _instance.GetDeviceLayers();
+        vector<const char*> layers = _instance->GetDeviceLayers();
 
         auto requiredExtensions = kRequiredExtensions;
 
-        auto requestedDeviceExtensions = _instance.GetDeviceExtensions();
+        auto requestedDeviceExtensions = _instance->GetDeviceExtensions();
 
         requiredExtensions.insert(requiredExtensions.end(), requestedDeviceExtensions.begin(), requestedDeviceExtensions.end());
 
@@ -213,8 +213,8 @@ namespace OpenRCT2::Ui::Vulkan
         deviceCreateInfo.get<vk::PhysicalDeviceVulkan12Features>().descriptorBindingSampledImageUpdateAfterBind = true;
         deviceCreateInfo.get<vk::PhysicalDeviceVulkan12Features>().runtimeDescriptorArray = true;
 
-        _instance.FilterPhysicalDeviceFeatures(deviceCreateInfo.get<vk::PhysicalDeviceFeatures2>().features);
-        _instance.FilterPhysicalDeviceRobustness2FeaturesEXT(deviceCreateInfo.get<vk::PhysicalDeviceRobustness2FeaturesEXT>());
+        _instance->FilterPhysicalDeviceFeatures(deviceCreateInfo.get<vk::PhysicalDeviceFeatures2>().features);
+        _instance->FilterPhysicalDeviceRobustness2FeaturesEXT(deviceCreateInfo.get<vk::PhysicalDeviceRobustness2FeaturesEXT>());
 
         _device = _physicalDevice.createDeviceUnique(deviceCreateInfo.get());
     }
@@ -222,7 +222,7 @@ namespace OpenRCT2::Ui::Vulkan
     void VulkanDrawingEngine::CreateAllocator()
     {
         _vmaAllocator = std::make_unique<VulkanMemoryAllocator>(
-            *_instance, _physicalDevice, *_device, authoredVulkanApiVersion);
+            **_instance, _physicalDevice, *_device, authoredVulkanApiVersion);
     }
 
     void VulkanDrawingEngine::CreateQueues()
