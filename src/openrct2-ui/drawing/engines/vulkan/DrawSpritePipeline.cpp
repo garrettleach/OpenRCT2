@@ -624,6 +624,10 @@ namespace OpenRCT2::Ui::Vulkan
                 flags = RectFlags::ColourOnly;
                 imageIndex = data.colour;
             }
+            else if (data.drawType == DrawType::Placeholder)
+            {
+                // the bounds are already intentionally out of view
+            }
 
             _workingInstances.emplace_back(data.bounds, data.clip, flags, imageIndex, maskIndex);
         }
@@ -931,6 +935,17 @@ namespace OpenRCT2::Ui::Vulkan
         _inProgressSprites.emplace_back(
             glm::ivec4{ left2, top2, right2, bottom2 }, glm::ivec4{ left2, top2, right2, bottom2 }, DrawType::FillRect,
             ImageId(), ImageId(), uint8_t{}, colour);
+    }
+
+    uint32_t DrawSpritePipeline::QueuePlaceholder()
+    {
+        auto position = static_cast<uint32_t>(_inProgressSprites.size());
+
+        _inProgressSprites.emplace_back(
+            glm::ivec4{ INT_MIN, INT_MIN, INT_MIN, INT_MIN }, glm::ivec4{ INT_MIN, INT_MIN, INT_MIN, INT_MIN }, DrawType::Placeholder,
+            ImageId(), ImageId(), uint8_t{}, colour_t{});
+
+        return position;
     }
 
     void DrawSpritePipeline::InvalidateImage(uint32_t image)

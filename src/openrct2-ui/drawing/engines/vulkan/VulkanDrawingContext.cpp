@@ -18,11 +18,13 @@ void VulkanDrawingContext::FillRect(RenderTarget& rt, uint32_t colour, int32_t l
 void VulkanDrawingContext::FilterRect(
     RenderTarget& rt, FilterPaletteID palette, int32_t left, int32_t top, int32_t right, int32_t bottom)
 {
+    std::ignore = _engine.GetDrawSpritePipeline().QueuePlaceholder();
 }
 
 void VulkanDrawingContext::DrawLine(RenderTarget& rt, uint32_t colour, const ScreenLine& line)
 {
     // We need a pipeline that uses vk::PrimitiveTopology::eLineList or can be converted into triagles
+    std::ignore = _engine.GetDrawSpritePipeline().QueuePlaceholder();
 }
 
 void VulkanDrawingContext::DrawSprite(RenderTarget& rt, const ImageId image, int32_t x, int32_t y)

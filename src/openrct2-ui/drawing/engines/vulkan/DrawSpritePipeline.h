@@ -20,7 +20,8 @@ namespace OpenRCT2::Ui::Vulkan
             DrawSprite,
             DrawSpriteRawMasked,
             DrawSpriteSolid,
-            DrawGlyph
+            DrawGlyph,
+            Placeholder
         };
 
         struct DrawCommand
@@ -202,6 +203,8 @@ namespace OpenRCT2::Ui::Vulkan
         void QueueSpriteSolid(RenderTarget& rt, const ImageId image, int32_t x, int32_t y, uint8_t colour);
         void QueueGlyph(RenderTarget& rt, const ImageId image, int32_t x, int32_t y, const PaletteMap& palette);
         void QueueRect(const RenderTarget& rt, uint32_t colour, int32_t left, int32_t top, int32_t right, int32_t bottom);
+
+        uint32_t QueuePlaceholder();
 
         void InvalidateImage(uint32_t image);
 
