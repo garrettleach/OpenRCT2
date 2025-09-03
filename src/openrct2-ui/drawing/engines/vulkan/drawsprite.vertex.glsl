@@ -19,12 +19,9 @@ layout(location = 0) flat out uint outTextureIndex;
 layout(location = 1) flat out uint outFlags;
 layout(location = 2) flat out uint outMaskIndex;
 layout(location = 3) out vec2 outTexCoord;
+layout(location = 4) flat out uint outInstanceIndex;
 
 void main() {
-    //if (gl_VertexIndex == 0) {
-    //    debugPrintfEXT("v");
-    //}
-
     int xPosition = (inPosition.x == 0 ? bounds.x : bounds.z);
     int yPosition = (inPosition.y == 0 ? bounds.y : bounds.w);
 
@@ -38,4 +35,5 @@ void main() {
     outTextureIndex = index;
     outTexCoord = texCoord;
     outMaskIndex = maskIndex;
+    outInstanceIndex = gl_InstanceIndex;
 }

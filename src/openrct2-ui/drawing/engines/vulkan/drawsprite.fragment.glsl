@@ -18,8 +18,10 @@ layout(location = 0) flat in uint textureIndex;
 layout(location = 1) flat in uint flags;
 layout(location = 2) flat in uint maskIndex;
 layout(location = 3) in vec2 texCoord;
+layout(location = 4) flat in uint inInstanceIndex;
 
 layout(location = 0) out vec4 outColor;
+layout(location = 1) out uint outInstanceIndex;
 
 void main() {
     uint upaletteindex;
@@ -44,4 +46,5 @@ void main() {
     }
 
     outColor = drawInfo.palette[upaletteindex];
+    outInstanceIndex = inInstanceIndex;
 }
