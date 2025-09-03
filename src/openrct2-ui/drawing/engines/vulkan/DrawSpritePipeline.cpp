@@ -158,8 +158,17 @@ namespace OpenRCT2::Ui::Vulkan
             vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB
                 | vk::ColorComponentFlagBits::eA);
 
+        vk::PipelineColorBlendAttachmentState pipelineColorBlendDepthAttachment(
+            false, vk::BlendFactor::eZero, vk::BlendFactor::eZero, vk::BlendOp::eAdd, vk::BlendFactor::eZero,
+            vk::BlendFactor::eZero, vk::BlendOp::eAdd,
+            vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB
+                | vk::ColorComponentFlagBits::eA);
+
+        std::vector<vk::PipelineColorBlendAttachmentState> colorAttachments = { pipelineColorBlendAttachment,
+                                                                                pipelineColorBlendDepthAttachment };
+
         vk::PipelineColorBlendStateCreateInfo pipelineColorBlendStateCreate(
-            vk::PipelineColorBlendStateCreateFlags(), false, vk::LogicOp::eCopy, { pipelineColorBlendAttachment },
+            vk::PipelineColorBlendStateCreateFlags(), false, vk::LogicOp::eCopy, colorAttachments,
             { 0.0f, 0.0f, 0.0f, 0.0f });
 
         std::vector<vk::DynamicState> dynamicStates = { vk::DynamicState::eViewport, vk::DynamicState::eScissor };
