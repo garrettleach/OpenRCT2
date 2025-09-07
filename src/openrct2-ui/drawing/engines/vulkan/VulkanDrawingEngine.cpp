@@ -232,6 +232,7 @@ namespace OpenRCT2::Ui::Vulkan
                 vk::PhysicalDeviceRobustness2FeaturesEXT{ false, false, true });
 
         deviceCreateInfo.get<vk::PhysicalDeviceVulkan13Features>().synchronization2 = true;
+        deviceCreateInfo.get<vk::PhysicalDeviceVulkan13Features>().dynamicRendering = true;
 
         deviceCreateInfo.get<vk::PhysicalDeviceVulkan12Features>().descriptorIndexing = true;
         deviceCreateInfo.get<vk::PhysicalDeviceVulkan12Features>().descriptorBindingVariableDescriptorCount = true;
@@ -425,64 +426,11 @@ namespace OpenRCT2::Ui::Vulkan
         }
     }
 
-    void VulkanDrawingEngine::CreateRenderPass()
-    {
-        vk::AttachmentDescription colorAttachment(
-            vk::AttachmentDescriptionFlags(), _surfaceFormat.format, vk::SampleCountFlagBits::e1, vk::AttachmentLoadOp::eClear,
-            vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare,
-            vk::ImageLayout::eUndefined, vk::ImageLayout::ePresentSrcKHR);
-
-        vk::AttachmentReference colorAttachmentRef(0, vk::ImageLayout::eColorAttachmentOptimal);
-
-        vk::AttachmentDescription depthAttachment(
-            vk::AttachmentDescriptionFlags(), vk::Format::eR32Uint, vk::SampleCountFlagBits::e1, vk::AttachmentLoadOp::eClear,
-            vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare,
-            vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal);
-
-        vk::AttachmentReference depthAttachmentRef(1, vk::ImageLayout::eColorAttachmentOptimal);
-
-        std::vector<vk::AttachmentReference> attachmentRefs = { colorAttachmentRef, depthAttachmentRef };
-
-        vk::SubpassDescription subpass(
-            vk::SubpassDescriptionFlags(), vk::PipelineBindPoint::eGraphics, {}, attachmentRefs, {},
-            nullptr);
-
-        vk::SubpassDependency dependencyColor(
-            vk::SubpassExternal, 0, vk::PipelineStageFlagBits::eColorAttachmentOutput,
-            vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlags(), vk::AccessFlagBits::eColorAttachmentWrite);
-
-        vk::SubpassDependency dependencyDepth(
-            vk::SubpassExternal, 0, vk::PipelineStageFlagBits::eColorAttachmentOutput,
-            vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlags(), vk::AccessFlagBits::eColorAttachmentWrite);
-
-        std::vector<vk::SubpassDependency> subpassDeps = { dependencyColor, dependencyDepth };
-
-        std::vector<vk::AttachmentDescription> attachmentDescriptions = { colorAttachment , depthAttachment};
-
-        vk::RenderPassCreateInfo renderPassInfo(
-            vk::RenderPassCreateFlags(), attachmentDescriptions, { subpass }, subpassDeps);
-
-        _renderPass = _device->createRenderPassUnique(renderPassInfo);
-    }
-
     void VulkanDrawingEngine::CreateGraphicsPipelines()
     {
         _drawSpritePipeline = std::make_unique<DrawSpritePipeline>(
-            *this, *_debug, _physicalDevice, *_device, *_renderPass, _framesInFlight, *_vmaAllocator, _graphicsQueue,
+            *this, *_debug, _physicalDevice, *_device, _framesInFlight, *_vmaAllocator, _graphicsQueue,
             _queueIndicies.graphics);
-    }
-
-    void VulkanDrawingEngine::CreateFramebuffers()
-    {
-        for (size_t i = 0; i < _intermediateImageViews.size(); i++)
-        {
-            std::vector<vk::ImageView> attachments{ *_intermediateImageViews[i], *_intermediateDepthImageViews[i] };
-
-            vk::FramebufferCreateInfo framebufferCreate(
-                vk::FramebufferCreateFlags(), *_renderPass, attachments, _swapchainExtent.width, _swapchainExtent.height, 1);
-
-            _intermediateFramebuffers.push_back(_device->createFramebufferUnique(framebufferCreate));
-        }
     }
 
     void VulkanDrawingEngine::CreateCommandPool()
@@ -514,8 +462,6 @@ namespace OpenRCT2::Ui::Vulkan
 
         _swapchainImages.clear();
 
-        _intermediateFramebuffers.clear();
-
         for (size_t i = 0; i < _intermediateImages.size(); i++)
         {
             vmaDestroyImage(*_vmaAllocator, _intermediateImages[i], _intermediateImageAllocations[i]);
@@ -531,7 +477,6 @@ namespace OpenRCT2::Ui::Vulkan
         CreateSwapchainImages();
         CreateIntermediateImages();
         CreateIntermediateImageViews();
-        CreateFramebuffers();
     }
 
     void VulkanDrawingEngine::Initialise()
@@ -552,9 +497,7 @@ namespace OpenRCT2::Ui::Vulkan
         CreateSwapchainImages();
         CreateIntermediateImages();
         CreateIntermediateImageViews();
-        CreateRenderPass();
         CreateGraphicsPipelines();
-        CreateFramebuffers();
         CreateCommandPool();
         CreateCommandBuffers();
         CreateSyncObjects();
@@ -629,12 +572,16 @@ namespace OpenRCT2::Ui::Vulkan
         auto& currentFramePrimaryCommandBuffer = _primaryCommandBuffers[_currentFrame];
         auto& currentFrameSecondaryCommandBuffer = _secondaryCommandBuffers[_currentFrame];
 
-        vk::CommandBufferInheritanceInfo secondaryGraphicsInheritance(
-            *_renderPass, 0, *_intermediateFramebuffers[_imageIndex], false, vk::QueryControlFlags(),
-            vk::QueryPipelineStatisticFlags());
+        std::vector<vk::Format> colorAttachmentFormats{ _surfaceFormat.format, vk::Format::eR32Uint };
+
+        vk::StructureChain<vk::CommandBufferInheritanceInfo, vk::CommandBufferInheritanceRenderingInfo>
+            secondaryGraphicsInheritance{ { nullptr, 0, nullptr, false, vk::QueryControlFlags(),
+                                            vk::QueryPipelineStatisticFlags() },
+                                          { {}, 0, colorAttachmentFormats }
+            };
 
         vk::CommandBufferBeginInfo beginInfoSecondary{ vk::CommandBufferUsageFlagBits::eRenderPassContinue,
-                                                       &secondaryGraphicsInheritance };
+                                                       &secondaryGraphicsInheritance.get() };
         currentFrameSecondaryCommandBuffer->begin(beginInfoSecondary);
 
         _drawSpritePipeline->Draw(*currentFrameSecondaryCommandBuffer, _mainRT, _swapchainExtent, _currentFrame);
@@ -654,17 +601,22 @@ namespace OpenRCT2::Ui::Vulkan
 
         currentFramePrimaryCommandBuffer->pipelineBarrier2(imageMemBarMakeGraphicsRenderableDepInfo);
 
-        vk::ClearValue clearColor({ 0.0f, 0.0f, 0.0f, 0.0f });
+        std::vector<vk::RenderingAttachmentInfo> attachmentInfo{
+            { *_intermediateImageViews[_imageIndex], vk::ImageLayout::eColorAttachmentOptimal },
+            { *_intermediateDepthImageViews[_imageIndex], vk::ImageLayout::eColorAttachmentOptimal }
+        };
 
-        vk::RenderPassBeginInfo renderPassInfo(
-            *_renderPass, *_intermediateFramebuffers[_imageIndex], { { 0, 0 }, _swapchainExtent }, clearColor);
+        vk::RenderingInfo renderingInfo(
+            vk::RenderingFlagBits::eContentsSecondaryCommandBuffers, vk::Rect2D{ vk::Offset2D{ 0, 0 }, _swapchainExtent }, 1, 0,
+            { attachmentInfo }, {},
+            {});
 
-        currentFramePrimaryCommandBuffer->beginRenderPass(renderPassInfo, vk::SubpassContents::eSecondaryCommandBuffers);
+        currentFramePrimaryCommandBuffer->beginRendering(renderingInfo);
 
         std::vector<vk::CommandBuffer> secondaryCommandBuffer{ { *_secondaryCommandBuffers[_currentFrame] } };
         currentFramePrimaryCommandBuffer->executeCommands(secondaryCommandBuffer);
 
-        currentFramePrimaryCommandBuffer->endRenderPass();
+        currentFramePrimaryCommandBuffer->endRendering();
 
         vk::ImageMemoryBarrier2 imageMemBarMakeGraphicsReadable(
             vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eColorAttachmentWrite,

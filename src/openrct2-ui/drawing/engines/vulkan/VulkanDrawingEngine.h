@@ -62,9 +62,7 @@ namespace OpenRCT2::Ui::Vulkan
         std::vector<VmaAllocation> _intermediateDepthImageAllocations{}; // [0,_swapchainImageCount)
         std::vector<vk::UniqueImageView> _intermediateImageViews{};      // [0,_swapchainImageCount)
         std::vector<vk::UniqueImageView> _intermediateDepthImageViews{}; // [0,_swapchainImageCount)
-        vk::UniqueRenderPass _renderPass;
         std::unique_ptr<DrawSpritePipeline> _drawSpritePipeline;
-        std::vector<vk::UniqueFramebuffer> _intermediateFramebuffers{};
         vk::UniqueCommandPool _commandPool;
         std::vector<vk::UniqueCommandBuffer> _primaryCommandBuffers;   //[0,_framesInFlight)
         std::vector<vk::UniqueCommandBuffer> _secondaryCommandBuffers; //[0,_framesInFlight)
@@ -128,9 +126,7 @@ namespace OpenRCT2::Ui::Vulkan
         void CreateSwapchainImages();
         void CreateIntermediateImages();
         void CreateIntermediateImageViews();
-        void CreateRenderPass();
         void CreateGraphicsPipelines();
-        void CreateFramebuffers();
         void CreateCommandPool();
         void CreateCommandBuffers();
         void CreateSyncObjects();

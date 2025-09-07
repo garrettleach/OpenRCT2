@@ -182,8 +182,8 @@ namespace OpenRCT2::Ui::Vulkan
     public:
         DrawSpritePipeline(
             OpenRCT2::Drawing::IDrawingEngine& engine, const IVulkanDebug& vulkanDebug, const vk::PhysicalDevice physicalDevice,
-            vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight, VulkanMemoryAllocator& vma,
-            vk::Queue graphicsQueue, uint32_t graphicsQueueIndex);
+            vk::Device device, size_t framesInFlight, VulkanMemoryAllocator& vma, vk::Queue graphicsQueue,
+            uint32_t graphicsQueueIndex);
 
         DrawSpritePipeline& operator=(const DrawSpritePipeline&) = delete;
         DrawSpritePipeline(const DrawSpritePipeline&) = delete;
@@ -215,7 +215,7 @@ namespace OpenRCT2::Ui::Vulkan
             const vk::Device& device, const std::vector<vk::DescriptorSetLayout>& descriptorSetLayouts);
         static vk::UniquePipeline CreatePipeline(
             const vk::Device& device, const vk::DescriptorSetLayout& descriptorSetLayout,
-            const vk::PipelineLayout& pipelineLayout, const vk::RenderPass& renderPass);
+            const vk::PipelineLayout& pipelineLayout);
 
         void CreateBuffers();
         void CreateDescriptorPool();

@@ -103,8 +103,7 @@ namespace OpenRCT2::Ui::Vulkan
     }
 
     vk::UniquePipeline DrawSpritePipeline::CreatePipeline(
-        const vk::Device& device, const vk::DescriptorSetLayout& descriptorSetLayout, const vk::PipelineLayout& pipelineLayout,
-        const vk::RenderPass& renderPass)
+        const vk::Device& device, const vk::DescriptorSetLayout& descriptorSetLayout, const vk::PipelineLayout& pipelineLayout)
     {
         auto vertexShaderSpirV = ReadSpirVFile("drawsprite.vertex.spirv");
         auto fragmentShaderSpirV = ReadSpirVFile("drawsprite.fragment.spirv");
@@ -179,32 +178,40 @@ namespace OpenRCT2::Ui::Vulkan
 
         vk::PipelineLayoutCreateInfo pipelineLayoutCreate(vk::PipelineLayoutCreateFlags(), descriptorSetLayouts);
 
-        vk::GraphicsPipelineCreateInfo graphicsPipelineCreate{ vk::PipelineCreateFlags{},
-                                                               shaderStages,
-                                                               &pipelineVertexInputStateCreateInfo,
-                                                               &pipelineInputAssemblyStateCreate,
-                                                               nullptr,
-                                                               &pipelineViewportStateCreate,
-                                                               &pipelineRasterizationStateCreate,
-                                                               &pipelineMultisampleStateCreate,
-                                                               nullptr,
-                                                               &pipelineColorBlendStateCreate,
-                                                               &pipelineDynamicStateCreate,
-                                                               pipelineLayout,
-                                                               renderPass,
-                                                               0,
-                                                               vk::Pipeline{},
-                                                               int32_t{} };
+        std::vector<vk::Format> colorAttachmentFormat{ vk::Format::eB8G8R8A8Unorm, vk::Format::eR32Uint };
 
-        auto pipeline = device.createGraphicsPipelineUnique(nullptr, graphicsPipelineCreate);
+        vk::StructureChain<vk::GraphicsPipelineCreateInfo, vk::PipelineRenderingCreateInfo> graphicsPipelineCreate
+        {
+            { vk::PipelineCreateFlags{},
+              shaderStages,
+              &pipelineVertexInputStateCreateInfo,
+              &pipelineInputAssemblyStateCreate,
+              nullptr,
+              &pipelineViewportStateCreate,
+              &pipelineRasterizationStateCreate,
+              &pipelineMultisampleStateCreate,
+              nullptr,
+              &pipelineColorBlendStateCreate,
+              &pipelineDynamicStateCreate,
+              pipelineLayout,
+              nullptr,
+              0,
+              vk::Pipeline{},
+              int32_t{} },
+            {
+                0, colorAttachmentFormat
+            }
+        };
+
+        auto pipeline = device.createGraphicsPipelineUnique(nullptr, graphicsPipelineCreate.get());
 
         return std::move(pipeline.value);
     }
 
     DrawSpritePipeline::DrawSpritePipeline(
         OpenRCT2::Drawing::IDrawingEngine& engine, const IVulkanDebug& vulkanDebug, const vk::PhysicalDevice physicalDevice,
-        const vk::Device device, const vk::RenderPass& renderPass, size_t framesInFlight, VulkanMemoryAllocator& vma,
-        vk::Queue graphicsQueue, uint32_t graphicsQueueIndex)
+        const vk::Device device, size_t framesInFlight, VulkanMemoryAllocator& vma, vk::Queue graphicsQueue,
+        uint32_t graphicsQueueIndex)
         : _engine(engine)
         , _vulkanDebug(vulkanDebug)
         , _physicalDevice(physicalDevice)
@@ -216,7 +223,7 @@ namespace OpenRCT2::Ui::Vulkan
         , _descriptorSetLayout(CreateDescriptorSetLayout(device))
         , _descriptorIndexSetLayout(CreateDescriptorIndexSetLayout(device))
         , _pipelineLayout(CreatePipelineLayout(device, { *_descriptorSetLayout, *_descriptorIndexSetLayout }))
-        , _pipeline(CreatePipeline(device, *_descriptorSetLayout, *_pipelineLayout, renderPass))
+        , _pipeline(CreatePipeline(device, *_descriptorSetLayout, *_pipelineLayout))
         , _queuedImageInvalidation(framesInFlight, std::vector<UploadedSpriteInfo>())
     {
         CreateBuffers();
