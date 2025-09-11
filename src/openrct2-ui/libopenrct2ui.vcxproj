@@ -65,6 +65,7 @@
     <ClInclude Include="drawing\engines\opengl\TextureCache.h" />
     <ClInclude Include="drawing\engines\opengl\TransparencyDepth.h" />
     <ClInclude Include="drawing\engines\vulkan\DrawSpritePipeline.h" />
+    <ClInclude Include="drawing\engines\vulkan\ColourizePipeline.h" />
     <ClInclude Include="drawing\engines\vulkan\MemoryType.h" />
     <ClInclude Include="drawing\engines\vulkan\SpirV.h" />
     <ClInclude Include="drawing\engines\vulkan\SwapchainSync.h" />
@@ -140,6 +141,7 @@
     <ClCompile Include="drawing\engines\opengl\TextureCache.cpp" />
     <ClCompile Include="drawing\engines\opengl\TransparencyDepth.cpp" />
     <ClCompile Include="drawing\engines\vulkan\DrawSpritePipeline.cpp" />
+    <ClCompile Include="drawing\engines\vulkan\ColourizePipeline.cpp" />
     <ClCompile Include="drawing\engines\vulkan\MemoryType.cpp" />
     <ClCompile Include="drawing\engines\vulkan\SpirV.cpp" />
     <ClCompile Include="drawing\engines\vulkan\SwapchainSync.cpp" />

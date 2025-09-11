@@ -7,10 +7,6 @@ const uint FLAG_COLOR_ONLY = 1;
 const uint FLAG_MASK = 2;
 
 layout(set = 0, binding = 1) uniform sampler singleSampler;
-layout(set = 0, binding = 2) uniform DrawInfo
-{
-    vec4 palette[256];
-} drawInfo;
 
 layout(set = 1, binding = 0) uniform utexture2D textures[];
 
@@ -20,7 +16,7 @@ layout(location = 2) flat in uint maskIndex;
 layout(location = 3) in vec2 texCoord;
 layout(location = 4) flat in uint inInstanceIndex;
 
-layout(location = 0) out vec4 outColor;
+layout(location = 0) out uint outColour;
 layout(location = 1) out uint outInstanceIndex;
 
 void main() {
@@ -45,6 +41,6 @@ void main() {
         }
     }
 
-    outColor = drawInfo.palette[upaletteindex];
+    outColour = upaletteindex;
     outInstanceIndex = inInstanceIndex;
 }

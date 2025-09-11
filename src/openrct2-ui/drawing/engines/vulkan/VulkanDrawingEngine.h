@@ -14,6 +14,7 @@
 #include <openrct2/ui/UiContext.h>
 #include <string>
 #include <vulkan/vulkan_raii.hpp>
+#include "ColourizePipeline.h"
 
 namespace OpenRCT2::Ui::Vulkan
 {
@@ -55,17 +56,24 @@ namespace OpenRCT2::Ui::Vulkan
         vk::PresentModeKHR _presentationMode{};
         uint32_t _swapchainImageCount{};
         vk::UniqueSwapchainKHR _swapchain;
-        std::vector<vk::Image> _swapchainImages{};                       // [0,_swapchainImageCount)
-        std::vector<VkImage> _intermediateImages{};                      // [0,_swapchainImageCount)
-        std::vector<VmaAllocation> _intermediateImageAllocations{};      // [0,_swapchainImageCount)
-        std::vector<VkImage> _intermediateDepthImages{};                 // [0,_swapchainImageCount)
-        std::vector<VmaAllocation> _intermediateDepthImageAllocations{}; // [0,_swapchainImageCount)
-        std::vector<vk::UniqueImageView> _intermediateImageViews{};      // [0,_swapchainImageCount)
-        std::vector<vk::UniqueImageView> _intermediateDepthImageViews{}; // [0,_swapchainImageCount)
+
+        std::vector<vk::Image> _swapchainImages{};               // [0,_swapchainImageCount)
+        std::vector<vk::UniqueImageView> _swapchainImageViews{}; // [0,_swapchainImageCount)
+
+        std::vector<vk::Image> _intermediatePaletteImages{};                 // [0,_framesInFlight)
+        std::vector<VmaAllocation> _intermediatePaletteImageAllocations{}; // [0,_framesInFlight)
+        std::vector<vk::UniqueImageView> _intermediatePaletteImageViews{}; // [0,_framesInFlight)
+
+        std::vector<vk::Image> _intermediateDepthImages{};                 // [0,_framesInFlight)
+        std::vector<VmaAllocation> _intermediateDepthImageAllocations{}; // [0,_framesInFlight)
+        std::vector<vk::UniqueImageView> _intermediateDepthImageViews{}; // [0,_framesInFlight)
+
         std::unique_ptr<DrawSpritePipeline> _drawSpritePipeline;
+        std::unique_ptr<ColourizePipeline> _colourizePipeline;
+
         vk::UniqueCommandPool _commandPool;
-        std::vector<vk::UniqueCommandBuffer> _primaryCommandBuffers;   //[0,_framesInFlight)
-        std::vector<vk::UniqueCommandBuffer> _secondaryCommandBuffers; //[0,_framesInFlight)
+        std::vector<vk::UniqueCommandBuffer> _primaryCommandBuffers;          //[0,_framesInFlight)
+
         SwapchainSync _swapchainSync = nullptr;
 
         bool _framebufferResized = false;
@@ -124,12 +132,14 @@ namespace OpenRCT2::Ui::Vulkan
         void ChoosePresentMode();
         void CreateSwapchain();
         void CreateSwapchainImages();
+        void CreateSwapchainImageViews();
         void CreateIntermediateImages();
         void CreateIntermediateImageViews();
         void CreateGraphicsPipelines();
         void CreateCommandPool();
         void CreateCommandBuffers();
         void CreateSyncObjects();
+        void PrepIntermediateImages();
 
         void RecreateSwapChain();
     };

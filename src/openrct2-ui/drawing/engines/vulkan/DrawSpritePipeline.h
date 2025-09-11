@@ -134,10 +134,6 @@ namespace OpenRCT2::Ui::Vulkan
         vk::UniqueDescriptorPool _uniformBufferDescriptorPool;
         std::vector<vk::DescriptorSet> _uniformBufferDescriptorSets;
 
-        std::vector<VmaAllocation> _paletteBufferObjectMemory;
-        std::vector<VkBuffer> _paletteBufferObjectBuffer;
-        std::vector<void*> _paletteBufferObjectMappedMemory;
-
         std::vector<VmaAllocation> _instanceDeviceMemory;
         std::vector<VkBuffer> _instanceBuffers;
         std::vector<void*> _instanceMappedMemory;
@@ -153,10 +149,6 @@ namespace OpenRCT2::Ui::Vulkan
 
         std::vector<vk::DescriptorPool> _descriptorIndexPools;
         std::vector<vk::DescriptorSet> _descriptorIndexSets;
-
-        // Add sprite tracking
-        // Palette for the next upload
-        OpenRCT2::Drawing::GamePalette _palette;
 
         std::vector<DrawCommand> _inProgressSprites;
 
@@ -195,8 +187,6 @@ namespace OpenRCT2::Ui::Vulkan
 
         void BeginDraw(uint32_t currentFrame);
         void Draw(const vk::CommandBuffer& commandBuffer, const RenderTarget& renderTarget, vk::Extent2D extent, uint32_t currentFrame);
-
-        void SetPalette(const OpenRCT2::Drawing::GamePalette& palette);
 
         void QueueDraw(RenderTarget& rt, ImageId imageId, int32_t x, int32_t y);
         void QueueRawMasked(RenderTarget& rt, int32_t x, int32_t y, const ImageId maskImage, const ImageId colourImage);
@@ -247,7 +237,5 @@ namespace OpenRCT2::Ui::Vulkan
             std::unordered_map<GlyphIdentifier, uint32_t, GlyphIdentifierHash>& descriptorMapGlyphs);
 
         void ReleaseUploadedSprites(std::vector<DrawSpritePipeline::UploadedSpriteInfo>& sprites);
-
-        std::vector<glm::vec4> TransformPalette(OpenRCT2::Drawing::GamePalette& palette);
     };
 } // namespace OpenRCT2::Ui::Vulkan

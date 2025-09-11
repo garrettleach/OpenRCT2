@@ -68,10 +68,8 @@ namespace OpenRCT2::Ui::Vulkan
             0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex);
         vk::DescriptorSetLayoutBinding samplerLayoutBinding(
             1, vk::DescriptorType::eSampler, 1, vk::ShaderStageFlagBits::eFragment);
-        vk::DescriptorSetLayoutBinding paletteLayoutBinding(
-            2, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eFragment);
 
-        std::vector<vk::DescriptorSetLayoutBinding> bindings{ uboLayoutBinding, samplerLayoutBinding, paletteLayoutBinding };
+        std::vector<vk::DescriptorSetLayoutBinding> bindings{ uboLayoutBinding, samplerLayoutBinding };
 
         vk::DescriptorSetLayoutCreateInfo layoutInfo(vk::DescriptorSetLayoutCreateFlags(), bindings);
 
@@ -151,23 +149,18 @@ namespace OpenRCT2::Ui::Vulkan
         vk::PipelineMultisampleStateCreateInfo pipelineMultisampleStateCreate(
             vk::PipelineMultisampleStateCreateFlags(), vk::SampleCountFlagBits::e1, false);
 
-        vk::PipelineColorBlendAttachmentState pipelineColorBlendAttachment(
+        vk::PipelineColorBlendAttachmentState pipelineColorBlendOffAttachment(
             false, vk::BlendFactor::eZero, vk::BlendFactor::eZero, vk::BlendOp::eAdd, vk::BlendFactor::eZero,
             vk::BlendFactor::eZero, vk::BlendOp::eAdd,
             vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB
                 | vk::ColorComponentFlagBits::eA);
 
-        vk::PipelineColorBlendAttachmentState pipelineColorBlendDepthAttachment(
-            false, vk::BlendFactor::eZero, vk::BlendFactor::eZero, vk::BlendOp::eAdd, vk::BlendFactor::eZero,
-            vk::BlendFactor::eZero, vk::BlendOp::eAdd,
-            vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB
-                | vk::ColorComponentFlagBits::eA);
-
-        std::vector<vk::PipelineColorBlendAttachmentState> colorAttachments = { pipelineColorBlendAttachment,
-                                                                                pipelineColorBlendDepthAttachment };
+        std::vector<vk::PipelineColorBlendAttachmentState> colorBlendOffAttachments = { pipelineColorBlendOffAttachment,
+                                                                                pipelineColorBlendOffAttachment,
+                                                                                pipelineColorBlendOffAttachment };
 
         vk::PipelineColorBlendStateCreateInfo pipelineColorBlendStateCreate(
-            vk::PipelineColorBlendStateCreateFlags(), false, vk::LogicOp::eCopy, colorAttachments,
+            vk::PipelineColorBlendStateCreateFlags(), false, vk::LogicOp::eCopy, colorBlendOffAttachments,
             { 0.0f, 0.0f, 0.0f, 0.0f });
 
         std::vector<vk::DynamicState> dynamicStates = { vk::DynamicState::eViewport, vk::DynamicState::eScissor };
@@ -176,11 +169,13 @@ namespace OpenRCT2::Ui::Vulkan
 
         vector<vk::DescriptorSetLayout> descriptorSetLayouts{ descriptorSetLayout }; // TODO: add images
 
-        vk::PipelineLayoutCreateInfo pipelineLayoutCreate(vk::PipelineLayoutCreateFlags(), descriptorSetLayouts);
+        std::vector<vk::Format> colourAttachmentFormats{ vk::Format::eR8Uint, vk::Format::eR32Uint, vk::Format::eB8G8R8A8Unorm };
 
-        std::vector<vk::Format> colorAttachmentFormat{ vk::Format::eB8G8R8A8Unorm, vk::Format::eR32Uint };
+        std::vector<uint32_t> colourAttachmentInputIndicies{ 0, 1, VK_ATTACHMENT_UNUSED };
 
-        vk::StructureChain<vk::GraphicsPipelineCreateInfo, vk::PipelineRenderingCreateInfo> graphicsPipelineCreate
+        vk::StructureChain<
+            vk::GraphicsPipelineCreateInfo, vk::PipelineRenderingCreateInfo, vk::RenderingInputAttachmentIndexInfo>
+            graphicsPipelineCreate
         {
             { vk::PipelineCreateFlags{},
               shaderStages,
@@ -195,12 +190,11 @@ namespace OpenRCT2::Ui::Vulkan
               &pipelineDynamicStateCreate,
               pipelineLayout,
               nullptr,
-              0,
-              vk::Pipeline{},
-              int32_t{} },
+              0 },
             {
-                0, colorAttachmentFormat
-            }
+                {}, colourAttachmentFormats,
+            },
+            { colourAttachmentInputIndicies }
         };
 
         auto pipeline = device.createGraphicsPipelineUnique(nullptr, graphicsPipelineCreate.get());
@@ -259,11 +253,6 @@ namespace OpenRCT2::Ui::Vulkan
             vmaDestroyBuffer(_alloc, _uniformBufferObjectBuffer[i], _uniformBufferObjectMemory[i]);
         }
 
-        for (size_t i = 0; i < _paletteBufferObjectMemory.size(); i++)
-        {
-            vmaDestroyBuffer(_alloc, _paletteBufferObjectBuffer[i], _paletteBufferObjectMemory[i]);
-        }
-
         for (auto& currentSprite : _currentFrameQueuedImageInvalidation)
         {
             _device.destroyImageView(currentSprite.imageView);
@@ -294,6 +283,10 @@ namespace OpenRCT2::Ui::Vulkan
             vmaDestroyImage(_alloc, uploadedGlyph.second.image, uploadedGlyph.second.imageAllocation);
             vmaDestroyBuffer(_alloc, uploadedGlyph.second.buffer, uploadedGlyph.second.bufferAllocation);
         }
+
+        _spritesToUpload.clear();
+        _glyphsToUpload.clear();
+        _inProgressSprites.clear();
 
         _device.destroyImageView(_sampleImageView);
 
@@ -341,18 +334,13 @@ namespace OpenRCT2::Ui::Vulkan
             vk::WriteDescriptorSet uniformDescriptorWrite(
                 _uniformBufferDescriptorSets[i], 0, 0, vk::DescriptorType::eUniformBuffer, {}, { uniformBufferInfo }, {});
 
+            // TODO: Can we convert this to an immutable sampler?
             vk::DescriptorImageInfo samplerImageInfo(_sampler, nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
 
             vk::WriteDescriptorSet samplerDescriptorWrite(
                 _uniformBufferDescriptorSets[i], 1, 0, vk::DescriptorType::eSampler, { samplerImageInfo }, {}, {});
 
-            vk::DescriptorBufferInfo paletteInfo(
-                _paletteBufferObjectBuffer[i], vk::DeviceSize(0), vk::DeviceSize(shaderPaletteSizeInBytes));
-
-            vk::WriteDescriptorSet paletteDescriptorWrite(
-                _uniformBufferDescriptorSets[i], 2, 0, vk::DescriptorType::eUniformBuffer, {}, { paletteInfo }, {});
-
-            _device.updateDescriptorSets({ uniformDescriptorWrite, samplerDescriptorWrite, paletteDescriptorWrite }, {});
+            _device.updateDescriptorSets({ uniformDescriptorWrite, samplerDescriptorWrite }, {});
         }
     }
 
@@ -388,23 +376,6 @@ namespace OpenRCT2::Ui::Vulkan
                 _uniformBufferObjectBuffer.push_back(uniformBuffer);
                 _uniformBufferObjectMemory.push_back(uniformAllocation);
                 _uniformBufferObjectMappedMemory.push_back(uniformAllocationInfo.pMappedData);
-
-                VkBuffer paletteBuffer;
-                VmaAllocation paletteAllocation;
-                VmaAllocationInfo paletteAllocationInfo;
-
-                if (VK_SUCCESS
-                    == vmaCreateBuffer(
-                        _alloc, paletteBufferInfo, &allocInfo, &paletteBuffer, &paletteAllocation, &paletteAllocationInfo))
-                {
-                    _paletteBufferObjectBuffer.push_back(paletteBuffer);
-                    _paletteBufferObjectMemory.push_back(paletteAllocation);
-                    _paletteBufferObjectMappedMemory.push_back(paletteAllocationInfo.pMappedData);
-                }
-                else
-                {
-                    throw std::runtime_error("Vulkan memory error while creating palette buffer");
-                }
             }
             else
             {
@@ -498,21 +469,6 @@ namespace OpenRCT2::Ui::Vulkan
         }
     }
 
-    std::vector<glm::vec4> DrawSpritePipeline::TransformPalette(OpenRCT2::Drawing::GamePalette& palette)
-    {
-        std::vector<glm::vec4> temp;
-
-        for (auto& entry : palette)
-        {
-            temp.push_back(
-                glm::vec4(
-                    (float)entry.Red / (float)256, (float)entry.Green / (float)256, (float)entry.Blue / (float)256,
-                    (float)entry.Alpha / (float)256));
-        }
-
-        return temp;
-    }
-
     void DrawSpritePipeline::BeginDraw(uint32_t currentFrame)
     {
         // we can delete any images that were added during the last cycle
@@ -552,15 +508,8 @@ namespace OpenRCT2::Ui::Vulkan
 
         UploadSprites();
 
-        auto shaderPalette = TransformPalette(_palette);
-
-        std::memcpy(_paletteBufferObjectMappedMemory[currentFrame], shaderPalette.data(), shaderPaletteSizeInBytes);
-
         // TODO: Update descriptor set for frame
         vk::DescriptorImageInfo descImageInfo(nullptr, _sampleImageView, vk::ImageLayout::eShaderReadOnlyOptimal);
-
-        vk::DescriptorBufferInfo paletteInfo(
-            _paletteBufferObjectBuffer[currentFrame], 0, vk::DeviceSize(shaderPaletteSizeInBytes));
 
         vk::WriteDescriptorSet writeSampleImageDesc(
             _descriptorIndexSets[currentFrame], 0, 0, vk::DescriptorType::eSampledImage, { descImageInfo }, nullptr, nullptr);
@@ -573,8 +522,6 @@ namespace OpenRCT2::Ui::Vulkan
             _descriptorIndexSets[currentFrame], 0, descriptorStartIndex, vk::DescriptorType::eSampledImage, _tmpDescriptors, {},
             {});
 
-        vk::WriteDescriptorSet writePaletteDesc(
-            _uniformBufferDescriptorSets[currentFrame], 2, 0, vk::DescriptorType::eUniformBuffer, {}, { paletteInfo });
         _device.updateDescriptorSets({ writeSampleImageDesc, writeAllImageDesc }, nullptr);
 
         for (auto& data : _inProgressSprites)
@@ -691,11 +638,6 @@ namespace OpenRCT2::Ui::Vulkan
             static_cast<uint32_t>(rectIndicies.size()), static_cast<uint32_t>(_workingInstances.size()), 0, 0, 0);
 
         _workingInstances.clear();
-    }
-
-    void DrawSpritePipeline::SetPalette(const OpenRCT2::Drawing::GamePalette& palette)
-    {
-        _palette = palette;
     }
 
     std::unique_ptr<uint8_t[]> ImageIdToData(ImageId image, vk::Extent2D& extent)

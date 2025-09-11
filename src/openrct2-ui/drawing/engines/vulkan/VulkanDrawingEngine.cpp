@@ -36,7 +36,8 @@ namespace OpenRCT2::Ui::Vulkan
     {
         constexpr uint32_t authoredVulkanApiVersion = vk::ApiVersion13;
 
-        vector<const char*> kRequiredExtensions{ vk::KHRSwapchainExtensionName };
+        vector<const char*> kRequiredExtensions{ vk::KHRSwapchainExtensionName, vk::KHRDynamicRenderingLocalReadExtensionName,
+                                                 vk::KHRRelaxedBlockLayoutExtensionName };
     } // namespace
 
     VulkanDrawingEngine::VulkanDrawingEngine(IUiContext& uiContext)
@@ -54,12 +55,12 @@ namespace OpenRCT2::Ui::Vulkan
         {
             _device->waitIdle();
 
-            _intermediateImageViews.clear();
+            _intermediatePaletteImageViews.clear();
             _intermediateDepthImageViews.clear();
 
-            for (size_t i = 0; i < _intermediateImages.size(); i++)
+            for (size_t i = 0; i < _intermediatePaletteImages.size(); i++)
             {
-                vmaDestroyImage(*_vmaAllocator, _intermediateImages[i], _intermediateImageAllocations[i]);
+                vmaDestroyImage(*_vmaAllocator, _intermediatePaletteImages[i], _intermediatePaletteImageAllocations[i]);
             }
 
             for (size_t i = 0; i < _intermediateDepthImages.size(); i++)
@@ -67,8 +68,8 @@ namespace OpenRCT2::Ui::Vulkan
                 vmaDestroyImage(*_vmaAllocator, _intermediateDepthImages[i], _intermediateDepthImageAllocations[i]);
             }
 
-            _intermediateImages.clear();
-            _intermediateImageAllocations.clear();
+            _intermediatePaletteImages.clear();
+            _intermediatePaletteImageAllocations.clear();
 
             _intermediateDepthImages.clear();
             _intermediateDepthImageAllocations.clear();
@@ -224,11 +225,12 @@ namespace OpenRCT2::Ui::Vulkan
         requiredExtensions.insert(requiredExtensions.end(), requestedDeviceExtensions.begin(), requestedDeviceExtensions.end());
 
         vk::StructureChain<
-            vk::DeviceCreateInfo, vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceVulkan13Features,
-            vk::PhysicalDeviceVulkan12Features, vk::PhysicalDeviceRobustness2FeaturesEXT>
+            vk::DeviceCreateInfo, vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceDynamicRenderingLocalReadFeatures,
+            vk::PhysicalDeviceVulkan13Features, vk::PhysicalDeviceVulkan12Features, vk::PhysicalDeviceRobustness2FeaturesEXT>
             deviceCreateInfo(
                 vk::DeviceCreateInfo{ vk::DeviceCreateFlags{}, queueCreateInfos, layers, requiredExtensions },
-                vk::PhysicalDeviceFeatures2{}, vk::PhysicalDeviceVulkan13Features{}, vk::PhysicalDeviceVulkan12Features{},
+                vk::PhysicalDeviceFeatures2{}, vk::PhysicalDeviceDynamicRenderingLocalReadFeatures{ true },
+                vk::PhysicalDeviceVulkan13Features{}, vk::PhysicalDeviceVulkan12Features{},
                 vk::PhysicalDeviceRobustness2FeaturesEXT{ false, false, true });
 
         deviceCreateInfo.get<vk::PhysicalDeviceVulkan13Features>().synchronization2 = true;
@@ -240,6 +242,7 @@ namespace OpenRCT2::Ui::Vulkan
         deviceCreateInfo.get<vk::PhysicalDeviceVulkan12Features>().descriptorBindingUpdateUnusedWhilePending = true;
         deviceCreateInfo.get<vk::PhysicalDeviceVulkan12Features>().descriptorBindingSampledImageUpdateAfterBind = true;
         deviceCreateInfo.get<vk::PhysicalDeviceVulkan12Features>().runtimeDescriptorArray = true;
+        deviceCreateInfo.get<vk::PhysicalDeviceVulkan12Features>().uniformBufferStandardLayout = true;
 
         _instance->FilterPhysicalDeviceFeatures(deviceCreateInfo.get<vk::PhysicalDeviceFeatures2>().features);
         _instance->FilterPhysicalDeviceRobustness2FeaturesEXT(deviceCreateInfo.get<vk::PhysicalDeviceRobustness2FeaturesEXT>());
@@ -308,6 +311,7 @@ namespace OpenRCT2::Ui::Vulkan
         }
         else
         {
+            // TODO: if mailbox is unavailable immediate is usually recomended above fifo (if it is available)
             _presentationMode = vk::PresentModeKHR::eFifo;
         }
     }
@@ -347,12 +351,24 @@ namespace OpenRCT2::Ui::Vulkan
         _swapchainImages = _device->getSwapchainImagesKHR(*_swapchain);
     }
 
+    void VulkanDrawingEngine::CreateSwapchainImageViews()
+    {
+        for (auto& image : _swapchainImages)
+        {
+            vk::ImageViewCreateInfo imageViewCreate(
+                vk::ImageViewCreateFlags(), image, vk::ImageViewType::e2D, _surfaceFormat.format, vk::ComponentMapping{},
+                vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
+
+            _swapchainImageViews.push_back(_device->createImageViewUnique(imageViewCreate));
+        }
+    }
+
     void VulkanDrawingEngine::CreateIntermediateImages()
     {
-        vk::ImageCreateInfo imageCreateInfo(
-            vk::ImageCreateFlags{}, vk::ImageType::e2D, vk::Format::eB8G8R8A8Unorm, vk::Extent3D{ _swapchainExtent, 1 }, 1, 1,
+        vk::ImageCreateInfo paletteImageCreateInfo(
+            vk::ImageCreateFlags{}, vk::ImageType::e2D, vk::Format::eR8Uint, vk::Extent3D{ _swapchainExtent, 1 }, 1, 1,
             vk::SampleCountFlagBits::e1, vk::ImageTiling::eOptimal,
-            vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc, vk::SharingMode::eExclusive,
+            vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eInputAttachment, vk::SharingMode::eExclusive,
             _queueIndicies.graphics, vk::ImageLayout::eUndefined);
 
         VmaAllocationCreateInfo vmaAllocCreateInfo{
@@ -360,30 +376,30 @@ namespace OpenRCT2::Ui::Vulkan
             .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
         };
 
-        for (size_t i = 0; i < _swapchainImageCount; i++)
+        for (size_t i = 0; i < _framesInFlight; i++)
         {
             VkImage image;
             VmaAllocation allocation;
 
             if (VK_SUCCESS
                 != vmaCreateImage(
-                    static_cast<VmaAllocator>(*_vmaAllocator), imageCreateInfo, &vmaAllocCreateInfo, &image, &allocation,
+                    static_cast<VmaAllocator>(*_vmaAllocator), paletteImageCreateInfo, &vmaAllocCreateInfo, &image, &allocation,
                     nullptr))
             {
                 throw std::runtime_error("Could not create intermediate image");
             }
 
-            _intermediateImages.push_back(image);
-            _intermediateImageAllocations.push_back(allocation);
+            _intermediatePaletteImages.emplace_back(image);
+            _intermediatePaletteImageAllocations.push_back(allocation);
         }
 
         vk::ImageCreateInfo imageDepthCreateInfo(
             vk::ImageCreateFlags{}, vk::ImageType::e2D, vk::Format::eR32Uint, vk::Extent3D{ _swapchainExtent, 1 }, 1, 1,
             vk::SampleCountFlagBits::e1, vk::ImageTiling::eOptimal,
-            vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc, vk::SharingMode::eExclusive,
+            vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eInputAttachment, vk::SharingMode::eExclusive,
             _queueIndicies.graphics, vk::ImageLayout::eUndefined);
 
-        for (size_t i = 0; i < _swapchainImageCount; i++)
+        for (size_t i = 0; i < _framesInFlight; i++)
         {
             VkImage image;
             VmaAllocation allocation;
@@ -396,22 +412,22 @@ namespace OpenRCT2::Ui::Vulkan
                 throw std::runtime_error("Could not create intermediate depth image");
             }
 
-            _intermediateDepthImages.push_back(image);
+            _intermediateDepthImages.emplace_back(image);
             _intermediateDepthImageAllocations.push_back(allocation);
         }
     }
 
     void VulkanDrawingEngine::CreateIntermediateImageViews()
     {
-        for (auto& image : _intermediateImages)
+        for (auto& image : _intermediatePaletteImages)
         {
             vk::ImageViewCreateInfo createInfo(
-                vk::ImageViewCreateFlags(), image, vk::ImageViewType::e2D, _surfaceFormat.format,
+                vk::ImageViewCreateFlags(), image, vk::ImageViewType::e2D, vk::Format::eR8Uint,
                 { vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity,
                   vk::ComponentSwizzle::eIdentity },
                 vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
-            _intermediateImageViews.push_back(_device->createImageViewUnique(createInfo));
+            _intermediatePaletteImageViews.push_back(_device->createImageViewUnique(createInfo));
         }
 
         for (auto& image : _intermediateDepthImages)
@@ -431,6 +447,22 @@ namespace OpenRCT2::Ui::Vulkan
         _drawSpritePipeline = std::make_unique<DrawSpritePipeline>(
             *this, *_debug, _physicalDevice, *_device, _framesInFlight, *_vmaAllocator, _graphicsQueue,
             _queueIndicies.graphics);
+
+        std::vector<vk::ImageView> paletteImageViews;
+        for (auto& imageView : _intermediatePaletteImageViews)
+        {
+            paletteImageViews.push_back(*imageView);
+        }
+
+        std::vector<vk::ImageView> depthImageViews;
+        for (auto& imageView : _intermediateDepthImageViews)
+        {
+            depthImageViews.push_back(*imageView);
+        }
+
+        _colourizePipeline = std::make_unique<ColourizePipeline>(
+            *_device, _framesInFlight, *_vmaAllocator, _graphicsQueue, _queueIndicies.graphics, paletteImageViews,
+            depthImageViews);
     }
 
     void VulkanDrawingEngine::CreateCommandPool()
@@ -443,12 +475,9 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::CreateCommandBuffers()
     {
-        vk::CommandBufferAllocateInfo primaryAllocInfo(*_commandPool, vk::CommandBufferLevel::ePrimary, _swapchainImageCount);
-        vk::CommandBufferAllocateInfo secondaryAllocInfo(
-            *_commandPool, vk::CommandBufferLevel::eSecondary, _swapchainImageCount);
+        vk::CommandBufferAllocateInfo primaryAllocInfo(*_commandPool, vk::CommandBufferLevel::ePrimary, _framesInFlight);
 
         _primaryCommandBuffers = _device->allocateCommandBuffersUnique(primaryAllocInfo);
-        _secondaryCommandBuffers = _device->allocateCommandBuffersUnique(secondaryAllocInfo);
     }
 
     void VulkanDrawingEngine::CreateSyncObjects()
@@ -456,27 +485,94 @@ namespace OpenRCT2::Ui::Vulkan
         _swapchainSync = SwapchainSync(_device, _framesInFlight, _swapchainImageCount);
     }
 
+    void VulkanDrawingEngine::PrepIntermediateImages()
+    {
+        vk::CommandPoolCreateInfo poolCreate(vk::CommandPoolCreateFlagBits::eTransient, _queueIndicies.graphics);
+        auto commandPool = _device->createCommandPoolUnique(poolCreate);
+
+        vk::CommandBufferAllocateInfo bufferAlloc(*commandPool, vk::CommandBufferLevel::ePrimary, 1);
+        auto commandBuffer = _device->allocateCommandBuffers(bufferAlloc)[0];
+
+        vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+        commandBuffer.begin(beginInfo);
+
+        std::vector<vk::ImageMemoryBarrier2> imageBarriers;
+
+        for (auto image : _intermediatePaletteImages)
+        {
+            imageBarriers.emplace_back(
+                vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eNone,
+                vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eColorAttachmentWrite,
+                vk::ImageLayout::eUndefined, vk::ImageLayout::eRenderingLocalRead, _queueIndicies.graphics,
+                _queueIndicies.graphics, image, vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+        }
+
+        for (auto image : _intermediateDepthImages)
+        {
+            imageBarriers.emplace_back(
+                vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone,
+                vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eColorAttachmentWrite,
+                vk::ImageLayout::eUndefined, vk::ImageLayout::eRenderingLocalRead, _queueIndicies.graphics,
+                _queueIndicies.graphics, image, vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+        }
+
+        vk::DependencyInfo depInfo(vk::DependencyFlags(), {}, {}, imageBarriers);
+        commandBuffer.pipelineBarrier2(depInfo);
+        commandBuffer.end();
+
+        vk::SubmitInfo submitInfo({}, {}, { commandBuffer }, {});
+
+        _graphicsQueue.submit(submitInfo);
+        _graphicsQueue.waitIdle();
+    }
+
     void VulkanDrawingEngine::RecreateSwapChain()
     {
         _device->waitIdle();
 
+        _swapchainImageViews.clear();
         _swapchainImages.clear();
 
-        for (size_t i = 0; i < _intermediateImages.size(); i++)
+        for (size_t i = 0; i < _intermediatePaletteImages.size(); i++)
         {
-            vmaDestroyImage(*_vmaAllocator, _intermediateImages[i], _intermediateImageAllocations[i]);
+            vmaDestroyImage(*_vmaAllocator, _intermediatePaletteImages[i], _intermediatePaletteImageAllocations[i]);
         }
 
-        _intermediateImageViews.clear();
-        _intermediateImages.clear();
-        _intermediateImageAllocations.clear();
+        _intermediatePaletteImageViews.clear();
+        _intermediatePaletteImages.clear();
+        _intermediatePaletteImageAllocations.clear();
+
+        for (size_t i = 0; i < _intermediateDepthImages.size(); i++)
+        {
+            vmaDestroyImage(*_vmaAllocator, _intermediateDepthImages[i], _intermediateDepthImageAllocations[i]);
+        }
+
+        _intermediateDepthImageViews.clear();
+        _intermediateDepthImages.clear();
+        _intermediateDepthImageAllocations.clear();
 
         _swapchain.reset();
 
         CreateSwapchain();
         CreateSwapchainImages();
+        CreateSwapchainImageViews();
         CreateIntermediateImages();
         CreateIntermediateImageViews();
+        PrepIntermediateImages();
+
+        std::vector<vk::ImageView> intermediatePaletteImageViews;
+        for (auto& paletteImage : _intermediatePaletteImageViews)
+        {
+            intermediatePaletteImageViews.emplace_back(*paletteImage);
+        }
+
+        std::vector<vk::ImageView> intermediateDepthImageViews;
+        for (auto& depthImage : _intermediateDepthImageViews)
+        {
+            intermediateDepthImageViews.emplace_back(*depthImage);
+        }
+
+        _colourizePipeline->Resize(intermediatePaletteImageViews, intermediateDepthImageViews);
     }
 
     void VulkanDrawingEngine::Initialise()
@@ -495,12 +591,14 @@ namespace OpenRCT2::Ui::Vulkan
         ChoosePresentMode();
         CreateSwapchain();
         CreateSwapchainImages();
+        CreateSwapchainImageViews();
         CreateIntermediateImages();
         CreateIntermediateImageViews();
         CreateGraphicsPipelines();
         CreateCommandPool();
         CreateCommandBuffers();
         CreateSyncObjects();
+        PrepIntermediateImages();
     }
 
     void VulkanDrawingEngine::Resize(uint32_t width, uint32_t height)
@@ -512,7 +610,7 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::SetPalette(const OpenRCT2::Drawing::GamePalette& colours)
     {
-        _drawSpritePipeline->SetPalette(colours);
+        _colourizePipeline->SetPalette(colours);
     }
 
     void VulkanDrawingEngine::SetVSync(bool vsync)
@@ -558,11 +656,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         _device->resetFences({ _swapchainSync.InFlightFence(_currentFrame) });
 
-        auto& currentFramePrimaryCommandBuffer = _primaryCommandBuffers[_currentFrame];
-        auto& currentFrameSecondaryCommandBuffer = _secondaryCommandBuffers[_currentFrame];
-
-        currentFramePrimaryCommandBuffer->reset(vk::CommandBufferResetFlags{});
-        currentFrameSecondaryCommandBuffer->reset(vk::CommandBufferResetFlags{});
+        _primaryCommandBuffers[_currentFrame]->reset(vk::CommandBufferResetFlags{});
 
         _drawSpritePipeline->BeginDraw(_currentFrame);
     }
@@ -570,90 +664,85 @@ namespace OpenRCT2::Ui::Vulkan
     void VulkanDrawingEngine::EndDraw()
     {
         auto& currentFramePrimaryCommandBuffer = _primaryCommandBuffers[_currentFrame];
-        auto& currentFrameSecondaryCommandBuffer = _secondaryCommandBuffers[_currentFrame];
-
-        std::vector<vk::Format> colorAttachmentFormats{ _surfaceFormat.format, vk::Format::eR32Uint };
-
-        vk::StructureChain<vk::CommandBufferInheritanceInfo, vk::CommandBufferInheritanceRenderingInfo>
-            secondaryGraphicsInheritance{ { nullptr, 0, nullptr, false, vk::QueryControlFlags(),
-                                            vk::QueryPipelineStatisticFlags() },
-                                          { {}, 0, colorAttachmentFormats }
-            };
-
-        vk::CommandBufferBeginInfo beginInfoSecondary{ vk::CommandBufferUsageFlagBits::eRenderPassContinue,
-                                                       &secondaryGraphicsInheritance.get() };
-        currentFrameSecondaryCommandBuffer->begin(beginInfoSecondary);
-
-        _drawSpritePipeline->Draw(*currentFrameSecondaryCommandBuffer, _mainRT, _swapchainExtent, _currentFrame);
-
-        currentFrameSecondaryCommandBuffer->end();
 
         vk::CommandBufferBeginInfo beginInfoPrimary{};
         currentFramePrimaryCommandBuffer->begin(beginInfoPrimary);
 
-        vk::ImageMemoryBarrier2 imageMemBarMakeGraphicsRenderable(
-            vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eTransferRead,
-            vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eColorAttachmentWrite, vk::ImageLayout::eUndefined,
-            vk::ImageLayout::eAttachmentOptimal, _queueIndicies.graphics, _queueIndicies.graphics,
-            _intermediateImages[_imageIndex], vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
-
-        vk::DependencyInfo imageMemBarMakeGraphicsRenderableDepInfo({}, {}, {}, { imageMemBarMakeGraphicsRenderable });
-
-        currentFramePrimaryCommandBuffer->pipelineBarrier2(imageMemBarMakeGraphicsRenderableDepInfo);
-
-        std::vector<vk::RenderingAttachmentInfo> attachmentInfo{
-            { *_intermediateImageViews[_imageIndex], vk::ImageLayout::eColorAttachmentOptimal },
-            { *_intermediateDepthImageViews[_imageIndex], vk::ImageLayout::eColorAttachmentOptimal }
+        std::vector<vk::ImageMemoryBarrier2> barriersMakeSwapchainWritable = {
+            { vk::PipelineStageFlagBits2::eTopOfPipe | vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+              vk::AccessFlagBits2::eNone, vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+              vk::AccessFlagBits2::eColorAttachmentWrite, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal,
+              _queueIndicies.graphics, _queueIndicies.graphics, _swapchainImages[_imageIndex],
+              vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1) }
         };
+        vk::DependencyInfo makeSwapchainWritableDependency{ vk::DependencyFlagBits::eByRegion, {}, {}, barriersMakeSwapchainWritable };
 
-        vk::RenderingInfo renderingInfo(
-            vk::RenderingFlagBits::eContentsSecondaryCommandBuffers, vk::Rect2D{ vk::Offset2D{ 0, 0 }, _swapchainExtent }, 1, 0,
-            { attachmentInfo }, {},
-            {});
+        currentFramePrimaryCommandBuffer->pipelineBarrier2(makeSwapchainWritableDependency);
+
+
+        std::vector<vk::RenderingAttachmentInfo> attachmentInfo{ { *_intermediatePaletteImageViews[_currentFrame],
+                                                                   vk::ImageLayout::eRenderingLocalRead,
+                                                                   vk::ResolveModeFlagBits::eNone,
+                                                                   {},
+                                                                   VULKAN_HPP_NAMESPACE::ImageLayout::eUndefined,
+                                                                   vk::AttachmentLoadOp::eClear,
+                                                                   vk::AttachmentStoreOp::eDontCare },
+                                                                 { *_intermediateDepthImageViews[_currentFrame],
+                                                                   vk::ImageLayout::eRenderingLocalRead,
+                                                                   vk::ResolveModeFlagBits::eNone,
+                                                                   {},
+                                                                   VULKAN_HPP_NAMESPACE::ImageLayout::eUndefined,
+                                                                   vk::AttachmentLoadOp::eClear,
+                                                                   vk::AttachmentStoreOp::eDontCare },
+                                                                 { *_swapchainImageViews[_imageIndex],
+                                                                   vk::ImageLayout::eColorAttachmentOptimal,
+                                                                   vk::ResolveModeFlagBits::eNone,
+                                                                   {},
+                                                                   vk::ImageLayout::eUndefined,
+                                                                   vk::AttachmentLoadOp::eClear,
+                                                                   vk::AttachmentStoreOp::eStore } };
+
+        vk::RenderingInfo renderingInfo({}, vk::Rect2D{ vk::Offset2D{ 0, 0 }, _swapchainExtent }, 1, 0, attachmentInfo, {}, {});
 
         currentFramePrimaryCommandBuffer->beginRendering(renderingInfo);
 
-        std::vector<vk::CommandBuffer> secondaryCommandBuffer{ { *_secondaryCommandBuffers[_currentFrame] } };
-        currentFramePrimaryCommandBuffer->executeCommands(secondaryCommandBuffer);
+        _drawSpritePipeline->Draw(*currentFramePrimaryCommandBuffer, _mainRT, _swapchainExtent, _currentFrame);
+
+        vk::ImageMemoryBarrier2 nextSubpassMemBarPalette(
+            vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eColorAttachmentWrite,
+            vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eInputAttachmentRead,
+            vk::ImageLayout::eAttachmentOptimal, vk::ImageLayout::eAttachmentOptimal, _queueIndicies.graphics,
+            _queueIndicies.graphics, _intermediatePaletteImages[_currentFrame],
+            vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
+
+        vk::ImageMemoryBarrier2 nextSubpassMemBarDepth(
+            vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eColorAttachmentWrite,
+            vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eInputAttachmentRead,
+            vk::ImageLayout::eAttachmentOptimal, vk::ImageLayout::eAttachmentOptimal, _queueIndicies.graphics,
+            _queueIndicies.graphics, _intermediateDepthImages[_currentFrame],
+            vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
+
+        std::vector<vk::ImageMemoryBarrier2> nextSubpassMemBars{ { nextSubpassMemBarPalette, nextSubpassMemBarDepth } };
+
+        vk::DependencyInfo nextSubpassDependencyInfo(vk::DependencyFlagBits::eByRegion,{},{}, { nextSubpassMemBars });
+
+        currentFramePrimaryCommandBuffer->pipelineBarrier2(nextSubpassDependencyInfo);
+
+        _colourizePipeline->Draw(*currentFramePrimaryCommandBuffer, _mainRT, _swapchainExtent, _currentFrame);
 
         currentFramePrimaryCommandBuffer->endRendering();
 
-        vk::ImageMemoryBarrier2 imageMemBarMakeGraphicsReadable(
-            vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eColorAttachmentWrite,
-            vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eTransferRead,
-            vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eTransferSrcOptimal, _queueIndicies.graphics,
-            _queueIndicies.graphics, _intermediateImages[_imageIndex],
-            vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
+        std::vector<vk::ImageMemoryBarrier2> makeSwapchainPresentableBarriers = {
+            { vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eColorAttachmentWrite,
+              vk::PipelineStageFlagBits2::eBottomOfPipe, vk::AccessFlagBits2::eNone, vk::ImageLayout::eColorAttachmentOptimal,
+              vk::ImageLayout::ePresentSrcKHR, _queueIndicies.graphics, _queueIndicies.graphics, _swapchainImages[_imageIndex],
+              vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1) }
+        };
 
-        vk::ImageMemoryBarrier2 imageMemBarMakePresentationWritable(
-            vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eMemoryRead,
-            vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eTransferWrite, vk::ImageLayout::eUndefined,
-            vk::ImageLayout::eTransferDstOptimal, _queueIndicies.graphics, _queueIndicies.graphics,
-            _swapchainImages[_imageIndex], vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
+        vk::DependencyInfo swapchainPresentableDependency{ {}, {}, {}, makeSwapchainPresentableBarriers };
 
-        std::vector<vk::ImageMemoryBarrier2> preCopyImageBarriers = {imageMemBarMakeGraphicsReadable, imageMemBarMakePresentationWritable};
+        currentFramePrimaryCommandBuffer->pipelineBarrier2(swapchainPresentableDependency);
 
-        vk::DependencyInfo preCopyDependency{ {}, {}, {}, preCopyImageBarriers };
-
-        currentFramePrimaryCommandBuffer->pipelineBarrier2(preCopyDependency);
-
-        currentFramePrimaryCommandBuffer->copyImage(
-            _intermediateImages[_imageIndex], vk::ImageLayout::eTransferSrcOptimal, _swapchainImages[_imageIndex],
-            vk::ImageLayout::eTransferDstOptimal,
-            { vk::ImageCopy(
-                vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), vk::Offset3D(0, 0, 0),
-                vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), vk::Offset3D(0, 0, 0),
-                vk::Extent3D(_swapchainExtent, 1)) });
-
-        vk::ImageMemoryBarrier2 imageMemBarMakePresentationPresentable(
-            vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eTransferWrite,
-            vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eMemoryRead, vk::ImageLayout::eTransferDstOptimal,
-            vk::ImageLayout::ePresentSrcKHR, _queueIndicies.graphics, _queueIndicies.graphics, _swapchainImages[_imageIndex],
-            vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
-
-        vk::DependencyInfo makePresntableDependency({}, {}, {}, {imageMemBarMakePresentationPresentable});
-
-        currentFramePrimaryCommandBuffer->pipelineBarrier2(makePresntableDependency);
 
         currentFramePrimaryCommandBuffer->end();
 
