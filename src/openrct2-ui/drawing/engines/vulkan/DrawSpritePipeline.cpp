@@ -156,8 +156,8 @@ namespace OpenRCT2::Ui::Vulkan
                 | vk::ColorComponentFlagBits::eA);
 
         std::vector<vk::PipelineColorBlendAttachmentState> colorBlendOffAttachments = { pipelineColorBlendOffAttachment,
-                                                                                pipelineColorBlendOffAttachment,
-                                                                                pipelineColorBlendOffAttachment };
+                                                                                        pipelineColorBlendOffAttachment,
+                                                                                        pipelineColorBlendOffAttachment };
 
         vk::PipelineColorBlendStateCreateInfo pipelineColorBlendStateCreate(
             vk::PipelineColorBlendStateCreateFlags(), false, vk::LogicOp::eCopy, colorBlendOffAttachments,
@@ -169,33 +169,22 @@ namespace OpenRCT2::Ui::Vulkan
 
         vector<vk::DescriptorSetLayout> descriptorSetLayouts{ descriptorSetLayout }; // TODO: add images
 
-        std::vector<vk::Format> colourAttachmentFormats{ vk::Format::eR8Uint, vk::Format::eR32Uint, vk::Format::eB8G8R8A8Unorm };
+        std::vector<vk::Format> colourAttachmentFormats{ vk::Format::eR8Uint, vk::Format::eR32Uint,
+                                                         vk::Format::eB8G8R8A8Unorm };
 
         std::vector<uint32_t> colourAttachmentInputIndicies{ 0, 1, VK_ATTACHMENT_UNUSED };
 
         vk::StructureChain<
             vk::GraphicsPipelineCreateInfo, vk::PipelineRenderingCreateInfo, vk::RenderingInputAttachmentIndexInfo>
-            graphicsPipelineCreate
-        {
-            { vk::PipelineCreateFlags{},
-              shaderStages,
-              &pipelineVertexInputStateCreateInfo,
-              &pipelineInputAssemblyStateCreate,
-              nullptr,
-              &pipelineViewportStateCreate,
-              &pipelineRasterizationStateCreate,
-              &pipelineMultisampleStateCreate,
-              nullptr,
-              &pipelineColorBlendStateCreate,
-              &pipelineDynamicStateCreate,
-              pipelineLayout,
-              nullptr,
-              0 },
-            {
-                {}, colourAttachmentFormats,
-            },
-            { colourAttachmentInputIndicies }
-        };
+            graphicsPipelineCreate{ { vk::PipelineCreateFlags{}, shaderStages, &pipelineVertexInputStateCreateInfo,
+                                      &pipelineInputAssemblyStateCreate, nullptr, &pipelineViewportStateCreate,
+                                      &pipelineRasterizationStateCreate, &pipelineMultisampleStateCreate, nullptr,
+                                      &pipelineColorBlendStateCreate, &pipelineDynamicStateCreate, pipelineLayout, nullptr, 0 },
+                                    {
+                                        {},
+                                        colourAttachmentFormats,
+                                    },
+                                    { colourAttachmentInputIndicies } };
 
         auto pipeline = device.createGraphicsPipelineUnique(nullptr, graphicsPipelineCreate.get());
 
@@ -900,8 +889,8 @@ namespace OpenRCT2::Ui::Vulkan
         auto position = static_cast<uint32_t>(_inProgressSprites.size());
 
         _inProgressSprites.emplace_back(
-            glm::ivec4{ INT_MIN, INT_MIN, INT_MIN, INT_MIN }, glm::ivec4{ INT_MIN, INT_MIN, INT_MIN, INT_MIN }, DrawType::Placeholder,
-            ImageId(), ImageId(), uint8_t{}, colour_t{});
+            glm::ivec4{ INT_MIN, INT_MIN, INT_MIN, INT_MIN }, glm::ivec4{ INT_MIN, INT_MIN, INT_MIN, INT_MIN },
+            DrawType::Placeholder, ImageId(), ImageId(), uint8_t{}, colour_t{});
 
         return position;
     }

@@ -1,8 +1,10 @@
 #include "ColourizePipeline.h"
+
 #include "SpirV.h"
+
+#include <array>
 #include <glm/glm.hpp>
 #include <limits>
-#include <array>
 #include <openrct2/core/EnumUtils.hpp>
 
 namespace
@@ -16,7 +18,7 @@ namespace
 
     struct UniformValues
     {
-        //uint32_t rectCount; // temporarily removed
+        // uint32_t rectCount; // temporarily removed
         glm::vec3 colourPalette[256];
     };
 
@@ -26,9 +28,9 @@ namespace
     };
 
     constexpr std::array<Vertex, 6> quad{ glm::vec2{ 1.0f, -1.0f }, glm::vec2{ -1.0f, -1.0f }, glm::vec2{ 1.0f, 1.0f },
-                                glm::vec2{ 1.0f, 1.0f },  glm::vec2{ -1.0f, -1.0f }, glm::vec2{ -1.0f, 1.0f } };
+                                          glm::vec2{ 1.0f, 1.0f },  glm::vec2{ -1.0f, -1.0f }, glm::vec2{ -1.0f, 1.0f } };
 
-    constexpr vk::VertexInputAttributeDescription attrDesc{0, 0, vk::Format::eR32G32Sfloat, 0};
+    constexpr vk::VertexInputAttributeDescription attrDesc{ 0, 0, vk::Format::eR32G32Sfloat, 0 };
 
     constexpr vk::VertexInputBindingDescription bindingDesc{ 0, sizeof(Vertex), vk::VertexInputRate::eVertex };
 
@@ -348,8 +350,7 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateDescriptorPool()
         vk::DescriptorType::eInputAttachment, static_cast<uint32_t>(_framesInFlight * 2));
 
     std::vector<vk::DescriptorPoolSize> poolSizes{ poolSizeUniformBuffer, poolSizeStorageBuffer, poolSizeSampler,
-                                                   poolSizeFilterPalette,
-                                                   poolSizeInputAttachments };
+                                                   poolSizeFilterPalette, poolSizeInputAttachments };
 
     vk::DescriptorPoolCreateInfo poolInfo(
         vk::DescriptorPoolCreateFlags(), static_cast<uint32_t>(_framesInFlight * 2), poolSizes);
@@ -389,8 +390,8 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateDescriptorSets()
         vk::WriteDescriptorSet writeDynamicStorage(
             _dynamicDescriptorSets[i], 3, 0, vk::DescriptorType::eStorageBuffer, {}, { storageCreate });
 
-        std::vector<vk::WriteDescriptorSet> writeDescSet{ writeStaticSampler, writeFilterPaletteImage,
-                                                          writeDynamicUniform, writeDynamicStorage };
+        std::vector<vk::WriteDescriptorSet> writeDescSet{ writeStaticSampler, writeFilterPaletteImage, writeDynamicUniform,
+                                                          writeDynamicStorage };
 
         _device.updateDescriptorSets(writeDescSet, {});
     }
@@ -410,7 +411,7 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateFilterPaletteImage()
 
     vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
     commandBuffer.begin(beginInfo);
-    
+
     vk::BufferCreateInfo bufferCreateInfo(
         vk::BufferCreateFlags(), filterImageExtent.width * filterImageExtent.width, vk::BufferUsageFlagBits::eTransferSrc,
         vk::SharingMode::eExclusive, {});
@@ -469,7 +470,8 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateFilterPaletteImage()
     vmaDestroyBuffer(_vma, stagingBuffer, stagingBufferAllocation);
 }
 
-void OpenRCT2::Ui::Vulkan::ColourizePipeline::UpdateInputViews(const std::vector<vk::ImageView>& paletteInputViews, const std::vector<vk::ImageView>& depthInputViews)
+void OpenRCT2::Ui::Vulkan::ColourizePipeline::UpdateInputViews(
+    const std::vector<vk::ImageView>& paletteInputViews, const std::vector<vk::ImageView>& depthInputViews)
 {
     for (size_t i = 0; i < _framesInFlight; i++)
     {

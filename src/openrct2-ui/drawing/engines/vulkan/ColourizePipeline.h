@@ -1,7 +1,8 @@
 #pragma once
-#include <vulkan/vulkan.hpp>
-#include <openrct2/drawing/Drawing.h>
 #include "VulkanMemoryAllocator.h"
+
+#include <openrct2/drawing/Drawing.h>
+#include <vulkan/vulkan.hpp>
 
 namespace OpenRCT2::Ui::Vulkan
 {
@@ -67,6 +68,7 @@ namespace OpenRCT2::Ui::Vulkan
         void CreateDescriptorPool();
         void CreateDescriptorSets();
         void CreateFilterPaletteImage();
-        void UpdateInputViews(const std::vector<vk::ImageView>& paletteInputViews, const std::vector<vk::ImageView>& depthInputViews);
+        void UpdateInputViews(
+            const std::vector<vk::ImageView>& paletteInputViews, const std::vector<vk::ImageView>& depthInputViews);
     };
 } // namespace OpenRCT2::Ui::Vulkan

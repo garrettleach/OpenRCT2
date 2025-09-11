@@ -675,10 +675,11 @@ namespace OpenRCT2::Ui::Vulkan
               _queueIndicies.graphics, _queueIndicies.graphics, _swapchainImages[_imageIndex],
               vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1) }
         };
-        vk::DependencyInfo makeSwapchainWritableDependency{ vk::DependencyFlagBits::eByRegion, {}, {}, barriersMakeSwapchainWritable };
+        vk::DependencyInfo makeSwapchainWritableDependency{
+            vk::DependencyFlagBits::eByRegion, {}, {}, barriersMakeSwapchainWritable
+        };
 
         currentFramePrimaryCommandBuffer->pipelineBarrier2(makeSwapchainWritableDependency);
-
 
         std::vector<vk::RenderingAttachmentInfo> attachmentInfo{ { *_intermediatePaletteImageViews[_currentFrame],
                                                                    vk::ImageLayout::eRenderingLocalRead,
@@ -724,7 +725,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         std::vector<vk::ImageMemoryBarrier2> nextSubpassMemBars{ { nextSubpassMemBarPalette, nextSubpassMemBarDepth } };
 
-        vk::DependencyInfo nextSubpassDependencyInfo(vk::DependencyFlagBits::eByRegion,{},{}, { nextSubpassMemBars });
+        vk::DependencyInfo nextSubpassDependencyInfo(vk::DependencyFlagBits::eByRegion, {}, {}, { nextSubpassMemBars });
 
         currentFramePrimaryCommandBuffer->pipelineBarrier2(nextSubpassDependencyInfo);
 
@@ -742,7 +743,6 @@ namespace OpenRCT2::Ui::Vulkan
         vk::DependencyInfo swapchainPresentableDependency{ {}, {}, {}, makeSwapchainPresentableBarriers };
 
         currentFramePrimaryCommandBuffer->pipelineBarrier2(swapchainPresentableDependency);
-
 
         currentFramePrimaryCommandBuffer->end();
 
