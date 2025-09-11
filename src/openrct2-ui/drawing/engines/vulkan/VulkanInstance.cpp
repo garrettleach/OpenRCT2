@@ -77,8 +77,8 @@ namespace
     const VkBool32 validate_sync_reporting_extraproperties_value = true; // requires validate_sync_value
 
     // Validation layer (Printf)
-    const VkBool32 prinft_value = true;
-    const VkBool32 prinft_stdout_value = false;    // requires printf_value
+    const VkBool32 prinft_value = false;
+    const VkBool32 prinft_stdout_value = true;     // requires printf_value
     const VkBool32 printf_verbose_value = true;    // requires printf_value
     const uint32_t printf_buffersize_value = 1024; // requires printf_value
 
