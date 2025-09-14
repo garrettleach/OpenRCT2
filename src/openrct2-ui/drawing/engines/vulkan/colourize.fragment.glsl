@@ -29,7 +29,7 @@ layout (set = 1, binding = 3) readonly buffer FilterRects {
 layout (location = 2) out vec3 outColour;
 
 void main() {
-    uint colour = subpassLoad(inputColour).r;
+    uint colour = subpassLoad(inputColour).x;
     uint depth = subpassLoad(inputDepth).x;
 
     uvec3 intColour = uvec3(

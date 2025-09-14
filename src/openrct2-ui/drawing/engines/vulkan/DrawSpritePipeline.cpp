@@ -20,7 +20,7 @@ namespace OpenRCT2::Ui::Vulkan
             return { 0, sizeof(DrawSpritePipeline::Rect), vk::VertexInputRate::eInstance };
         }
 
-        std::array<vk::VertexInputAttributeDescription, 5> GetInstanceAttributeDescriptions()
+        std::array<vk::VertexInputAttributeDescription, 6> GetInstanceAttributeDescriptions()
         {
             return {
                 vk::VertexInputAttributeDescription{ 0, 0, vk::Format::eR32G32B32A32Sint,
@@ -31,6 +31,8 @@ namespace OpenRCT2::Ui::Vulkan
                 vk::VertexInputAttributeDescription{ 3, 0, vk::Format::eR32Uint, offsetof(DrawSpritePipeline::Rect, index) },
                 vk::VertexInputAttributeDescription{ 4, 0, vk::Format::eR32Uint,
                                                      offsetof(DrawSpritePipeline::Rect, maskIndex) },
+                vk::VertexInputAttributeDescription{ 5, 0, vk::Format::eR32Uint,
+                                                     offsetof(DrawSpritePipeline::Rect, remapPalette) }
             };
         }
 
@@ -42,7 +44,7 @@ namespace OpenRCT2::Ui::Vulkan
         std::array<vk::VertexInputAttributeDescription, 1> GetVertexAttributeDescriptions()
         {
             return {
-                vk::VertexInputAttributeDescription{ 5, 1, vk::Format::eR32G32Sint, offsetof(DrawSpritePipeline::Vertex, pos) },
+                vk::VertexInputAttributeDescription{ 6, 1, vk::Format::eR32G32Sint, offsetof(DrawSpritePipeline::Vertex, pos) },
             };
         }
 
@@ -60,6 +62,13 @@ namespace OpenRCT2::Ui::Vulkan
             .preferredFlags = (VkMemoryPropertyFlags)(vk::MemoryPropertyFlagBits::eHostCoherent
                                                       | vk::MemoryPropertyFlagBits::eHostCached)
         };
+
+        constexpr vk::Extent2D filterImageExtent(256, kPaletteTotalOffsets);
+
+        int32_t PaletteToY(FilterPaletteID palette)
+        {
+            return palette > FilterPaletteID::PaletteWater ? EnumValue(palette) + 5 : EnumValue(palette) + 1;
+        }
     } // namespace
 
     vk::UniqueDescriptorSetLayout DrawSpritePipeline::CreateDescriptorSetLayout(const vk::Device& device)
@@ -68,8 +77,11 @@ namespace OpenRCT2::Ui::Vulkan
             0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex);
         vk::DescriptorSetLayoutBinding samplerLayoutBinding(
             1, vk::DescriptorType::eSampler, 1, vk::ShaderStageFlagBits::eFragment);
+        vk::DescriptorSetLayoutBinding filterPaletteLayoutBinding(
+            2, vk::DescriptorType::eSampledImage, 1, vk::ShaderStageFlagBits::eFragment);
 
-        std::vector<vk::DescriptorSetLayoutBinding> bindings{ uboLayoutBinding, samplerLayoutBinding };
+        std::vector<vk::DescriptorSetLayoutBinding> bindings{ uboLayoutBinding, samplerLayoutBinding,
+                                                              filterPaletteLayoutBinding };
 
         vk::DescriptorSetLayoutCreateInfo layoutInfo(vk::DescriptorSetLayoutCreateFlags(), bindings);
 
@@ -210,6 +222,7 @@ namespace OpenRCT2::Ui::Vulkan
         , _queuedImageInvalidation(framesInFlight, std::vector<UploadedSpriteInfo>())
     {
         CreateBuffers();
+        CreateFilterPaletteImage();
         CreateDescriptorPool();
         CreateDescriptorSets();
         CreateInstanceBuffers();
@@ -222,6 +235,13 @@ namespace OpenRCT2::Ui::Vulkan
 
     DrawSpritePipeline::~DrawSpritePipeline()
     {
+        _filterPaletteImageView.reset();
+
+        if (_filterPaletteImage)
+        {
+            vmaDestroyImage(_alloc, _filterPaletteImage, _filterPaletteImageAllocation);
+        }
+
         _device.destroySampler(_sampler);
 
         for (auto& pool : _descriptorIndexPools)
@@ -289,8 +309,9 @@ namespace OpenRCT2::Ui::Vulkan
         vk::DescriptorPoolSize poolSizeUniformBuffer(
             vk::DescriptorType::eUniformBuffer, static_cast<uint32_t>(_framesInFlight * 2));
         vk::DescriptorPoolSize poolSizeSampler(vk::DescriptorType::eSampler, static_cast<uint32_t>(_framesInFlight));
+        vk::DescriptorPoolSize poolSizeFilterPaletteImage(vk::DescriptorType::eSampledImage, static_cast<uint32_t>(_framesInFlight));
 
-        std::vector<vk::DescriptorPoolSize> poolSizes{ poolSizeUniformBuffer, poolSizeSampler };
+        std::vector<vk::DescriptorPoolSize> poolSizes{ poolSizeUniformBuffer, poolSizeSampler, poolSizeFilterPaletteImage };
 
         vk::DescriptorPoolCreateInfo poolInfo(
             vk::DescriptorPoolCreateFlags(), static_cast<uint32_t>(_framesInFlight), poolSizes);
@@ -329,7 +350,13 @@ namespace OpenRCT2::Ui::Vulkan
             vk::WriteDescriptorSet samplerDescriptorWrite(
                 _uniformBufferDescriptorSets[i], 1, 0, vk::DescriptorType::eSampler, { samplerImageInfo }, {}, {});
 
-            _device.updateDescriptorSets({ uniformDescriptorWrite, samplerDescriptorWrite }, {});
+            vk::DescriptorImageInfo filterPaletteImageInfo(
+                nullptr, *_filterPaletteImageView, vk::ImageLayout::eShaderReadOnlyOptimal);
+            
+            vk::WriteDescriptorSet filterPaletteDescriptorWrite(
+                _uniformBufferDescriptorSets[i], 2, 0, vk::DescriptorType::eSampledImage, { filterPaletteImageInfo }, {}, {});
+
+            _device.updateDescriptorSets({ uniformDescriptorWrite, samplerDescriptorWrite, filterPaletteDescriptorWrite }, {});
         }
     }
 
@@ -493,6 +520,8 @@ namespace OpenRCT2::Ui::Vulkan
     void DrawSpritePipeline::Draw(
         const vk::CommandBuffer& commandBuffer, const RenderTarget& renderTarget, vk::Extent2D extent, uint32_t currentFrame)
     {
+        std::call_once(_initializedFilterPaletteData, [this]() { UploadFilterPaletteImage(); });
+
         _workingInstances.clear();
 
         UploadSprites();
@@ -518,6 +547,7 @@ namespace OpenRCT2::Ui::Vulkan
             uint32_t imageIndex = 0;
             uint32_t maskIndex = 0;
             RectFlags flags = RectFlags::None;
+            uint32_t paletteRemap = 0;
 
             if (data.drawType == DrawType::DrawSprite)
             {
@@ -528,6 +558,7 @@ namespace OpenRCT2::Ui::Vulkan
                     imageIndex = descriptorMapItem->second;
                 }
 
+                paletteRemap = static_cast<uint32_t>(data.paletteMap);
                 maskIndex = imageIndex;
                 flags = RectFlags::Mask;
             }
@@ -581,7 +612,7 @@ namespace OpenRCT2::Ui::Vulkan
                 // the bounds are already intentionally out of view
             }
 
-            _workingInstances.emplace_back(data.bounds, data.clip, flags, imageIndex, maskIndex);
+            _workingInstances.emplace_back(data.bounds, data.clip, flags, imageIndex, maskIndex, paletteRemap);
         }
         _inProgressSprites.clear();
 
@@ -712,16 +743,42 @@ namespace OpenRCT2::Ui::Vulkan
         if (!_uploadedSprites.contains(baseImage) && !_spritesToUpload.contains(baseImage))
         {
             vk::Extent2D extent;
-            auto imgData = ImageIdToData(imageId, extent);
+            auto imgData = ImageIdToData(ImageId(imageId.GetIndex()), extent);
 
             _spritesToUpload.insert(std::make_pair(baseImage, SpriteUpload(std::move(imgData), extent)));
         }
 
-        // TODO: calculate clipping???
+        uint8_t paletteCount = 0;
+        uint8_t palettes[3]{};
+        if (imageId.HasSecondary())
+        {
+            palettes[0] = PaletteToY(static_cast<FilterPaletteID>(imageId.GetPrimary()));
+            palettes[1] = PaletteToY(static_cast<FilterPaletteID>(imageId.GetSecondary()));
+            if (!imageId.HasTertiary())
+            {
+                paletteCount = 2;
+            }
+            else
+            {
+                paletteCount = 3;
+                palettes[2] = PaletteToY(static_cast<FilterPaletteID>(imageId.GetTertiary()));
+            }
+        }
+        else if (imageId.IsRemap() || imageId.IsBlended())
+        {
+            paletteCount = 1;
+            FilterPaletteID palette = static_cast<FilterPaletteID>(imageId.GetRemap());
+            palettes[0] = PaletteToY(palette);
+            if (palette == FilterPaletteID::PaletteWater)
+            {
+                palettes[0] -= 1;
+            }
+        }
 
-        // TODO: palette?
-
-        _inProgressSprites.emplace_back(glm::ivec4{ left, top, right, bottom }, clip, DrawType::DrawSprite, baseImage);
+        _inProgressSprites.emplace_back(
+            glm::ivec4{ left, top, right, bottom }, clip, DrawType::DrawSprite, baseImage, ImageId{},
+            ((uint32_t)paletteCount << 24) | ((uint32_t)palettes[2] << 16) | ((uint32_t)palettes[1] << 8)
+                | (uint32_t)(palettes[0]));
     }
 
     void DrawSpritePipeline::QueueRawMasked(
@@ -986,6 +1043,120 @@ namespace OpenRCT2::Ui::Vulkan
             vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
         _sampleImageView = _device.createImageView(imageViewCreateInfo);
+    }
+
+    std::unique_ptr<uint8_t[]> CreateFilterPaletteMapData(vk::Extent2D& extent)
+    {
+        constexpr int32_t height = filterImageExtent.height;
+        constexpr int32_t width = filterImageExtent.width;
+        auto data = std::make_unique<uint8_t[]>(width * height);
+        RenderTarget rt{};
+        rt.bits = data.get();
+        rt.width = width;
+        rt.height = height;
+        rt.pitch = 0;
+        rt.x = 0;
+        rt.y = 0;
+        rt.zoom_level = ZoomLevel{ 0 };
+
+        // Init no-op palette
+        for (int i = 0; i < width; ++i)
+        {
+            rt.bits[i] = i;
+        }
+
+        for (int i = 0; i < kPaletteTotalOffsets; ++i)
+        {
+            int32_t y = PaletteToY(static_cast<FilterPaletteID>(i));
+
+            auto g1Index = GetPaletteG1Index(i);
+            if (g1Index.has_value())
+            {
+                const auto* element = GfxGetG1Element(g1Index.value());
+                if (element != nullptr)
+                {
+                    GfxDrawSpriteSoftware(rt, ImageId(g1Index.value()), { -element->x_offset, y - element->y_offset });
+                }
+            }
+        }
+
+        extent = vk::Extent2D(width, height);
+        return data;
+    }
+
+    void DrawSpritePipeline::CreateFilterPaletteImage()
+    {
+        vk::ImageCreateInfo filterImageCreateInfo(
+            vk::ImageCreateFlags{}, vk::ImageType::e2D, vk::Format::eR8Uint, vk::Extent3D(filterImageExtent, 1), 1, 1,
+            vk::SampleCountFlagBits::e1, vk::ImageTiling::eOptimal,
+            vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst, vk::SharingMode::eExclusive,
+            { _graphicsQueueIndex }, vk::ImageLayout::eUndefined);
+
+        VmaAllocationCreateInfo allocImageCreateInfo{};
+        allocImageCreateInfo.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO;
+
+        VkImage filterPaletteImage;
+        VmaAllocation filterPaletteImageAllocation;
+
+        auto imageResult = vmaCreateImage(
+            _alloc, filterImageCreateInfo, &allocImageCreateInfo, &filterPaletteImage, &filterPaletteImageAllocation, nullptr);
+
+        if (VK_SUCCESS != imageResult)
+        {
+            throw std::runtime_error("Vulkan memory error while creating image");
+        }
+
+        _filterPaletteImage = filterPaletteImage;
+        _filterPaletteImageAllocation = filterPaletteImageAllocation;
+
+        vk::ImageViewCreateInfo imageViewCreate(
+            vk::ImageViewCreateFlags{}, _filterPaletteImage, vk::ImageViewType::e2D, vk::Format::eR8Uint, {},
+            vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
+
+        _filterPaletteImageView = _device.createImageViewUnique(imageViewCreate);
+    }
+
+    void DrawSpritePipeline::UploadFilterPaletteImage()
+    {
+        vk::Extent2D extent;
+        auto imageData = CreateFilterPaletteMapData(extent);
+
+        vk::CommandPoolCreateInfo commandPoolCreate(vk::CommandPoolCreateFlagBits::eTransient, _graphicsQueueIndex);
+        auto commandPool = _device.createCommandPoolUnique(commandPoolCreate);
+
+        vk::CommandBufferAllocateInfo commandAlloc(*commandPool, vk::CommandBufferLevel::ePrimary, 1);
+        auto commandBuffers = _device.allocateCommandBuffers(commandAlloc);
+        auto commandBuffer = commandBuffers[0];
+
+        vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+        commandBuffer.begin(beginInfo);
+
+        VkBuffer stagingBuffer;
+        VmaAllocation stagingBufferAllocation;
+
+        auto stagingResult = CreateStagingBuffer(
+            imageData.get(), extent.width * extent.height, stagingBuffer, stagingBufferAllocation);
+        if (VK_SUCCESS != stagingResult)
+        {
+            throw std::runtime_error("Vulkan memory error while creating staging buffer");
+        }
+
+        VkImage tempFilterImage = (VkImage)_filterPaletteImage;
+        TransitionImageToTransferDst(commandBuffer, tempFilterImage);
+
+        CopyBufferToImage(commandBuffer, stagingBuffer, tempFilterImage, filterImageExtent);
+
+        TransitionImageToFragmentReadOpt(commandBuffer, tempFilterImage);
+
+        commandBuffer.end();
+
+        vk::SubmitInfo submitInfo({}, {}, { commandBuffer }, {});
+
+        _graphicsQueue.submit(submitInfo);
+
+        _graphicsQueue.waitIdle();
+
+        vmaDestroyBuffer(_alloc, stagingBuffer, stagingBufferAllocation);
     }
 
     VkResult DrawSpritePipeline::CreateImage(vk::Extent2D extent, VkImage& image, VmaAllocation& vmaAllocation)

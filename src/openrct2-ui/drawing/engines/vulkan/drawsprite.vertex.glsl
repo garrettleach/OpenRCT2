@@ -12,14 +12,16 @@ layout(location = 1) in ivec4 clip;
 layout(location = 2) in uint flags;
 layout(location = 3) in uint index;
 layout(location = 4) in uint maskIndex;
-layout(location = 5) in ivec2 inPosition;
+layout(location = 5) in uint remapPalette;
+layout(location = 6) in ivec2 inPosition;
 
 
-layout(location = 0) flat out uint outTextureIndex;
-layout(location = 1) flat out uint outFlags;
+layout(location = 0) flat out uint outFlags;
+layout(location = 1) flat out uint outTextureIndex;
 layout(location = 2) flat out uint outMaskIndex;
-layout(location = 3) out vec2 outTexCoord;
+layout(location = 3) flat out uint outRemapPalette;
 layout(location = 4) flat out uint outInstanceIndex;
+layout(location = 5) out vec2 outTexCoord;
 
 void main() {
     int xPosition = (inPosition.x == 0 ? bounds.x : bounds.z);
@@ -33,7 +35,8 @@ void main() {
 
     outFlags = flags;
     outTextureIndex = index;
-    outTexCoord = texCoord;
     outMaskIndex = maskIndex;
+    outRemapPalette = remapPalette;
     outInstanceIndex = gl_InstanceIndex;
+    outTexCoord = texCoord;
 }

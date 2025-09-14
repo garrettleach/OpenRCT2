@@ -31,7 +31,7 @@ namespace OpenRCT2::Ui::Vulkan
             DrawType drawType;
             ImageId imageId;     // ignored for fillrect
             ImageId maskImageId; // used for SpriteRawMasked
-            uint64_t paletteMap; // PaletteMap paletteMap; // for DrawGlyph
+            uint64_t paletteMap; // for DrawGlyph or DrawSprite (high is count, next palette1, next 2, next 3)
             colour_t colour;     // for fillrect
         };
 
@@ -95,6 +95,7 @@ namespace OpenRCT2::Ui::Vulkan
             RectFlags flags;
             uint32_t index; // index is the palette colour when type is fillrect
             uint32_t maskIndex;
+            uint32_t remapPalette;
         };
 
         struct Vertex
@@ -171,6 +172,11 @@ namespace OpenRCT2::Ui::Vulkan
 
         vk::UniqueCommandPool _commandPool;
 
+        std::once_flag _initializedFilterPaletteData;
+        vk::Image _filterPaletteImage;
+        VmaAllocation _filterPaletteImageAllocation;
+        vk::UniqueImageView _filterPaletteImageView;
+
     public:
         DrawSpritePipeline(
             OpenRCT2::Drawing::IDrawingEngine& engine, const IVulkanDebug& vulkanDebug, const vk::PhysicalDevice physicalDevice,
@@ -222,6 +228,9 @@ namespace OpenRCT2::Ui::Vulkan
         void CreateIndexDescriptors();
 
         void SetupSampleImage();
+
+        void CreateFilterPaletteImage();
+        void UploadFilterPaletteImage();
 
         VkResult CreateImage(vk::Extent2D extent, VkImage& image, VmaAllocation& vmaAllocation);
         VkResult CreateStagingBuffer(void* data, vk::DeviceSize size, VkBuffer& buffer, VmaAllocation& vmaAllocation);
