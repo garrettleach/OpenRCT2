@@ -937,7 +937,7 @@ namespace OpenRCT2::Ui::Vulkan
         int32_t bottom2 = bottom + clip.y - rt.y;
 
         _inProgressSprites.emplace_back(
-            glm::ivec4{ left2, top2, right2, bottom2 }, glm::ivec4{ left2, top2, right2, bottom2 }, DrawType::FillRect,
+            glm::ivec4{ left2, top2, right2 + 1, bottom2 + 1 }, clip, DrawType::FillRect,
             ImageId(), ImageId(), uint8_t{}, colour);
     }
 
