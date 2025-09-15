@@ -37,27 +37,36 @@ layout (location = 2) out vec3 outColour;
 void main() {
     uint colour = subpassLoad(inputColour).x;
     uint depth = subpassLoad(inputDepth).x;
+    vec2 coords = gl_FragCoord.xy;
 
-    uvec3 intColour = uvec3(
-        (colourPalette[colour] & 0xFF0000) >> 16,
-        (colourPalette[colour] & 0xFF00) >> 8,
-        colourPalette[colour] & 0xFF);
+    for(uint i = 0; i < push.rectCount; i++)
+    {
+        if(depth < rects[i].depth)
+        {
+            vec4 bounds = rects[i].bounds * push.scaleFactor;
+            if(
+                coords.x > bounds.x &&
+                coords.y > bounds.y &&
+                coords.x < bounds.z &&
+                coords.y < bounds.w)
+            {
+                //vec4 clipRect = rects[i].clip * push.scaleFactor;
+                ivec2 uv = ivec2(colour, rects[i].filterId);
+                uint thisColour = texelFetch(usampler2D(filterPalette, singleSampler), uv, 0).x;
+                if(thisColour != 0)
+                {
+                    colour = thisColour;
+                }
+            }
+        }
+    }
 
-    outColour = vec3(intColour) / 255.0;
+    uint rawBGRA = colourPalette[colour];
 
-    // This will likely end up something like below
-    // 
-    // uint colour = subpassLoad(inputColour);
-    // uint depth = subpassLoad(inputDepth).x;
-    // ivec2 coords = ???gl_FragCoord.xy???;
-    //
-    // for(uint i = 0; i< global.rectCount; i++)
-    // {
-    //     if(depth < bounds.depth && coords.x > bounds.x && coord.y > bounds.y && coords.x < bounds.z && coords.y < bounds.w)
-    //     {
-    //         colour = texture(singleSampler, filterPalette, rects[i].filterId)
-    //     }
-    // }
-    //
-    // outColour = texture(singleSampler, colourFilter, colourPalette[colour]);
+    // alpha = (rawBGRA & 0xFF000000) >> 24;
+    outColour = vec3(
+        (rawBGRA & 0xFF0000) >> 16,
+        (rawBGRA & 0xFF00) >> 8,
+        (rawBGRA & 0xFF) >> 0
+        ) / 255.0;
 }

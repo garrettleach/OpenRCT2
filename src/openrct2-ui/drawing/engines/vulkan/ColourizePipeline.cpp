@@ -603,7 +603,8 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::QueueFilterRect(
 
     auto clip = CalcClip(rt, *_engine.GetDrawingPixelInfo());
 
-    glm::ivec4 bounds{ left + clip.x - rt.x, top + clip.y - rt.y, right + clip.x - rt.x, bottom + clip.y - rt.y };
+    // not sure why there is +1
+    glm::ivec4 bounds{ left + clip.x - rt.x, top + clip.y - rt.y, right + clip.x - rt.x + 1, bottom + clip.y - rt.y + 1 };
 
     _inProgressFilterRects.emplace_back(bounds, clip, paletteIndex, index);
 }
