@@ -461,7 +461,7 @@ namespace OpenRCT2::Ui::Vulkan
         }
 
         _colourizePipeline = std::make_unique<ColourizePipeline>(
-            *_device, _framesInFlight, *_vmaAllocator, _graphicsQueue, _queueIndicies.graphics, paletteImageViews,
+            *this, *_device, _framesInFlight, *_vmaAllocator, _graphicsQueue, _queueIndicies.graphics, paletteImageViews,
             depthImageViews);
     }
 

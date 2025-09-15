@@ -11,9 +11,14 @@ layout (input_attachment_index = 0, set = 1, binding = 0) uniform usubpassInput 
 layout (input_attachment_index = 1, set = 1, binding = 1) uniform usubpassInput inputDepth;
 
 layout (set = 1, binding = 2, std430) uniform globals{
-    //uint rectCount; // temporilly removed
     uint colourPalette[256]; //palette to BGRA colour mapping
 };
+
+layout(push_constant) uniform pushConstants
+{
+    uint rectCount;
+    float scaleFactor;
+} push;
 
 struct FilterRect
 {

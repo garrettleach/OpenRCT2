@@ -3,9 +3,10 @@
 #include "SpirV.h"
 
 #include <array>
-#include <glm/glm.hpp>
 #include <limits>
+#include <openrct2/config/Config.h>
 #include <openrct2/core/EnumUtils.hpp>
+#include <openrct2/drawing/IDrawingEngine.h>
 
 namespace
 {
@@ -14,6 +15,12 @@ namespace
         glm::ivec4 bounds;
         uint32_t depth;
         uint32_t filterId;
+    };
+
+    struct PushConstants
+    {
+        uint32_t rectCount;
+        float scaleFactor;
     };
 
     struct UniformValues
@@ -37,13 +44,26 @@ namespace
     constexpr size_t initialStorageBufferSize = sizeof(FilterRect) * 100;
 
     constexpr vk::Extent2D filterImageExtent(256, kPaletteTotalOffsets);
+
+    glm::ivec4 CalcClip(const RenderTarget& rt, const RenderTarget& mainRT)
+    {
+        auto bitsOffset = static_cast<int32_t>(rt.bits - mainRT.bits);
+
+        auto fullLineWidth = (mainRT.width + mainRT.pitch);
+
+        auto rtDownShift = bitsOffset / fullLineWidth;
+        auto rtRightShift = bitsOffset - (rtDownShift * fullLineWidth);
+
+        return { rtRightShift, rtDownShift, rtRightShift + rt.width, rtDownShift + rt.height };
+    }
 } // namespace
 
 OpenRCT2::Ui::Vulkan::ColourizePipeline::ColourizePipeline(
-    const vk::Device& device, size_t framesInFlight, VulkanMemoryAllocator& vma, vk::Queue graphicsQueue,
-    uint32_t graphicsQueueIndex, const std::vector<vk::ImageView>& paletteInputViews,
+    OpenRCT2::Drawing::IDrawingEngine& engine, const vk::Device& device, size_t framesInFlight, VulkanMemoryAllocator& vma,
+    vk::Queue graphicsQueue, uint32_t graphicsQueueIndex, const std::vector<vk::ImageView>& paletteInputViews,
     const std::vector<vk::ImageView>& depthInputViews)
-    : _device(device)
+    : _engine(engine)
+    , _device(device)
     , _framesInFlight(framesInFlight)
     , _vma(vma)
     , _graphicsQueue(graphicsQueue)
@@ -152,7 +172,10 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateGraphicsPipeline()
 
     std::vector<vk::DescriptorSetLayout> descriptorSetLayouts{ *_staticDescriptorSetLayout, *_dynamicDescriptorSetLayout };
 
-    vk::PipelineLayoutCreateInfo pipelineCreateInfo(vk::PipelineLayoutCreateFlags{}, descriptorSetLayouts);
+    std::vector<vk::PushConstantRange> pushConstantRanges{ { vk::ShaderStageFlagBits::eFragment, 0,
+                                                             static_cast<uint32_t>(sizeof(PushConstants)) } };
+
+    vk::PipelineLayoutCreateInfo pipelineCreateInfo(vk::PipelineLayoutCreateFlags{}, descriptorSetLayouts, pushConstantRanges);
 
     _pipelineLayout = _device.createPipelineLayoutUnique(pipelineCreateInfo);
 
@@ -268,9 +291,9 @@ static int32_t PaletteToY(FilterPaletteID palette)
 
 std::unique_ptr<uint8_t[]> CreateFilterMap(vk::Extent2D& extent)
 {
-    constexpr int32_t height = kPaletteTotalOffsets;
-    constexpr int32_t width = 256;
-    auto data = std::make_unique<uint8_t[]>(height * width);
+    constexpr int32_t height = filterImageExtent.height;
+    constexpr int32_t width = filterImageExtent.width;
+    auto data = std::make_unique<uint8_t[]>(width * height);
     RenderTarget rt{};
     rt.bits = data.get();
     rt.width = width;
@@ -498,6 +521,11 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::Draw(
         + offsetof(UniformValues, colourPalette);
     std::memcpy(colorPalette, _palette.data(), _palette.size() * sizeof(decltype(_palette)::value_type));
 
+    PushConstants pushConsts(static_cast<uint32_t>(_inProgressFilterRects.size()), Config::Get().general.WindowScale);
+    commandBuffer.pushConstants(*_pipelineLayout, vk::ShaderStageFlagBits::eFragment, 0, sizeof(pushConsts), &pushConsts);
+
+    _inProgressFilterRects.clear();
+
     vk::Viewport viewport(0.0f, 0.0f, extent.width, extent.height, 0.0f, 1.0f);
     commandBuffer.setViewport(0, { viewport });
 
@@ -529,4 +557,11 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::Resize(
 void OpenRCT2::Ui::Vulkan::ColourizePipeline::QueueFilterRect(
     uint32_t index, RenderTarget& rt, FilterPaletteID palette, int32_t left, int32_t top, int32_t right, int32_t bottom)
 {
+    uint32_t paletteIndex = PaletteToY(palette);
+
+    auto clip = CalcClip(rt, *_engine.GetDrawingPixelInfo());
+
+    glm::ivec4 bounds{ left + clip.x - rt.x, top + clip.y - rt.y, right + clip.x - rt.x, bottom + clip.y - rt.y };
+
+    _inProgressFilterRects.emplace_back(bounds, clip, paletteIndex, index);
 }

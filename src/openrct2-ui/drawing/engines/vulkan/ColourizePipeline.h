@@ -1,6 +1,7 @@
 #pragma once
 #include "VulkanMemoryAllocator.h"
 
+#include <glm/glm.hpp>
 #include <openrct2/drawing/Drawing.h>
 #include <vulkan/vulkan.hpp>
 
@@ -8,6 +9,15 @@ namespace OpenRCT2::Ui::Vulkan
 {
     class ColourizePipeline
     {
+        struct FilterRectCommand
+        {
+            alignas(16) glm::ivec4 bounds;
+            alignas(16) glm::ivec4 clip = { INT_MIN, INT_MIN, INT_MAX, INT_MAX };
+            alignas(4) uint32_t paletteIndex;
+            alignas(4) uint32_t drawIndex;
+        };
+
+        OpenRCT2::Drawing::IDrawingEngine& _engine; 
         const vk::Device& _device;
         size_t _framesInFlight;
         VulkanMemoryAllocator& _vma;
@@ -45,11 +55,13 @@ namespace OpenRCT2::Ui::Vulkan
 
         std::once_flag _initializedFilterPaletteData;
 
+        std::vector<FilterRectCommand> _inProgressFilterRects;
+
     public:
         ColourizePipeline(
-            const vk::Device& device, size_t framesInFlight, VulkanMemoryAllocator& vma, vk::Queue graphicsQueue,
-            uint32_t graphicsQueueIndex, const std::vector<vk::ImageView>& paletteInputViews,
-            const std::vector<vk::ImageView>& depthInputViews);
+            OpenRCT2::Drawing::IDrawingEngine& engine, const vk::Device& device, size_t framesInFlight,
+            VulkanMemoryAllocator& vma, vk::Queue graphicsQueue, uint32_t graphicsQueueIndex,
+            const std::vector<vk::ImageView>& paletteInputViews, const std::vector<vk::ImageView>& depthInputViews);
         ~ColourizePipeline();
 
         void Draw(
