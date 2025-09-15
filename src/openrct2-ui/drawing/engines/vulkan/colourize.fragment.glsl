@@ -23,12 +23,13 @@ layout(push_constant) uniform pushConstants
 struct FilterRect
 {
     ivec4 bounds;
-    uint depth;
+    ivec4 clip;
     uint filterId; //filter number to use for filterPalette
+    uint depth;
 };
 
-layout (set = 1, binding = 3) readonly buffer FilterRects {
-    FilterRect rects;
+layout (set = 1, binding = 3, std430) readonly buffer FilterRects {
+    FilterRect[] rects;
 };
 
 layout (location = 2) out vec3 outColour;

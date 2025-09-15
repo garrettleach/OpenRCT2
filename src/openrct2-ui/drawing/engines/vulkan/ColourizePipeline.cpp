@@ -524,6 +524,48 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::Draw(
     PushConstants pushConsts(static_cast<uint32_t>(_inProgressFilterRects.size()), Config::Get().general.WindowScale);
     commandBuffer.pushConstants(*_pipelineLayout, vk::ShaderStageFlagBits::eFragment, 0, sizeof(pushConsts), &pushConsts);
 
+    uint32_t bufferSizeNeeded = static_cast<uint32_t>(_inProgressFilterRects.size() * sizeof(decltype(_inProgressFilterRects)::value_type));
+
+    if (_storageBufferSize[currentFrame] < bufferSizeNeeded)
+    {
+        vmaDestroyBuffer(_vma, _storageBuffer[currentFrame], _storageAllocation[currentFrame]);
+
+        vk::BufferCreateInfo bufferCreate(
+            vk::BufferCreateFlags{}, vk::DeviceSize(bufferSizeNeeded), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive,
+            {_graphicsQueueIndex});
+
+        VmaAllocationCreateInfo allocInfo = {};
+        allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
+        allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+        allocInfo.requiredFlags = (VkMemoryPropertyFlags)vk::MemoryPropertyFlagBits::eHostVisible;
+        allocInfo.preferredFlags = (VkMemoryPropertyFlags)(vk::MemoryPropertyFlagBits::eHostCoherent
+                                                           | vk::MemoryPropertyFlagBits::eHostCached);
+
+        VkBuffer newBuffer;
+        VmaAllocation newAllocation;
+        VmaAllocationInfo newAllocationInfo;
+
+        VkResult createResult = vmaCreateBuffer(_vma, bufferCreate, &allocInfo, &newBuffer, &newAllocation, &newAllocationInfo);
+
+        if (vk::Result::eSuccess != vk::Result(createResult))
+        {
+            throw std::runtime_error("Failed to allocate larger buffer for filter rects");
+        }
+
+        _storageBuffer[currentFrame] = newBuffer;
+        _storageAllocation[currentFrame] = newAllocation;
+        _storageBufferPointer[currentFrame] = newAllocationInfo.pMappedData;
+        _storageBufferSize[currentFrame] = bufferSizeNeeded;
+
+        vk::DescriptorBufferInfo storageCreate(_storageBuffer[currentFrame], vk::DeviceSize(0), vk::DeviceSize(_storageBufferSize[currentFrame]));
+        std::vector<vk::WriteDescriptorSet> writeDescSet{
+            { _dynamicDescriptorSets[currentFrame], 3, 0, vk::DescriptorType::eStorageBuffer, {}, { storageCreate } }
+        };
+
+        _device.updateDescriptorSets(writeDescSet, {});
+    }
+
+    std::memcpy(_storageBufferPointer[currentFrame], _inProgressFilterRects.data(), bufferSizeNeeded);
     _inProgressFilterRects.clear();
 
     vk::Viewport viewport(0.0f, 0.0f, extent.width, extent.height, 0.0f, 1.0f);
