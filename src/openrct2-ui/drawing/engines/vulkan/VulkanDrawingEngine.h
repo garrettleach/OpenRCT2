@@ -119,6 +119,7 @@ namespace OpenRCT2::Ui::Vulkan
         void InvalidateImage(uint32_t image) override;
 
         DrawSpritePipeline& GetDrawSpritePipeline();
+        ColourizePipeline& GetColourizePipeline();
 
     private:
         void CreateInstance();

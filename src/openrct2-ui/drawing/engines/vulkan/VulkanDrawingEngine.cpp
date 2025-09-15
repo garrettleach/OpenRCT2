@@ -833,6 +833,11 @@ namespace OpenRCT2::Ui::Vulkan
     {
         return *_drawSpritePipeline;
     }
+
+    ColourizePipeline& VulkanDrawingEngine::GetColourizePipeline()
+    {
+        return *_colourizePipeline;
+    }
 } // namespace OpenRCT2::Ui::Vulkan
 
 #endif

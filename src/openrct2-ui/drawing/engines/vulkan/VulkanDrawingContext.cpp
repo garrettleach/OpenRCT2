@@ -18,7 +18,8 @@ void VulkanDrawingContext::FillRect(RenderTarget& rt, uint32_t colour, int32_t l
 void VulkanDrawingContext::FilterRect(
     RenderTarget& rt, FilterPaletteID palette, int32_t left, int32_t top, int32_t right, int32_t bottom)
 {
-    std::ignore = _engine.GetDrawSpritePipeline().QueuePlaceholder();
+    auto index = _engine.GetDrawSpritePipeline().QueuePlaceholder();
+    _engine.GetColourizePipeline().QueueFilterRect(index, rt, palette, left, top, right, bottom);
 }
 
 void VulkanDrawingContext::DrawLine(RenderTarget& rt, uint32_t colour, const ScreenLine& line)

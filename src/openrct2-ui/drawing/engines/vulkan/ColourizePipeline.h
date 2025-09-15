@@ -59,6 +59,10 @@ namespace OpenRCT2::Ui::Vulkan
 
         void Resize(std::vector<vk::ImageView> paletteInputViews, std::vector<vk::ImageView> depthInputViews);
 
+        void QueueFilterRect(
+            uint32_t index, RenderTarget& rt, FilterPaletteID palette, int32_t left, int32_t top, int32_t right,
+            int32_t bottom);
+
     private:
         void CreateGraphicsPipeline();
         void CreateSampler();

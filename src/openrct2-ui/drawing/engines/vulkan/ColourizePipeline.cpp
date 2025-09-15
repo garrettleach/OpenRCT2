@@ -525,3 +525,8 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::Resize(
 {
     UpdateInputViews(paletteInputViews, depthInputViews);
 }
+
+void OpenRCT2::Ui::Vulkan::ColourizePipeline::QueueFilterRect(
+    uint32_t index, RenderTarget& rt, FilterPaletteID palette, int32_t left, int32_t top, int32_t right, int32_t bottom)
+{
+}
