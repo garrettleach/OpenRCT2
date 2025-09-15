@@ -290,7 +290,7 @@ std::unique_ptr<uint8_t[]> CreateFilterMap(vk::Extent2D& extent)
     {
         int32_t y = PaletteToY(static_cast<FilterPaletteID>(i));
 
-        auto g1Index = GetPaletteG1Index(y);
+        auto g1Index = GetPaletteG1Index(i);
         if (g1Index.has_value())
         {
             const auto* element = GfxGetG1Element(g1Index.value());
