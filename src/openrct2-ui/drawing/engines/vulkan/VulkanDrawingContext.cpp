@@ -8,6 +8,7 @@ using OpenRCT2::Ui::Vulkan::VulkanDrawingContext;
 
 void VulkanDrawingContext::Clear(RenderTarget& rt, uint8_t paletteIndex)
 {
+    FillRect(rt, paletteIndex, rt.x, rt.y, rt.x + rt.width, rt.y + rt.height);
 }
 
 void VulkanDrawingContext::FillRect(RenderTarget& rt, uint32_t colour, int32_t left, int32_t top, int32_t right, int32_t bottom)
