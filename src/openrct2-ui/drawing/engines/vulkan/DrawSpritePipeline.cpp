@@ -947,7 +947,7 @@ namespace OpenRCT2::Ui::Vulkan
             colour = colour & (~0x1000000); // cross hatch
             crossHatch = true;
         }
-        
+
         _inProgressSprites.emplace_back(
             glm::ivec4{ left2, top2, right2 + 1, bottom2 + 1 }, clip,
             crossHatch ? DrawType::FillRectCrossHatch : DrawType::FillRect, ImageId(), ImageId(), uint8_t{}, colour);
