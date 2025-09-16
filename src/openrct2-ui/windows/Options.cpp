@@ -19,6 +19,7 @@
 #include <openrct2-ui/interface/Widget.h>
 #include <openrct2-ui/windows/Windows.h>
 #include <openrct2/Diagnostic.h>
+#include <openrct2/GameState.h>
 #include <openrct2/PlatformEnvironment.h>
 #include <openrct2/SpriteIds.h>
 #include <openrct2/actions/ScenarioSetSettingAction.h>
@@ -825,12 +826,10 @@ namespace OpenRCT2::Ui::Windows
                     {
                         const Resolution& resolution = resolutions[i];
 
-                        gDropdown.items[i].format = STR_DROPDOWN_MENU_LABEL;
-
-                        uint16_t* args = reinterpret_cast<uint16_t*>(&gDropdown.items[i].args.generic);
-                        args[0] = STR_RESOLUTION_X_BY_Y;
-                        args[1] = resolution.Width;
-                        args[2] = resolution.Height;
+                        Formatter ft;
+                        ft.Add<uint16_t>(resolution.Width);
+                        ft.Add<uint16_t>(resolution.Height);
+                        gDropdown.items[i] = Dropdown::MenuLabel(STR_RESOLUTION_X_BY_Y, ft);
 
                         if (resolution.Width == Config::Get().general.FullscreenWidth
                             && resolution.Height == Config::Get().general.FullscreenHeight)
@@ -1888,11 +1887,11 @@ namespace OpenRCT2::Ui::Windows
                     Config::Get().general.AllowEarlyCompletion ^= 1;
                     // Only the server can control this setting and needs to send the
                     // current value of allow_early_completion to all clients
-                    if (NetworkGetMode() == NETWORK_MODE_SERVER)
+                    if (Network::GetMode() == Network::Mode::server)
                     {
                         auto setAllowEarlyCompletionAction = GameActions::ScenarioSetSettingAction(
                             GameActions::ScenarioSetSetting::AllowEarlyCompletion, Config::Get().general.AllowEarlyCompletion);
-                        GameActions::Execute(&setAllowEarlyCompletionAction);
+                        GameActions::Execute(&setAllowEarlyCompletionAction, getGameState());
                     }
                     Config::Save();
                     Invalidate();
@@ -2014,7 +2013,7 @@ namespace OpenRCT2::Ui::Windows
 
             // The real name setting of clients is fixed to that of the server
             // and the server cannot change the setting during gameplay to prevent desyncs
-            if (NetworkGetMode() != NETWORK_MODE_NONE)
+            if (Network::GetMode() != Network::Mode::none)
             {
                 disabled_widgets |= (1uLL << WIDX_REAL_NAMES_GUESTS_CHECKBOX) | (1uLL << WIDX_REAL_NAMES_STAFF_CHECKBOX);
                 widgets[WIDX_REAL_NAMES_GUESTS_CHECKBOX].tooltip = STR_OPTION_DISABLED_DURING_NETWORK_PLAY;
@@ -2023,7 +2022,7 @@ namespace OpenRCT2::Ui::Windows
                 // Disable the use of the allow_early_completion option during network play on clients.
                 // This is to prevent confusion on clients because changing this setting during network play wouldn't change
                 // the way scenarios are completed during this network-session
-                if (NetworkGetMode() == NETWORK_MODE_CLIENT)
+                if (Network::GetMode() == Network::Mode::client)
                 {
                     disabled_widgets |= (1uLL << WIDX_ALLOW_EARLY_COMPLETION);
                     widgets[WIDX_ALLOW_EARLY_COMPLETION].tooltip = STR_OPTION_DISABLED_DURING_NETWORK_PLAY;

@@ -326,6 +326,9 @@ namespace OpenRCT2::Title
                     // TODO: Have a separate GameState and exchange once loaded.
                     auto& gameState = getGameState();
                     parkImporter->Import(gameState);
+
+                    GameFixSaveVars();
+
                     ReportProgress(100);
 
                     MapAnimations::MarkAllTiles();
@@ -432,8 +435,9 @@ namespace OpenRCT2::Title
             auto windowManager = Ui::GetWindowManager();
             auto& gameState = getGameState();
             windowManager->SetMainView(gameState.savedView, gameState.savedViewZoom, gameState.savedViewRotation);
-            ResetEntitySpatialIndices();
+            gameState.entities.ResetEntitySpatialIndices();
             ResetAllSpriteQuadrantPlacements();
+
             auto intent = Intent(INTENT_ACTION_REFRESH_NEW_RIDES);
             ContextBroadcastIntent(&intent);
             Ui::Windows::WindowScenerySetDefaultPlacementConfiguration();

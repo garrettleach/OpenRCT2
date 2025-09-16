@@ -256,7 +256,8 @@ const RideObjectEntry* Ride::getRideEntry() const
 
 int32_t RideGetCount()
 {
-    return static_cast<int32_t>(GetRideManager().size());
+    auto& gameState = getGameState();
+    return static_cast<int32_t>(RideManager(gameState).size());
 }
 
 size_t Ride::getNumPrices() const
@@ -319,7 +320,7 @@ Guest* Ride::getQueueHeadGuest(StationIndex stationIndex) const
     Guest* peep;
     Guest* result = nullptr;
     auto spriteIndex = getStation(stationIndex).LastPeepInQueue;
-    while ((peep = TryGetEntity<Guest>(spriteIndex)) != nullptr)
+    while ((peep = getGameState().entities.TryGetEntity<Guest>(spriteIndex)) != nullptr)
     {
         spriteIndex = peep->GuestNextInQueue;
         result = peep;
@@ -333,7 +334,7 @@ void Ride::updateQueueLength(StationIndex stationIndex)
     Guest* peep;
     auto& station = getStation(stationIndex);
     auto spriteIndex = station.LastPeepInQueue;
-    while ((peep = TryGetEntity<Guest>(spriteIndex)) != nullptr)
+    while ((peep = getGameState().entities.TryGetEntity<Guest>(spriteIndex)) != nullptr)
     {
         spriteIndex = peep->GuestNextInQueue;
         count++;
@@ -365,7 +366,8 @@ void Ride::queueInsertGuestAtFront(StationIndex stationIndex, Guest* peep)
  */
 void RideUpdateFavouritedStat()
 {
-    for (auto& ride : GetRideManager())
+    auto& gameState = getGameState();
+    for (auto& ride : RideManager(gameState))
         ride.guestsFavourite = 0;
 
     for (auto peep : EntityList<Guest>())
@@ -841,7 +843,7 @@ void Ride::formatStatusTo(Formatter& ft) const
     }
     else if (mode == RideMode::race && !(lifecycleFlags & RIDE_LIFECYCLE_PASS_STATION_NO_STOPPING) && !raceWinner.IsNull())
     {
-        auto peep = GetEntity<Guest>(raceWinner);
+        auto peep = getGameState().entities.GetEntity<Guest>(raceWinner);
         if (peep != nullptr)
         {
             ft.Add<StringId>(STR_RACE_WON_BY);
@@ -938,7 +940,8 @@ void RideInitAll()
  */
 void ResetAllRideBuildDates()
 {
-    for (auto& ride : GetRideManager())
+    auto& gameState = getGameState();
+    for (auto& ride : RideManager(gameState))
     {
         ride.buildDate -= GetDate().GetMonthsElapsed();
     }
@@ -960,6 +963,8 @@ void Ride::updateAll()
 {
     PROFILED_FUNCTION();
 
+    auto& gameState = getGameState();
+
     // Remove all rides if scenario editor
     if (gLegacyScene == LegacyScene::scenarioEditor)
     {
@@ -968,9 +973,11 @@ void Ride::updateAll()
             case EditorStep::ObjectSelection:
             case EditorStep::LandscapeEditor:
             case EditorStep::InventionsListSetUp:
-                for (auto& ride : GetRideManager())
+            {
+                for (auto& ride : RideManager(gameState))
                     ride.remove();
                 break;
+            }
             case EditorStep::OptionsSelection:
             case EditorStep::ObjectiveSelection:
             case EditorStep::ScenarioDetails:
@@ -986,7 +993,7 @@ void Ride::updateAll()
     WindowUpdateViewportRideMusic();
 
     // Update rides
-    for (auto& ride : GetRideManager())
+    for (auto& ride : RideManager(gameState))
         ride.update();
 
     OpenRCT2::RideAudio::UpdateMusicChannels();
@@ -1130,13 +1137,13 @@ void Ride::update()
         {
             // We require this to execute right away during the simulation, always ignore network and queue.
             auto gameAction = GameActions::RideSetStatusAction(id, RideStatus::closed);
-            GameActions::ExecuteNested(&gameAction);
+            GameActions::ExecuteNested(&gameAction, getGameState());
         }
         else
         {
             // We require this to execute right away during the simulation, always ignore network and queue.
             auto gameAction = GameActions::RideSetStatusAction(id, RideStatus::simulating);
-            GameActions::ExecuteNested(&gameAction);
+            GameActions::ExecuteNested(&gameAction, getGameState());
         }
     }
 }
@@ -1242,15 +1249,15 @@ void updateSpiralSlide(Ride& ride)
 {
     if (getGameState().currentTicks & 3)
         return;
-    if (ride.slideInUse == 0)
+    if (!ride.slideInUse)
         return;
 
     ride.spiralSlideProgress++;
     if (ride.spiralSlideProgress >= 48)
     {
-        ride.slideInUse--;
+        ride.slideInUse = 0;
 
-        auto* peep = GetEntity<Guest>(ride.slidePeep);
+        auto* peep = getGameState().entities.GetEntity<Guest>(ride.slidePeep);
         if (peep != nullptr)
         {
             auto destination = peep->GetDestination();
@@ -1556,7 +1563,7 @@ void RidePrepareBreakdown(Ride& ride, int32_t breakdownReason)
                 ride.brokenCar = ScenarioRand() % ride.numCarsPerTrain;
 
                 // Set flag on broken car
-                vehicle = GetEntity<Vehicle>(ride.vehicles[ride.brokenTrain]);
+                vehicle = getGameState().entities.GetEntity<Vehicle>(ride.vehicles[ride.brokenTrain]);
                 if (vehicle != nullptr)
                 {
                     vehicle = vehicle->GetCar(ride.brokenCar);
@@ -1573,7 +1580,7 @@ void RidePrepareBreakdown(Ride& ride, int32_t breakdownReason)
             ride.brokenCar = 0;
 
             // Set flag on broken train, first car
-            vehicle = GetEntity<Vehicle>(ride.vehicles[ride.brokenTrain]);
+            vehicle = getGameState().entities.GetEntity<Vehicle>(ride.vehicles[ride.brokenTrain]);
             if (vehicle != nullptr)
             {
                 vehicle->SetFlag(VehicleFlags::TrainIsBroken);
@@ -1820,7 +1827,7 @@ Staff* FindClosestMechanic(const CoordsXY& entrancePosition, int32_t forInspecti
 
 Staff* RideGetMechanic(const Ride& ride)
 {
-    auto staff = GetEntity<Staff>(ride.mechanic);
+    auto staff = getGameState().entities.GetEntity<Staff>(ride.mechanic);
     if (staff != nullptr && staff->IsMechanic())
     {
         return staff;
@@ -1906,7 +1913,7 @@ static bool RideMusicBreakdownEffect(Ride& ride)
  */
 void CircusMusicUpdate(Ride& ride)
 {
-    Vehicle* vehicle = GetEntity<Vehicle>(ride.vehicles[0]);
+    Vehicle* vehicle = getGameState().entities.GetEntity<Vehicle>(ride.vehicles[0]);
     if (vehicle == nullptr || vehicle->status != Vehicle::Status::DoingCircusShow)
     {
         ride.musicPosition = 0;
@@ -1919,16 +1926,11 @@ void CircusMusicUpdate(Ride& ride)
         return;
     }
 
+    CoordsXYZ rideCoords = ride.getStation().GetStart().ToTileCentre();
+
     const auto sampleRate = RideMusicSampleRate(ride);
 
-    for (const auto& station : ride.getStations())
-    {
-        if (!station.Start.IsNull())
-        {
-            CoordsXYZ rideCoords = station.GetStart().ToTileCentre();
-            OpenRCT2::RideAudio::UpdateMusicInstance(ride, rideCoords, sampleRate);
-        }
-    }
+    OpenRCT2::RideAudio::UpdateMusicInstance(ride, rideCoords, sampleRate);
 }
 
 /**
@@ -1962,16 +1964,11 @@ void DefaultMusicUpdate(Ride& ride)
         return;
     }
 
+    CoordsXYZ rideCoords = ride.getStation().GetStart().ToTileCentre();
+
     int32_t sampleRate = RideMusicSampleRate(ride);
 
-    for (const auto& station : ride.getStations())
-    {
-        if (!station.Start.IsNull())
-        {
-            CoordsXYZ rideCoords = station.GetStart().ToTileCentre();
-            OpenRCT2::RideAudio::UpdateMusicInstance(ride, rideCoords, sampleRate);
-        }
-    }
+    OpenRCT2::RideAudio::UpdateMusicInstance(ride, rideCoords, sampleRate);
 }
 
 static void RideMusicUpdate(Ride& ride)
@@ -1996,7 +1993,7 @@ static void RideMeasurementUpdate(Ride& ride, RideMeasurement& measurement)
     if (measurement.vehicle_index >= std::size(ride.vehicles))
         return;
 
-    auto vehicle = GetEntity<Vehicle>(ride.vehicles[measurement.vehicle_index]);
+    auto vehicle = getGameState().entities.GetEntity<Vehicle>(ride.vehicles[measurement.vehicle_index]);
     if (vehicle == nullptr)
         return;
 
@@ -2075,8 +2072,10 @@ void RideMeasurementsUpdate()
     if (gLegacyScene == LegacyScene::scenarioEditor)
         return;
 
+    auto& gameState = getGameState();
+
     // For each ride measurement
-    for (auto& ride : GetRideManager())
+    for (auto& ride : RideManager(gameState))
     {
         auto measurement = ride.measurement.get();
         if (measurement != nullptr && (ride.lifecycleFlags & RIDE_LIFECYCLE_ON_TRACK) && ride.status != RideStatus::simulating)
@@ -2091,7 +2090,7 @@ void RideMeasurementsUpdate()
                 for (int32_t j = 0; j < ride.numTrains; j++)
                 {
                     auto vehicleSpriteIdx = ride.vehicles[j];
-                    auto vehicle = GetEntity<Vehicle>(vehicleSpriteIdx);
+                    auto vehicle = gameState.entities.GetEntity<Vehicle>(vehicleSpriteIdx);
                     if (vehicle != nullptr)
                     {
                         if (vehicle->status == Vehicle::Status::Departing
@@ -2121,7 +2120,9 @@ static void RideFreeOldMeasurements()
     {
         Ride* lruRide{};
         numRideMeasurements = 0;
-        for (auto& ride : GetRideManager())
+
+        auto& gameState = getGameState();
+        for (auto& ride : RideManager(gameState))
         {
             if (ride.measurement != nullptr)
             {
@@ -2187,7 +2188,8 @@ VehicleColour RideGetVehicleColour(const Ride& ride, int32_t vehicleIndex)
 
 static bool RideTypeVehicleColourExists(ObjectEntryIndex subType, const VehicleColour& vehicleColour)
 {
-    for (auto& ride : GetRideManager())
+    auto& gameState = getGameState();
+    for (auto& ride : RideManager(gameState))
     {
         if (ride.subtype != subType)
             continue;
@@ -2268,7 +2270,8 @@ void RideSetVehicleColoursToRandomPreset(Ride& ride, uint8_t preset_index)
  */
 void RideCheckAllReachable()
 {
-    for (auto& ride : GetRideManager())
+    auto& gameState = getGameState();
+    for (auto& ride : RideManager(gameState))
     {
         if (ride.connectedMessageThrottle != 0)
             ride.connectedMessageThrottle--;
@@ -3188,8 +3191,9 @@ static void RideSetStartFinishPoints(RideId rideIndex, const CoordsXYE& startEle
  */
 static int32_t count_free_misc_sprite_slots()
 {
-    int32_t miscSpriteCount = GetMiscEntityCount();
-    int32_t remainingSpriteCount = GetNumFreeEntities();
+    auto& gameState = getGameState();
+    int32_t miscSpriteCount = gameState.entities.GetMiscEntityCount();
+    int32_t remainingSpriteCount = gameState.entities.GetNumFreeEntities();
     return std::max(0, miscSpriteCount + remainingSpriteCount - 300);
 }
 
@@ -3231,7 +3235,7 @@ static Vehicle* VehicleCreateCar(
 
     auto& carEntry = rideEntry->Cars[carEntryIndex];
 
-    auto* vehicle = CreateEntity<Vehicle>();
+    auto* vehicle = getGameState().entities.CreateEntity<Vehicle>();
     if (vehicle == nullptr)
         return nullptr;
 
@@ -3275,8 +3279,8 @@ static Vehicle* VehicleCreateCar(
     vehicle->animation_frame = 0;
     vehicle->animationState = 0;
     vehicle->scream_sound_id = OpenRCT2::Audio::SoundId::Null;
-    vehicle->Pitch = 0;
-    vehicle->bank_rotation = 0;
+    vehicle->pitch = VehiclePitch::flat;
+    vehicle->roll = VehicleRoll::unbanked;
     vehicle->target_seat_rotation = 4;
     vehicle->seat_rotation = 4;
     for (size_t i = 0; i < std::size(vehicle->peep); i++)
@@ -3516,7 +3520,7 @@ static bool VehicleCreateTrains(Ride& ride, const CoordsXYZ& trainsPos, TrackEle
  */
 static void RidecreateVehiclesFindFirstBlock(const Ride& ride, CoordsXYE* outXYElement)
 {
-    Vehicle* vehicle = GetEntity<Vehicle>(ride.vehicles[0]);
+    Vehicle* vehicle = getGameState().entities.GetEntity<Vehicle>(ride.vehicles[0]);
     if (vehicle == nullptr)
         return;
 
@@ -3656,7 +3660,7 @@ ResultWithMessage Ride::createVehicles(const CoordsXYE& element, bool isApplying
         {
             for (int32_t i = 0; i < numTrains; i++)
             {
-                Vehicle* vehicle = GetEntity<Vehicle>(vehicles[i]);
+                Vehicle* vehicle = getGameState().entities.GetEntity<Vehicle>(vehicles[i]);
                 if (vehicle == nullptr)
                 {
                     continue;
@@ -3700,7 +3704,7 @@ void Ride::moveTrainsToBlockBrakes(const CoordsXYZ& firstBlockPosition, TrackEle
 
     for (int32_t i = 0; i < numTrains; i++)
     {
-        auto train = GetEntity<Vehicle>(vehicles[i]);
+        auto train = getGameState().entities.GetEntity<Vehicle>(vehicles[i]);
         if (train == nullptr)
             continue;
 
@@ -3736,7 +3740,8 @@ void Ride::moveTrainsToBlockBrakes(const CoordsXYZ& firstBlockPosition, TrackEle
                 cableLiftPreviousBlock->SetBrakeClosed(cableLiftTileElement->IsBrakeClosed());
             }
             firstBlock.SetBrakeClosed(true);
-            for (Vehicle* car = train; car != nullptr; car = GetEntity<Vehicle>(car->next_vehicle_on_train))
+            for (Vehicle* car = train; car != nullptr;
+                 car = getGameState().entities.GetEntity<Vehicle>(car->next_vehicle_on_train))
             {
                 car->velocity = 0;
                 car->acceleration = 0;
@@ -3752,7 +3757,7 @@ void Ride::moveTrainsToBlockBrakes(const CoordsXYZ& firstBlockPosition, TrackEle
         {
             BlockBrakeSetLinkedBrakesClosed(firstBlockPosition, firstBlock, true);
         }
-        for (Vehicle* car = train; car != nullptr; car = GetEntity<Vehicle>(car->next_vehicle_on_train))
+        for (Vehicle* car = train; car != nullptr; car = getGameState().entities.GetEntity<Vehicle>(car->next_vehicle_on_train))
         {
             car->ClearFlag(VehicleFlags::CollisionDisabled);
             car->SetState(Vehicle::Status::Travelling, car->sub_state);
@@ -4241,7 +4246,8 @@ RideMode Ride::getDefaultMode() const
 
 static bool RideTypeWithTrackColoursExists(ride_type_t rideType, const TrackColour& colours)
 {
-    for (auto& ride : GetRideManager())
+    auto& gameState = getGameState();
+    for (auto& ride : RideManager(gameState))
     {
         if (ride.type != rideType)
             continue;
@@ -4259,13 +4265,15 @@ static bool RideTypeWithTrackColoursExists(ride_type_t rideType, const TrackColo
 
 bool Ride::nameExists(std::string_view name, RideId excludeRideId)
 {
-    char buffer[256]{};
-    for (auto& ride : GetRideManager())
+    auto& gameState = getGameState();
+    for (auto& ride : RideManager(gameState))
     {
         if (ride.id != excludeRideId)
         {
             Formatter ft;
             ride.formatNameTo(ft);
+
+            char buffer[256]{};
             FormatStringLegacy(buffer, 256, STR_STRINGID, ft.Data());
             if (name == buffer && RideHasAnyTrackElements(ride))
             {
@@ -4338,7 +4346,8 @@ void Ride::setColourPreset(uint8_t index)
 
 money64 RideGetCommonPrice(const Ride& forRide)
 {
-    for (const auto& ride : GetRideManager())
+    auto& gameState = getGameState();
+    for (const auto& ride : RideManager(gameState))
     {
         if (ride.type == forRide.type && ride.id != forRide.id)
         {
@@ -4648,7 +4657,7 @@ void InvalidateTestResults(Ride& ride)
     {
         for (int32_t i = 0; i < ride.numTrains; i++)
         {
-            Vehicle* vehicle = GetEntity<Vehicle>(ride.vehicles[i]);
+            Vehicle* vehicle = getGameState().entities.GetEntity<Vehicle>(ride.vehicles[i]);
             if (vehicle != nullptr)
             {
                 vehicle->ClearFlag(VehicleFlags::Testing);
@@ -4678,8 +4687,8 @@ void RideFixBreakdown(Ride& ride, int32_t reliabilityIncreaseFactor)
     {
         for (int32_t i = 0; i < ride.numTrains; i++)
         {
-            for (Vehicle* vehicle = GetEntity<Vehicle>(ride.vehicles[i]); vehicle != nullptr;
-                 vehicle = GetEntity<Vehicle>(vehicle->next_vehicle_on_train))
+            for (Vehicle* vehicle = getGameState().entities.GetEntity<Vehicle>(ride.vehicles[i]); vehicle != nullptr;
+                 vehicle = getGameState().entities.GetEntity<Vehicle>(vehicle->next_vehicle_on_train))
             {
                 vehicle->ClearFlag(VehicleFlags::StoppedOnLift);
                 vehicle->ClearFlag(VehicleFlags::CarIsBroken);
@@ -4708,8 +4717,8 @@ void RideUpdateVehicleColours(const Ride& ride)
         int32_t carIndex = 0;
         VehicleColour colours = {};
 
-        for (Vehicle* vehicle = GetEntity<Vehicle>(ride.vehicles[i]); vehicle != nullptr;
-             vehicle = GetEntity<Vehicle>(vehicle->next_vehicle_on_train))
+        for (Vehicle* vehicle = getGameState().entities.GetEntity<Vehicle>(ride.vehicles[i]); vehicle != nullptr;
+             vehicle = getGameState().entities.GetEntity<Vehicle>(vehicle->next_vehicle_on_train))
         {
             switch (ride.vehicleColourSettings)
             {
@@ -5234,27 +5243,27 @@ void Ride::setRideEntry(ObjectEntryIndex entryIndex)
     auto colour = RideGetUnusedPresetVehicleColour(entryIndex);
     auto rideSetVehicleAction = GameActions::RideSetVehicleAction(
         id, GameActions::RideSetVehicleType::RideEntry, entryIndex, colour);
-    GameActions::Execute(&rideSetVehicleAction);
+    GameActions::Execute(&rideSetVehicleAction, getGameState());
 }
 
 void Ride::setNumTrains(int32_t newNumTrains)
 {
     auto rideSetVehicleAction = GameActions::RideSetVehicleAction(id, GameActions::RideSetVehicleType::NumTrains, newNumTrains);
-    GameActions::Execute(&rideSetVehicleAction);
+    GameActions::Execute(&rideSetVehicleAction, getGameState());
 }
 
 void Ride::setNumCarsPerTrain(int32_t numCarsPerVehicle)
 {
     auto rideSetVehicleAction = GameActions::RideSetVehicleAction(
         id, GameActions::RideSetVehicleType::NumCarsPerTrain, numCarsPerVehicle);
-    GameActions::Execute(&rideSetVehicleAction);
+    GameActions::Execute(&rideSetVehicleAction, getGameState());
 }
 
 void Ride::setReversedTrains(bool reverseTrains)
 {
     auto rideSetVehicleAction = GameActions::RideSetVehicleAction(
         id, GameActions::RideSetVehicleType::TrainsReversed, reverseTrains);
-    GameActions::Execute(&rideSetVehicleAction);
+    GameActions::Execute(&rideSetVehicleAction, getGameState());
 }
 
 void Ride::setToDefaultInspectionInterval()
@@ -5275,7 +5284,7 @@ void Ride::setToDefaultInspectionInterval()
  */
 void Ride::crash(uint8_t vehicleIndex)
 {
-    Vehicle* vehicle = GetEntity<Vehicle>(vehicles[vehicleIndex]);
+    Vehicle* vehicle = getGameState().entities.GetEntity<Vehicle>(vehicles[vehicleIndex]);
 
     if (gLegacyScene != LegacyScene::titleSequence && vehicle != nullptr)
     {
@@ -5321,7 +5330,7 @@ uint32_t RideCustomersInLast5Minutes(const Ride& ride)
 Vehicle* RideGetBrokenVehicle(const Ride& ride)
 {
     auto vehicleIndex = ride.vehicles[ride.brokenTrain];
-    Vehicle* vehicle = GetEntity<Vehicle>(vehicleIndex);
+    Vehicle* vehicle = getGameState().entities.GetEntity<Vehicle>(vehicleIndex);
     if (vehicle != nullptr)
     {
         return vehicle->GetCar(ride.brokenCar);
@@ -5487,12 +5496,13 @@ int32_t GetUnifiedBoosterSpeed(ride_type_t rideType, int32_t relativeSpeed)
 
 void FixInvalidVehicleSpriteSizes()
 {
-    for (const auto& ride : GetRideManager())
+    auto& gameState = getGameState();
+    for (const auto& ride : RideManager(gameState))
     {
         for (auto entityIndex : ride.vehicles)
         {
-            for (Vehicle* vehicle = TryGetEntity<Vehicle>(entityIndex); vehicle != nullptr;
-                 vehicle = TryGetEntity<Vehicle>(vehicle->next_vehicle_on_train))
+            for (Vehicle* vehicle = getGameState().entities.TryGetEntity<Vehicle>(entityIndex); vehicle != nullptr;
+                 vehicle = getGameState().entities.TryGetEntity<Vehicle>(vehicle->next_vehicle_on_train))
             {
                 auto carEntry = vehicle->Entry();
                 if (carEntry == nullptr)
@@ -5582,7 +5592,8 @@ void DetermineRideEntranceAndExitLocations()
 {
     LOG_VERBOSE("Inspecting ride entrance / exit locations");
 
-    for (auto& ride : GetRideManager())
+    auto& gameState = getGameState();
+    for (auto& ride : RideManager(gameState))
     {
         for (auto& station : ride.getStations())
         {
@@ -5632,7 +5643,6 @@ void DetermineRideEntranceAndExitLocations()
             // Search the map to find it. Skip the outer ring of invisible tiles.
             bool alreadyFoundEntrance = false;
             bool alreadyFoundExit = false;
-            auto& gameState = getGameState();
             for (int32_t y = 1; y < gameState.mapSize.y - 1; y++)
             {
                 for (int32_t x = 1; x < gameState.mapSize.x - 1; x++)
@@ -5881,7 +5891,8 @@ std::vector<RideId> GetTracklessRides()
     }
 
     // Get all rides that did not get seen during map iteration
-    const auto& rideManager = GetRideManager();
+    auto& gameState = getGameState();
+    const auto& rideManager = RideManager(gameState);
     std::vector<RideId> result;
     for (const auto& ride : rideManager)
     {

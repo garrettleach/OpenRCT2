@@ -33,6 +33,8 @@
 #include <openrct2/ride/Vehicle.h>
 #include <openrct2/ui/WindowManager.h>
 #include <openrct2/world/Footpath.h>
+#include <openrct2/world/Map.h>
+#include <openrct2/world/MapSelection.h>
 #include <openrct2/world/Scenery.h>
 #include <openrct2/world/tile_element/EntranceElement.h>
 #include <openrct2/world/tile_element/Slope.h>
@@ -250,7 +252,7 @@ namespace OpenRCT2::Ui::Windows
             InitMap();
             gWindowSceneryRotation = 0;
             CentreMapOnViewPoint();
-            FootpathSelectDefault();
+            WindowFootpathSelectDefault();
 
             auto& gameState = getGameState();
             _mapWidthAndHeightLinked = gameState.mapSize.x == gameState.mapSize.y;
@@ -445,8 +447,7 @@ namespace OpenRCT2::Ui::Windows
             int32_t direction;
             TileElement* tileElement;
             MapInvalidateSelectionRect();
-            gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE;
-            gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE_ARROW;
+            gMapSelectFlags.unset(MapSelectFlag::enable, MapSelectFlag::enableArrow);
             auto mapCoords = FootpathBridgeGetInfoFromPos(screenCoords, &direction, &tileElement);
             if (mapCoords.IsNull())
                 return;
@@ -460,9 +461,8 @@ namespace OpenRCT2::Ui::Windows
                     mapZ += 16;
             }
 
-            gMapSelectFlags |= MAP_SELECT_FLAG_ENABLE;
-            gMapSelectFlags |= MAP_SELECT_FLAG_ENABLE_ARROW;
-            gMapSelectType = MAP_SELECT_TYPE_FULL;
+            gMapSelectFlags.set(MapSelectFlag::enable, MapSelectFlag::enableArrow);
+            gMapSelectType = MapSelectType::full;
             gMapSelectPositionA = mapCoords;
             gMapSelectPositionB = mapCoords;
             gMapSelectArrowPosition = CoordsXYZ{ mapCoords, mapZ };
@@ -482,7 +482,7 @@ namespace OpenRCT2::Ui::Windows
             int32_t mapZ = tileElement->GetBaseZ();
 
             auto gameAction = GameActions::PeepSpawnPlaceAction({ mapCoords, mapZ, static_cast<Direction>(direction) });
-            auto result = GameActions::Execute(&gameAction);
+            auto result = GameActions::Execute(&gameAction, getGameState());
             if (result.Error == GameActions::Status::Ok)
             {
                 Audio::Play3D(Audio::SoundId::PlaceItem, result.Position);
@@ -516,7 +516,7 @@ namespace OpenRCT2::Ui::Windows
                             newMapSize.x = size;
 
                         auto mapChangeSizeAction = GameActions::MapChangeSizeAction(newMapSize);
-                        GameActions::Execute(&mapChangeSizeAction);
+                        GameActions::Execute(&mapChangeSizeAction, getGameState());
                         Invalidate();
                     }
                     break;
@@ -764,7 +764,7 @@ namespace OpenRCT2::Ui::Windows
                 newMapSize.x++;
 
             auto increaseMapSizeAction = GameActions::MapChangeSizeAction(newMapSize);
-            GameActions::Execute(&increaseMapSizeAction);
+            GameActions::Execute(&increaseMapSizeAction, getGameState());
         }
 
         void DecreaseMapSize()
@@ -776,7 +776,7 @@ namespace OpenRCT2::Ui::Windows
                 newMapSize.x--;
 
             auto decreaseMapSizeAction = GameActions::MapChangeSizeAction(newMapSize);
-            GameActions::Execute(&decreaseMapSizeAction);
+            GameActions::Execute(&decreaseMapSizeAction, getGameState());
         }
 
         void SetMapPixels()
@@ -969,7 +969,7 @@ namespace OpenRCT2::Ui::Windows
             auto leftTop = ScreenCoordsXY{ c.x, c.y } + offset;
             auto rightBottom = leftTop;
             uint8_t colour = DefaultPeepMapColour;
-            if (EntityGetFlashing(peep))
+            if (getGameState().entities.EntityGetFlashing(peep))
             {
                 colour = flashColour;
                 // If flashing then map peep pixel size is increased (by moving left top downwards)
@@ -1010,7 +1010,8 @@ namespace OpenRCT2::Ui::Windows
         {
             for (auto train : TrainManager::View())
             {
-                for (Vehicle* vehicle = train; vehicle != nullptr; vehicle = GetEntity<Vehicle>(vehicle->next_vehicle_on_train))
+                for (Vehicle* vehicle = train; vehicle != nullptr;
+                     vehicle = getGameState().entities.GetEntity<Vehicle>(vehicle->next_vehicle_on_train))
                 {
                     if (vehicle->x == kLocationNull)
                         continue;

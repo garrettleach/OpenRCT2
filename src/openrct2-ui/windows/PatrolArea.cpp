@@ -15,6 +15,7 @@
 #include <openrct2-ui/windows/Windows.h>
 #include <openrct2/Context.h>
 #include <openrct2/Game.h>
+#include <openrct2/GameState.h>
 #include <openrct2/Input.h>
 #include <openrct2/SpriteIds.h>
 #include <openrct2/actions/StaffSetPatrolAreaAction.h>
@@ -25,6 +26,7 @@
 #include <openrct2/entity/Staff.h>
 #include <openrct2/localisation/Formatter.h>
 #include <openrct2/ui/WindowManager.h>
+#include <openrct2/world/MapSelection.h>
 #include <openrct2/world/Park.h>
 
 namespace OpenRCT2::Ui::Windows
@@ -157,10 +159,10 @@ namespace OpenRCT2::Ui::Windows
                 return;
 
             auto stateChanged = false;
-            if (!(gMapSelectFlags & MAP_SELECT_FLAG_ENABLE))
+            if (!(gMapSelectFlags.has(MapSelectFlag::enable)))
                 stateChanged = true;
 
-            if (gMapSelectType != MAP_SELECT_TYPE_FULL)
+            if (gMapSelectType != MapSelectType::full)
                 stateChanged = true;
 
             auto toolSize = std::max<uint16_t>(1, gLandToolSize);
@@ -183,8 +185,8 @@ namespace OpenRCT2::Ui::Windows
                 MapInvalidateSelectionRect();
 
                 // Update and invalidate new area
-                gMapSelectFlags |= MAP_SELECT_FLAG_ENABLE;
-                gMapSelectType = MAP_SELECT_TYPE_FULL;
+                gMapSelectFlags.set(MapSelectFlag::enable);
+                gMapSelectType = MapSelectType::full;
                 gMapSelectPositionA = posA;
                 gMapSelectPositionB = posB;
                 MapInvalidateSelectionRect();
@@ -203,7 +205,7 @@ namespace OpenRCT2::Ui::Windows
             auto mapTile = GetBestCoordsFromPos(screenCoords);
             if (mapTile)
             {
-                auto staff = GetEntity<Staff>(_staffId);
+                auto staff = getGameState().entities.GetEntity<Staff>(_staffId);
                 if (staff != nullptr)
                 {
                     _mode = staff->IsPatrolAreaSet(*mapTile) ? GameActions::StaffSetPatrolAreaMode::Unset
@@ -216,12 +218,12 @@ namespace OpenRCT2::Ui::Windows
 
         void OnToolDrag(WidgetIndex widgetIndex, const ScreenCoordsXY& screenCoords) override
         {
-            auto staff = GetEntity<Staff>(_staffId);
+            auto staff = getGameState().entities.GetEntity<Staff>(_staffId);
             if (staff != nullptr)
             {
                 MapRange range(gMapSelectPositionA, gMapSelectPositionB);
                 auto staffSetPatrolAreaAction = GameActions::StaffSetPatrolAreaAction(_staffId, range, _mode);
-                GameActions::Execute(&staffSetPatrolAreaAction);
+                GameActions::Execute(&staffSetPatrolAreaAction, getGameState());
             }
         }
 

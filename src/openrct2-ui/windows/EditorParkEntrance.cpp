@@ -12,6 +12,7 @@
 #include <openrct2-ui/interface/Widget.h>
 #include <openrct2-ui/windows/Windows.h>
 #include <openrct2/Context.h>
+#include <openrct2/GameState.h>
 #include <openrct2/Input.h>
 #include <openrct2/SpriteIds.h>
 #include <openrct2/actions/ParkEntrancePlaceAction.h>
@@ -20,6 +21,8 @@
 #include <openrct2/object/ObjectLimits.h>
 #include <openrct2/object/ObjectManager.h>
 #include <openrct2/ui/WindowManager.h>
+#include <openrct2/world/Map.h>
+#include <openrct2/world/MapSelection.h>
 #include <openrct2/world/tile_element/EntranceElement.h>
 #include <openrct2/world/tile_element/PathElement.h>
 #include <openrct2/world/tile_element/Slope.h>
@@ -162,9 +165,7 @@ namespace OpenRCT2::Ui::Windows
         {
             MapInvalidateSelectionRect();
             MapInvalidateMapSelectionTiles();
-            gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE;
-            gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE_ARROW;
-            gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE_CONSTRUCT;
+            gMapSelectFlags.unset(MapSelectFlag::enable, MapSelectFlag::enableArrow, MapSelectFlag::enableConstruct);
             CoordsXYZD parkEntrancePosition = PlaceParkEntranceGetMapPosition(screenCoords);
             if (parkEntrancePosition.IsNull())
             {
@@ -185,7 +186,7 @@ namespace OpenRCT2::Ui::Windows
             gMapSelectArrowPosition = parkEntrancePosition;
             gMapSelectArrowDirection = parkEntrancePosition.direction;
 
-            gMapSelectFlags |= MAP_SELECT_FLAG_ENABLE_CONSTRUCT | MAP_SELECT_FLAG_ENABLE_ARROW;
+            gMapSelectFlags.set(MapSelectFlag::enableConstruct, MapSelectFlag::enableArrow);
             MapInvalidateMapSelectionTiles();
             if (gParkEntranceGhostExists && parkEntrancePosition == gParkEntranceGhostPosition)
             {
@@ -194,11 +195,13 @@ namespace OpenRCT2::Ui::Windows
 
             ParkEntranceRemoveGhost();
 
+            bool isLegacyPath = (gFootpathSelection.LegacyPath != kObjectEntryIndexNull);
+            auto pathIndex = isLegacyPath ? gFootpathSelection.LegacyPath : gFootpathSelection.NormalSurface;
             auto gameAction = GameActions::ParkEntrancePlaceAction(
-                parkEntrancePosition, gFootpathSelectedId, _selectedEntranceType);
+                parkEntrancePosition, pathIndex, _selectedEntranceType, isLegacyPath);
             gameAction.SetFlags(GAME_COMMAND_FLAG_GHOST);
 
-            auto result = GameActions::Execute(&gameAction);
+            auto result = GameActions::Execute(&gameAction, getGameState());
             if (result.Error == GameActions::Status::Ok)
             {
                 gParkEntranceGhostPosition = parkEntrancePosition;
@@ -213,9 +216,11 @@ namespace OpenRCT2::Ui::Windows
             CoordsXYZD parkEntrancePosition = PlaceParkEntranceGetMapPosition(screenCoords);
             if (!parkEntrancePosition.IsNull())
             {
+                bool isLegacyPath = (gFootpathSelection.LegacyPath != kObjectEntryIndexNull);
+                auto pathIndex = isLegacyPath ? gFootpathSelection.LegacyPath : gFootpathSelection.NormalSurface;
                 auto gameAction = GameActions::ParkEntrancePlaceAction(
-                    parkEntrancePosition, gFootpathSelectedId, _selectedEntranceType);
-                auto result = GameActions::Execute(&gameAction);
+                    parkEntrancePosition, pathIndex, _selectedEntranceType, isLegacyPath);
+                auto result = GameActions::Execute(&gameAction, getGameState());
                 if (result.Error == GameActions::Status::Ok)
                 {
                     Audio::Play3D(Audio::SoundId::PlaceItem, result.Position);

@@ -191,7 +191,7 @@ bool Peep::CanBePickedUp() const
 
 int32_t PeepGetStaffCount()
 {
-    return GetEntityListCount(EntityType::Staff);
+    return getGameState().entities.GetEntityListCount(EntityType::Staff);
 }
 
 /**
@@ -460,10 +460,12 @@ std::optional<CoordsXY> Peep::UpdateAction(int16_t& xy_distance)
     }
 
     // Should we throw up, and are we at the frame where sick appears?
-    auto* guest = As<Guest>();
-    if (Action == PeepActionType::ThrowUp && AnimationFrameNum == 15 && guest != nullptr)
+    if (auto* guest = As<Guest>(); guest != nullptr)
     {
-        ThrowUp();
+        if (Action == PeepActionType::ThrowUp && AnimationFrameNum == 15)
+        {
+            guest->ThrowUp();
+        }
     }
 
     return { { x, y } };
@@ -544,35 +546,6 @@ void Peep::UpdateWalkingAnimation()
     AnimationImageIdOffset = peepAnimation.frame_offsets[WalkingAnimationFrameNum];
 }
 
-void Peep::ThrowUp()
-{
-    auto* guest = As<Guest>();
-    if (guest == nullptr)
-        return;
-
-    guest->Hunger /= 2;
-    guest->NauseaTarget /= 2;
-
-    if (guest->Nausea < 30)
-        guest->Nausea = 0;
-    else
-        guest->Nausea -= 30;
-
-    WindowInvalidateFlags |= PEEP_INVALIDATE_PEEP_2;
-
-    const auto curLoc = GetLocation();
-    Litter::Create({ curLoc, Orientation }, (Id.ToUnderlying() & 1) ? Litter::Type::VomitAlt : Litter::Type::Vomit);
-
-    static constexpr OpenRCT2::Audio::SoundId coughs[4] = {
-        OpenRCT2::Audio::SoundId::Cough1,
-        OpenRCT2::Audio::SoundId::Cough2,
-        OpenRCT2::Audio::SoundId::Cough3,
-        OpenRCT2::Audio::SoundId::Cough4,
-    };
-    auto soundId = coughs[ScenarioRand() & 3];
-    OpenRCT2::Audio::Play3D(soundId, curLoc);
-}
-
 /**
  *  rct2: 0x0069A409
  * Decreases rider count if on/entering a ride.
@@ -626,8 +599,7 @@ void PeepWindowStateUpdate(Peep* peep)
 
 void Peep::Pickup()
 {
-    auto* guest = As<Guest>();
-    if (guest != nullptr)
+    if (auto* guest = As<Guest>(); guest != nullptr)
     {
         guest->RemoveFromRide();
     }
@@ -701,8 +673,7 @@ GameActions::Result Peep::Place(const TileCoordsXYZ& location, bool apply)
         AnimationType = PeepAnimationType::Walking;
         PathCheckOptimisation = 0;
         EntityTweener::Get().Reset();
-        auto* guest = As<Guest>();
-        if (guest != nullptr)
+        if (auto* guest = As<Guest>(); guest != nullptr)
         {
             AnimationType = PeepAnimationType::Invalid;
             guest->HappinessTarget = std::max(guest->HappinessTarget - 10, 0);
@@ -744,7 +715,7 @@ void PeepEntityRemove(Peep* peep)
 
         News::DisableNewsItems(News::ItemType::peep, staff->Id.ToUnderlying());
     }
-    EntityRemove(peep);
+    getGameState().entities.EntityRemove(peep);
 
     auto intent = Intent(wasGuest ? INTENT_ACTION_REFRESH_GUEST_LIST : INTENT_ACTION_REFRESH_STAFF_LIST);
     ContextBroadcastIntent(&intent);
@@ -834,8 +805,7 @@ void Peep::UpdateFalling()
                         // Looks like we are drowning!
                         MoveTo({ x, y, height });
 
-                        auto* guest = As<Guest>();
-                        if (guest != nullptr)
+                        if (auto* guest = As<Guest>(); guest != nullptr)
                         {
                             // Drop balloon if held
                             GuestReleaseBalloon(guest, height);
@@ -1333,8 +1303,7 @@ void Peep::FormatActionTo(Formatter& ft) const
         case PeepState::Walking:
         case PeepState::UsingBin:
         {
-            auto* guest = As<Guest>();
-            if (guest != nullptr)
+            if (auto* guest = As<Guest>(); guest != nullptr)
             {
                 if (!guest->GuestHeadingToRideId.IsNull())
                 {
@@ -1567,8 +1536,7 @@ bool Peep::IsActionInterruptable() const
 void PeepSetMapTooltip(Peep* peep)
 {
     auto ft = Formatter();
-    auto* guest = peep->As<Guest>();
-    if (guest != nullptr)
+    if (auto* guest = peep->As<Guest>(); guest != nullptr)
     {
         ft.Add<StringId>((peep->PeepFlags & PEEP_FLAGS_TRACKING) ? STR_TRACKED_GUEST_MAP_TIP : STR_GUEST_MAP_TIP);
         ft.Add<uint32_t>(GetPeepFaceSpriteSmall(guest));
@@ -2531,8 +2499,8 @@ StringId GetRealNameStringIDFromPeepID(uint32_t id)
 
 int32_t PeepCompare(const EntityId sprite_index_a, const EntityId sprite_index_b)
 {
-    Peep const* peep_a = GetEntity<Peep>(sprite_index_a);
-    Peep const* peep_b = GetEntity<Peep>(sprite_index_b);
+    Peep const* peep_a = getGameState().entities.GetEntity<Peep>(sprite_index_a);
+    Peep const* peep_b = getGameState().entities.GetEntity<Peep>(sprite_index_b);
     if (peep_a == nullptr || peep_b == nullptr)
     {
         return 0;

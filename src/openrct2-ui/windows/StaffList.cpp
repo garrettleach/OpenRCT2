@@ -185,10 +185,10 @@ namespace OpenRCT2::Ui::Windows
             {
                 for (auto peep : EntityList<Staff>())
                 {
-                    EntitySetFlashing(peep, false);
+                    getGameState().entities.EntitySetFlashing(peep, false);
                     if (peep->AssignedStaffType == GetSelectedStaffType())
                     {
-                        EntitySetFlashing(peep, true);
+                        getGameState().entities.EntitySetFlashing(peep, true);
                     }
                 }
             }
@@ -234,7 +234,7 @@ namespace OpenRCT2::Ui::Windows
             {
                 auto action = GameActions::StaffSetColourAction(
                     GetSelectedStaffType(), ColourDropDownIndexToColour(dropdownIndex));
-                GameActions::Execute(&action);
+                GameActions::Execute(&action, getGameState());
             }
         }
 
@@ -336,6 +336,8 @@ namespace OpenRCT2::Ui::Windows
         void OnScrollMouseDown(int32_t scrollIndex, const ScreenCoordsXY& screenCoords) override
         {
             int32_t i = screenCoords.y / kScrollableRowHeight;
+            auto& gameState = getGameState();
+
             for (const auto& entry : _staffList)
             {
                 if (i == 0)
@@ -343,11 +345,11 @@ namespace OpenRCT2::Ui::Windows
                     if (_quickFireMode)
                     {
                         auto staffFireAction = GameActions::StaffFireAction(entry.Id);
-                        GameActions::Execute(&staffFireAction);
+                        GameActions::Execute(&staffFireAction, gameState);
                     }
                     else
                     {
-                        auto peep = GetEntity<Staff>(entry.Id);
+                        auto peep = gameState.entities.GetEntity<Staff>(entry.Id);
                         if (peep != nullptr)
                         {
                             auto intent = Intent(WindowClass::Peep);
@@ -386,7 +388,7 @@ namespace OpenRCT2::Ui::Windows
 
                 if (y + 11 >= rt.y)
                 {
-                    const auto* peep = GetEntity<Staff>(entry.Id);
+                    const auto* peep = getGameState().entities.GetEntity<Staff>(entry.Id);
                     if (peep == nullptr)
                     {
                         continue;
@@ -420,7 +422,7 @@ namespace OpenRCT2::Ui::Windows
                     }
 
                     auto staffOrderIcon_x = nameColumnSize + 20;
-                    if (peep->AssignedStaffType != StaffType::Entertainer)
+                    if (!peep->isEntertainer())
                     {
                         auto staffOrders = peep->StaffOrders;
                         auto staffOrderSprite = GetStaffOrderBaseSprite(GetSelectedStaffType());
@@ -485,10 +487,10 @@ namespace OpenRCT2::Ui::Windows
 
             for (auto* peep : EntityList<Staff>())
             {
-                EntitySetFlashing(peep, false);
+                getGameState().entities.EntitySetFlashing(peep, false);
                 if (peep->AssignedStaffType == GetSelectedStaffType())
                 {
-                    EntitySetFlashing(peep, true);
+                    getGameState().entities.EntitySetFlashing(peep, true);
 
                     StaffEntry entry;
                     entry.Id = peep->Id;
@@ -537,13 +539,15 @@ namespace OpenRCT2::Ui::Windows
             else
                 costume = findPeepAnimationsIndexForType(animPeepType);
 
+            auto& gameState = getGameState();
+
             auto hireStaffAction = GameActions::StaffHireNewAction(autoPosition, staffType, costume, staffOrders);
             hireStaffAction.SetCallback([=](const GameActions::GameAction*, const GameActions::Result* res) -> void {
                 if (res->Error != GameActions::Status::Ok)
                     return;
 
                 auto actionResult = res->GetData<GameActions::StaffHireNewActionResult>();
-                auto* staff = GetEntity<Staff>(actionResult.StaffEntityId);
+                auto* staff = getGameState().entities.GetEntity<Staff>(actionResult.StaffEntityId);
                 if (staff == nullptr)
                     return;
 
@@ -554,13 +558,13 @@ namespace OpenRCT2::Ui::Windows
                     nullLoc.SetNull();
 
                     GameActions::PeepPickupAction pickupAction{ GameActions::PeepPickupType::Pickup, staff->Id, nullLoc,
-                                                                NetworkGetCurrentPlayerId() };
+                                                                Network::GetCurrentPlayerId() };
                     pickupAction.SetCallback(
                         [staffId = staff->Id](const GameActions::GameAction* ga, const GameActions::Result* result) {
                             if (result->Error != GameActions::Status::Ok)
                                 return;
 
-                            auto* staff2 = GetEntity<Staff>(staffId);
+                            auto* staff2 = getGameState().entities.GetEntity<Staff>(staffId);
                             auto intent = Intent(WindowClass::Peep);
                             intent.PutExtra(INTENT_EXTRA_PEEP, staff2);
                             auto* wind = ContextOpenIntent(&intent);
@@ -569,7 +573,7 @@ namespace OpenRCT2::Ui::Windows
                                 ToolSet(*wind, WC_STAFF__WIDX_PICKUP, Tool::picker);
                             }
                         });
-                    GameActions::Execute(&pickupAction);
+                    GameActions::Execute(&pickupAction, getGameState());
                 }
                 else
                 {
@@ -580,7 +584,7 @@ namespace OpenRCT2::Ui::Windows
                 }
             });
 
-            GameActions::Execute(&hireStaffAction);
+            GameActions::Execute(&hireStaffAction, gameState);
         }
 
         StaffType GetSelectedStaffType() const

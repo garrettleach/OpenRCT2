@@ -50,6 +50,8 @@
 #include <openrct2/windows/Intent.h>
 #include <openrct2/world/ConstructionClearance.h>
 #include <openrct2/world/Entrance.h>
+#include <openrct2/world/Map.h>
+#include <openrct2/world/MapSelection.h>
 #include <openrct2/world/Park.h>
 #include <openrct2/world/tile_element/EntranceElement.h>
 #include <openrct2/world/tile_element/PathElement.h>
@@ -285,8 +287,8 @@ namespace OpenRCT2::Ui::Windows
             ViewportSetVisibility(ViewportVisibility::Default);
 
             MapInvalidateMapSelectionTiles();
-            gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE_CONSTRUCT;
-            gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE_ARROW;
+            gMapSelectFlags.unset(MapSelectFlag::enableConstruct);
+            gMapSelectFlags.unset(MapSelectFlag::enableArrow);
 
             // In order to cancel the yellow arrow correctly the
             // selection tool should be cancelled. Don't do a tool cancel if
@@ -304,6 +306,8 @@ namespace OpenRCT2::Ui::Windows
                 return;
             }
 
+            auto& gameState = getGameState();
+
             if (RideTryGetOriginElement(*currentRide, nullptr))
             {
                 // Auto open shops if required.
@@ -315,7 +319,7 @@ namespace OpenRCT2::Ui::Windows
                     {
                         _autoOpeningShop = true;
                         auto gameAction = GameActions::RideSetStatusAction(currentRide->id, RideStatus::open);
-                        GameActions::Execute(&gameAction);
+                        GameActions::Execute(&gameAction, gameState);
                         _autoOpeningShop = false;
                     }
                 }
@@ -329,7 +333,7 @@ namespace OpenRCT2::Ui::Windows
             {
                 auto gameAction = GameActions::RideDemolishAction(currentRide->id, GameActions::RideModifyType::demolish);
                 gameAction.SetFlags(GAME_COMMAND_FLAG_ALLOW_DURING_PAUSED);
-                GameActions::Execute(&gameAction);
+                GameActions::Execute(&gameAction, gameState);
             }
         }
 
@@ -1102,7 +1106,7 @@ namespace OpenRCT2::Ui::Windows
                         auto status = currentRide->status == RideStatus::simulating ? RideStatus::closed
                                                                                     : RideStatus::simulating;
                         auto gameAction = GameActions::RideSetStatusAction(currentRide->id, status);
-                        GameActions::Execute(&gameAction);
+                        GameActions::Execute(&gameAction, getGameState());
                     }
                     break;
                 }
@@ -1132,12 +1136,12 @@ namespace OpenRCT2::Ui::Windows
                     break;
                 case WIDX_NEXT_SECTION:
                     RideSelectNextSection();
-                    if (!(gMapSelectFlags & MAP_SELECT_FLAG_ENABLE))
+                    if (!(gMapSelectFlags.has(MapSelectFlag::enable)))
                         VirtualFloorSetHeight(_currentTrackBegin.z);
                     break;
                 case WIDX_PREVIOUS_SECTION:
                     RideSelectPreviousSection();
-                    if (!(gMapSelectFlags & MAP_SELECT_FLAG_ENABLE))
+                    if (!(gMapSelectFlags.has(MapSelectFlag::enable)))
                         VirtualFloorSetHeight(_currentTrackBegin.z);
                     break;
                 case WIDX_LEFT_CURVE:
@@ -2238,8 +2242,8 @@ namespace OpenRCT2::Ui::Windows
             CoordsXYZ trackPos{};
 
             MapInvalidateMapSelectionTiles();
-            gMapSelectFlags |= MAP_SELECT_FLAG_ENABLE_CONSTRUCT;
-            gMapSelectFlags |= MAP_SELECT_FLAG_GREEN;
+            gMapSelectFlags.set(MapSelectFlag::enableConstruct);
+            gMapSelectFlags.set(MapSelectFlag::green);
 
             switch (_rideConstructionState)
             {
@@ -2331,8 +2335,8 @@ namespace OpenRCT2::Ui::Windows
             {
                 trackPlaceAction.SetCallback(RideConstructPlacedForwardGameActionCallback);
             }
-            auto res = GameActions::Execute(&trackPlaceAction);
-            // Used by some functions
+
+            auto res = GameActions::Execute(&trackPlaceAction, getGameState());
             if (res.Error != GameActions::Status::Ok)
             {
                 _trackPlaceCost = kMoney64Undefined;
@@ -2348,9 +2352,10 @@ namespace OpenRCT2::Ui::Windows
             {
                 return;
             }
-            OpenRCT2::Audio::Play3D(OpenRCT2::Audio::SoundId::PlaceItem, trackPos);
 
-            if (NetworkGetMode() != NETWORK_MODE_NONE)
+            Audio::Play3D(OpenRCT2::Audio::SoundId::PlaceItem, trackPos);
+
+            if (Network::GetMode() != Network::Mode::none)
             {
                 _currentTrackSelectionFlags.set(TrackSelectionFlag::trackPlaceActionQueued);
             }
@@ -2476,7 +2481,7 @@ namespace OpenRCT2::Ui::Windows
                 }
             });
 
-            GameActions::Execute(&trackRemoveAction);
+            GameActions::Execute(&trackRemoveAction, getGameState());
         }
 
         void Rotate()
@@ -2574,7 +2579,7 @@ namespace OpenRCT2::Ui::Windows
                 trackSetBrakeSpeed.SetCallback([](const GameActions::GameAction* ga, const GameActions::Result* result) {
                     WindowRideConstructionUpdateActiveElements();
                 });
-                GameActions::Execute(&trackSetBrakeSpeed);
+                GameActions::Execute(&trackSetBrakeSpeed, getGameState());
                 return;
             }
             WindowRideConstructionUpdateActiveElements();
@@ -2648,8 +2653,8 @@ namespace OpenRCT2::Ui::Windows
         {
             RideConstructionInvalidateCurrentTrack();
             MapInvalidateSelectionRect();
-            gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE;
-            gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE_ARROW;
+            gMapSelectFlags.unset(MapSelectFlag::enable);
+            gMapSelectFlags.unset(MapSelectFlag::enableArrow);
 
             CoordsXYZD entranceOrExitCoords = RideGetEntranceOrExitPositionFromScreenPosition(screenCoords);
             if (gRideEntranceExitPlaceDirection == kInvalidDirection)
@@ -2690,7 +2695,7 @@ namespace OpenRCT2::Ui::Windows
                         ToolSet(*this, newToolWidgetIndex, Tool::crosshair);
                     }
                 });
-            auto res = GameActions::Execute(&rideEntranceExitPlaceAction);
+            auto res = GameActions::Execute(&rideEntranceExitPlaceAction, getGameState());
         }
 
         void DrawTrackPiece(
@@ -2973,7 +2978,7 @@ namespace OpenRCT2::Ui::Windows
                 _currentTrackSelectionFlags.clearAll();
                 _rideConstructionState = RideConstructionState::Selected;
                 _rideConstructionNextArrowPulse = 0;
-                gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE_ARROW;
+                gMapSelectFlags.unset(MapSelectFlag::enableArrow);
                 RideSelectNextSection();
             }
             else
@@ -3020,7 +3025,7 @@ namespace OpenRCT2::Ui::Windows
                 _currentTrackSelectionFlags.clearAll();
                 _rideConstructionState = RideConstructionState::Selected;
                 _rideConstructionNextArrowPulse = 0;
-                gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE_ARROW;
+                gMapSelectFlags.unset(MapSelectFlag::enableArrow);
                 RideSelectPreviousSection();
             }
             else
@@ -3255,7 +3260,7 @@ namespace OpenRCT2::Ui::Windows
                             rideIndex, type, direction, liftHillAndAlternativeState, trackPos);
                         WindowRideConstructionUpdateActiveElements();
 
-                        if (!(gMapSelectFlags & MAP_SELECT_FLAG_ENABLE))
+                        if (!(gMapSelectFlags.has(MapSelectFlag::enable)))
                         {
                             // Set height to where the next track piece would begin
                             VirtualFloorSetHeight(_currentTrackBegin.z);
@@ -3279,9 +3284,9 @@ namespace OpenRCT2::Ui::Windows
                     direction = DirectionReverse(direction);
                 gMapSelectArrowPosition = trackPos;
                 gMapSelectArrowDirection = direction;
-                gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE_ARROW;
+                gMapSelectFlags.unset(MapSelectFlag::enableArrow);
                 if (_currentTrackSelectionFlags.has(TrackSelectionFlag::arrow))
-                    gMapSelectFlags |= MAP_SELECT_FLAG_ENABLE_ARROW;
+                    gMapSelectFlags.set(MapSelectFlag::enableArrow);
                 MapInvalidateTileFull(trackPos);
                 break;
             }
@@ -3329,9 +3334,9 @@ namespace OpenRCT2::Ui::Windows
                             gMapSelectArrowDirection = 7;
                     }
                 }
-                gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE_ARROW;
+                gMapSelectFlags.unset(MapSelectFlag::enableArrow);
                 if (_currentTrackSelectionFlags.has(TrackSelectionFlag::arrow))
-                    gMapSelectFlags |= MAP_SELECT_FLAG_ENABLE_ARROW;
+                    gMapSelectFlags.set(MapSelectFlag::enableArrow);
                 MapInvalidateTileFull(trackPos);
                 break;
             }
@@ -3349,9 +3354,9 @@ namespace OpenRCT2::Ui::Windows
         int32_t z;
 
         MapInvalidateMapSelectionTiles();
-        gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE;
-        gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE_CONSTRUCT;
-        gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE_ARROW;
+        gMapSelectFlags.unset(MapSelectFlag::enable);
+        gMapSelectFlags.unset(MapSelectFlag::enableConstruct);
+        gMapSelectFlags.unset(MapSelectFlag::enableArrow);
         auto mapCoords = RideGetPlacePositionFromScreenPosition(screenCoords);
         if (!mapCoords)
         {
@@ -3364,9 +3369,9 @@ namespace OpenRCT2::Ui::Windows
         if (z == 0)
             z = MapGetHighestZ(*mapCoords);
 
-        gMapSelectFlags |= MAP_SELECT_FLAG_ENABLE_CONSTRUCT;
-        gMapSelectFlags |= MAP_SELECT_FLAG_ENABLE_ARROW;
-        gMapSelectFlags &= ~MAP_SELECT_FLAG_GREEN;
+        gMapSelectFlags.set(MapSelectFlag::enableConstruct);
+        gMapSelectFlags.set(MapSelectFlag::enableArrow);
+        gMapSelectFlags.unset(MapSelectFlag::green);
         gMapSelectArrowPosition = CoordsXYZ{ *mapCoords, z };
         gMapSelectArrowDirection = _currentTrackPieceDirection;
         gMapSelectionTiles.clear();
@@ -3409,7 +3414,7 @@ namespace OpenRCT2::Ui::Windows
         if (_trackPlaceZ == 0)
         {
             // Raise z above all slopes and water
-            if (gMapSelectFlags & MAP_SELECT_FLAG_ENABLE_CONSTRUCT)
+            if (gMapSelectFlags.has(MapSelectFlag::enableConstruct))
             {
                 int32_t highestZ = 0;
                 for (const auto& selectedTile : gMapSelectionTiles)
@@ -3569,18 +3574,18 @@ namespace OpenRCT2::Ui::Windows
     {
         MapInvalidateSelectionRect();
         MapInvalidateMapSelectionTiles();
-        gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE;
-        gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE_CONSTRUCT;
-        gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE_ARROW;
+        gMapSelectFlags.unset(MapSelectFlag::enable);
+        gMapSelectFlags.unset(MapSelectFlag::enableConstruct);
+        gMapSelectFlags.unset(MapSelectFlag::enableArrow);
         CoordsXYZD entranceOrExitCoords = RideGetEntranceOrExitPositionFromScreenPosition(screenCoords);
         if (gRideEntranceExitPlaceDirection == kInvalidDirection)
         {
             RideConstructionInvalidateCurrentTrack();
             return;
         }
-        gMapSelectFlags |= MAP_SELECT_FLAG_ENABLE;
-        gMapSelectFlags |= MAP_SELECT_FLAG_ENABLE_ARROW;
-        gMapSelectType = MAP_SELECT_TYPE_FULL;
+        gMapSelectFlags.set(MapSelectFlag::enable);
+        gMapSelectFlags.set(MapSelectFlag::enableArrow);
+        gMapSelectType = MapSelectType::full;
         gMapSelectPositionA = entranceOrExitCoords;
         gMapSelectPositionB = entranceOrExitCoords;
         gMapSelectArrowPosition = entranceOrExitCoords;
@@ -3628,7 +3633,7 @@ namespace OpenRCT2::Ui::Windows
 
         // Raise z above all slopes and water
         highestZ = 0;
-        if (gMapSelectFlags & MAP_SELECT_FLAG_ENABLE_CONSTRUCT)
+        if (gMapSelectFlags.has(MapSelectFlag::enableConstruct))
         {
             for (const auto& selectedTile : gMapSelectionTiles)
             {
@@ -3641,9 +3646,9 @@ namespace OpenRCT2::Ui::Windows
             }
         }
 
-        gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE;
-        gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE_CONSTRUCT;
-        gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE_ARROW;
+        gMapSelectFlags.unset(MapSelectFlag::enable);
+        gMapSelectFlags.unset(MapSelectFlag::enableConstruct);
+        gMapSelectFlags.unset(MapSelectFlag::enableArrow);
         auto ridePlacePosition = RideGetPlacePositionFromScreenPosition(screenCoords);
         if (!ridePlacePosition)
             return;
@@ -3707,7 +3712,7 @@ namespace OpenRCT2::Ui::Windows
 
                 auto gameAction = GameActions::MazeSetTrackAction(
                     CoordsXYZD{ _currentTrackBegin, 0 }, true, _currentRideIndex, GC_SET_MAZE_TRACK_BUILD);
-                auto mazeSetTrackResult = GameActions::Execute(&gameAction);
+                auto mazeSetTrackResult = GameActions::Execute(&gameAction, getGameState());
                 if (mazeSetTrackResult.Error == GameActions::Status::Ok)
                 {
                     _trackPlaceCost = mazeSetTrackResult.Cost;
@@ -4721,7 +4726,7 @@ namespace OpenRCT2::Ui::Windows
                     type = TrackElemType::BeginStation;
                 }
             }
-            if (NetworkGetMode() == NETWORK_MODE_CLIENT)
+            if (Network::GetMode() == Network::Mode::client)
             {
                 // rideConstructionState needs to be set again to the proper value, this only affects the client
                 _rideConstructionState = RideConstructionState::Selected;
@@ -4768,7 +4773,7 @@ namespace OpenRCT2::Ui::Windows
             auto gameAction = GameActions::MazeSetTrackAction(
                 CoordsXYZD{ trackPos, 0 }, true, rideIndex, GC_SET_MAZE_TRACK_BUILD);
             gameAction.SetFlags(flags);
-            auto result = GameActions::Execute(&gameAction);
+            auto result = GameActions::Execute(&gameAction, getGameState());
 
             if (result.Error != GameActions::Status::Ok)
                 return kMoney64Undefined;
@@ -4787,7 +4792,7 @@ namespace OpenRCT2::Ui::Windows
             liftHillAndAlternativeState, false);
         trackPlaceAction.SetFlags(GAME_COMMAND_FLAG_ALLOW_DURING_PAUSED | GAME_COMMAND_FLAG_NO_SPEND | GAME_COMMAND_FLAG_GHOST);
         // This command must not be sent over the network
-        auto res = GameActions::Execute(&trackPlaceAction);
+        auto res = GameActions::Execute(&trackPlaceAction, getGameState());
         if (res.Error != GameActions::Status::Ok)
             return kMoney64Undefined;
 
@@ -4814,7 +4819,7 @@ namespace OpenRCT2::Ui::Windows
         if (_currentTrackPitchEnd != TrackPitch::None)
             ViewportSetVisibility(ViewportVisibility::TrackHeights);
 
-        if (!(gMapSelectFlags & MAP_SELECT_FLAG_ENABLE))
+        if (!(gMapSelectFlags.has(MapSelectFlag::enable)))
         {
             // Set height to where the next track piece would begin
             VirtualFloorSetHeight(trackPos.z - zBegin + zEnd);
@@ -5156,7 +5161,7 @@ namespace OpenRCT2::Ui::Windows
             {
                 auto gameAction = GameActions::MazeSetTrackAction(quadrant, false, rideIndex, GC_SET_MAZE_TRACK_FILL);
                 gameAction.SetFlags(flags);
-                auto res = GameActions::Execute(&gameAction);
+                auto res = GameActions::Execute(&gameAction, getGameState());
             }
         }
         else
@@ -5177,7 +5182,7 @@ namespace OpenRCT2::Ui::Windows
                 };
                 trackRemoveAction.SetFlags(
                     GAME_COMMAND_FLAG_ALLOW_DURING_PAUSED | GAME_COMMAND_FLAG_NO_SPEND | GAME_COMMAND_FLAG_GHOST);
-                GameActions::Execute(&trackRemoveAction);
+                GameActions::Execute(&trackRemoveAction, getGameState());
             }
         }
     }

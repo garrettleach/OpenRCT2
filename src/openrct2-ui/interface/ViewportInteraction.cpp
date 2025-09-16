@@ -49,6 +49,7 @@
 #include <openrct2/windows/Intent.h>
 #include <openrct2/world/Banner.h>
 #include <openrct2/world/Footpath.h>
+#include <openrct2/world/Map.h>
 #include <openrct2/world/Park.h>
 #include <openrct2/world/Scenery.h>
 #include <openrct2/world/tile_element/BannerElement.h>
@@ -195,6 +196,7 @@ namespace OpenRCT2::Ui
     bool ViewportInteractionLeftClick(const ScreenCoordsXY& screenCoords)
     {
         auto info = ViewportInteractionGetItemLeft(screenCoords);
+        auto& gameState = getGameState();
 
         switch (info.interactionType)
         {
@@ -223,7 +225,7 @@ namespace OpenRCT2::Ui
                         if (GameIsNotPaused())
                         {
                             auto balloonPress = GameActions::BalloonPressAction(entity->Id);
-                            GameActions::Execute(&balloonPress);
+                            GameActions::Execute(&balloonPress, gameState);
                         }
                     }
                     break;
@@ -626,7 +628,7 @@ namespace OpenRCT2::Ui
             { mapCoords.x, mapCoords.y, smallSceneryElement.GetBaseZ() }, smallSceneryElement.GetSceneryQuadrant(),
             smallSceneryElement.GetEntryIndex());
 
-        GameActions::Execute(&removeSceneryAction);
+        GameActions::Execute(&removeSceneryAction, getGameState());
     }
 
     /**
@@ -650,7 +652,7 @@ namespace OpenRCT2::Ui
             if (tileElement2->GetType() == TileElementType::Path && tileElement2->GetBaseZ() == z)
             {
                 auto action = GameActions::FootpathRemoveAction({ mapCoords, z });
-                GameActions::Execute(&action);
+                GameActions::Execute(&action, getGameState());
                 break;
             }
         } while (!(tileElement2++)->IsLastForTile());
@@ -664,7 +666,7 @@ namespace OpenRCT2::Ui
     {
         auto footpathAdditionRemoveAction = GameActions::FootpathAdditionRemoveAction(
             { mapCoords.x, mapCoords.y, pathElement.GetBaseZ() });
-        GameActions::Execute(&footpathAdditionRemoveAction);
+        GameActions::Execute(&footpathAdditionRemoveAction, getGameState());
     }
 
     /**
@@ -685,7 +687,7 @@ namespace OpenRCT2::Ui
         }
         auto parkEntranceRemoveAction = GameActions::ParkEntranceRemoveAction(
             { mapCoords.x, mapCoords.y, entranceElement.GetBaseZ() });
-        GameActions::Execute(&parkEntranceRemoveAction);
+        GameActions::Execute(&parkEntranceRemoveAction, getGameState());
     }
 
     /**
@@ -703,7 +705,7 @@ namespace OpenRCT2::Ui
         {
             CoordsXYZD wallLocation = { mapCoords.x, mapCoords.y, wallElement.GetBaseZ(), wallElement.GetDirection() };
             auto wallRemoveAction = GameActions::WallRemoveAction(wallLocation);
-            GameActions::Execute(&wallRemoveAction);
+            GameActions::Execute(&wallRemoveAction, getGameState());
         }
     }
 
@@ -725,7 +727,7 @@ namespace OpenRCT2::Ui
             auto removeSceneryAction = GameActions::LargeSceneryRemoveAction(
                 { mapCoords.x, mapCoords.y, largeSceneryElement.GetBaseZ(), largeSceneryElement.GetDirection() },
                 largeSceneryElement.GetSequenceIndex());
-            GameActions::Execute(&removeSceneryAction);
+            GameActions::Execute(&removeSceneryAction, getGameState());
         }
     }
 

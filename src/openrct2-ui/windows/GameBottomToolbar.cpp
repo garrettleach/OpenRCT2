@@ -267,13 +267,13 @@ namespace OpenRCT2::Ui::Windows
                         break;
                     }
 
-                    auto peep = TryGetEntity<Peep>(EntityId::FromUnderlying(newsItem->assoc));
+                    auto peep = getGameState().entities.TryGetEntity<Peep>(EntityId::FromUnderlying(newsItem->assoc));
                     if (peep == nullptr)
                         return;
 
                     auto clipCoords = ScreenCoordsXY{ 10, 19 };
                     auto* staff = peep->As<Staff>();
-                    if (staff != nullptr && staff->AssignedStaffType == StaffType::Entertainer)
+                    if (staff != nullptr && staff->isEntertainer())
                     {
                         clipCoords.y += 3;
                     }

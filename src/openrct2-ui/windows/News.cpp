@@ -504,7 +504,7 @@ namespace OpenRCT2::Ui::Windows
                                 break;
                             }
 
-                            auto peep = TryGetEntity<Peep>(EntityId::FromUnderlying(newsItem.assoc));
+                            auto peep = getGameState().entities.TryGetEntity<Peep>(EntityId::FromUnderlying(newsItem.assoc));
                             if (peep == nullptr)
                             {
                                 break;
@@ -515,11 +515,10 @@ namespace OpenRCT2::Ui::Windows
                             // If normal peep set sprite to normal (no food)
                             // If staff set sprite to staff sprite
                             auto spriteType = PeepAnimationGroup::Normal;
-                            auto* staff = peep->As<Staff>();
-                            if (staff != nullptr)
+                            if (auto* staff = peep->As<Staff>(); staff != nullptr)
                             {
                                 spriteType = staff->AnimationGroup;
-                                if (staff->AssignedStaffType == StaffType::Entertainer)
+                                if (staff->isEntertainer())
                                 {
                                     clipCoords.y += 3;
                                 }

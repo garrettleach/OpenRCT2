@@ -23,6 +23,8 @@
 #include "../ride/RideAudio.h"
 #include "../ui/UiContext.h"
 #include "../ui/WindowManager.h"
+#include "../world/Map.h"
+#include "../world/MapSelection.h"
 #include "Viewport.h"
 #include "Widget.h"
 #include "WindowBase.h"
@@ -673,7 +675,7 @@ static constexpr float kWindowScrollLocations[][2] = {
         }
 
         gInputFlags.set(InputFlag::toolActive);
-        gInputFlags.unset(InputFlag::unk4);
+        gInputFlags.unset(InputFlag::leftMousePressed);
         gInputFlags.unset(InputFlag::unk6);
         gCurrentToolId = tool;
         gCurrentToolWidget.window_classification = w.classification;
@@ -696,7 +698,7 @@ static constexpr float kWindowScrollLocations[][2] = {
             MapInvalidateMapSelectionTiles();
 
             // Reset map selection
-            gMapSelectFlags = 0;
+            gMapSelectFlags.clearAll();
 
             if (gCurrentToolWidget.widget_index != kWidgetIndexNull)
             {

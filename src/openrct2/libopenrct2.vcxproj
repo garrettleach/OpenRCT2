@@ -425,6 +425,7 @@
     <ClInclude Include="rct2\RCT2.h" />
     <ClInclude Include="rct2\T6Exporter.h" />
     <ClInclude Include="ReplayManager.h" />
+    <ClInclude Include="ride\Angles.h" />
     <ClInclude Include="ride\CableLift.h" />
     <ClInclude Include="ride\CarEntry.h" />
     <ClInclude Include="ride\MazeCost.h" />
@@ -632,6 +633,8 @@
     <ClInclude Include="world\Location.hpp" />
     <ClInclude Include="world\Map.h" />
     <ClInclude Include="world\MapAnimation.h" />
+    <ClInclude Include="world\MapLimits.h" />
+    <ClInclude Include="world\MapSelection.h" />
     <ClInclude Include="world\Park.h" />
     <ClInclude Include="world\ParkData.h" />
     <ClInclude Include="world\QuarterTile.h" />
@@ -1148,6 +1151,7 @@
     <ClCompile Include="world\Footpath.cpp" />
     <ClCompile Include="world\Map.cpp" />
     <ClCompile Include="world\MapAnimation.cpp" />
+    <ClCompile Include="world\MapSelection.cpp" />
     <ClCompile Include="world\Park.cpp" />
     <ClCompile Include="world\QuarterTile.cpp" />
     <ClCompile Include="world\Scenery.cpp" />
@@ -1163,6 +1167,7 @@
     <ClCompile Include="world\tile_element\EntranceElement.cpp" />
     <ClCompile Include="world\tile_element\LargeSceneryElement.cpp" />
     <ClCompile Include="world\tile_element\PathElement.cpp" />
+    <ClCompile Include="world\tile_element\Slope.cpp" />
     <ClCompile Include="world\tile_element\SmallSceneryElement.cpp" />
     <ClCompile Include="world\tile_element\SurfaceElement.cpp" />
     <ClCompile Include="world\tile_element\TileElement.cpp" />

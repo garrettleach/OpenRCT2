@@ -24,6 +24,8 @@
 #include <openrct2/drawing/Drawing.h>
 #include <openrct2/localisation/Formatter.h>
 #include <openrct2/ui/WindowManager.h>
+#include <openrct2/world/Map.h>
+#include <openrct2/world/MapSelection.h>
 #include <openrct2/world/Park.h>
 #include <openrct2/world/tile_element/SurfaceElement.h>
 
@@ -458,7 +460,7 @@ namespace OpenRCT2::Ui::Windows
         void OnToolUpdate(WidgetIndex widgetIndex, const ScreenCoordsXY& screenCoords) override
         {
             MapInvalidateSelectionRect();
-            gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE;
+            gMapSelectFlags.unset(MapSelectFlag::enable);
 
             auto info = GetMapCoordinatesFromPos(
                 screenCoords, EnumsToFlags(ViewportInteractionItem::Terrain, ViewportInteractionItem::Water));
@@ -477,15 +479,15 @@ namespace OpenRCT2::Ui::Windows
 
             uint8_t state_changed = 0;
 
-            if (!(gMapSelectFlags & MAP_SELECT_FLAG_ENABLE))
+            if (!(gMapSelectFlags.has(MapSelectFlag::enable)))
             {
-                gMapSelectFlags |= MAP_SELECT_FLAG_ENABLE;
+                gMapSelectFlags.set(MapSelectFlag::enable);
                 state_changed++;
             }
 
-            if (gMapSelectType != MAP_SELECT_TYPE_FULL_LAND_RIGHTS)
+            if (gMapSelectType != MapSelectType::fullLandRights)
             {
-                gMapSelectType = MAP_SELECT_TYPE_FULL_LAND_RIGHTS;
+                gMapSelectType = MapSelectType::fullLandRights;
                 state_changed++;
             }
 
@@ -531,16 +533,17 @@ namespace OpenRCT2::Ui::Windows
             if (!state_changed)
                 return;
 
+            auto& gameState = getGameState();
             if (IsOwnershipMode())
             {
                 auto landSetRightsAction = GetLandSetAction();
-                auto res = GameActions::Query(&landSetRightsAction);
+                auto res = GameActions::Query(&landSetRightsAction, gameState);
                 _landRightsCost = res.Error == GameActions::Status::Ok ? res.Cost : kMoney64Undefined;
             }
             else
             {
                 auto landBuyRightsAction = GetLandBuyAction();
-                auto res = GameActions::Query(&landBuyRightsAction);
+                auto res = GameActions::Query(&landBuyRightsAction, gameState);
                 _landRightsCost = res.Error == GameActions::Status::Ok ? res.Cost : kMoney64Undefined;
             }
         }
@@ -559,15 +562,16 @@ namespace OpenRCT2::Ui::Windows
             if (screenCoords.x == kLocationNull)
                 return;
 
+            auto& gameState = getGameState();
             if (IsOwnershipMode())
             {
                 auto landSetRightsAction = GetLandSetAction();
-                GameActions::Execute(&landSetRightsAction);
+                GameActions::Execute(&landSetRightsAction, gameState);
             }
             else
             {
                 auto landBuyRightsAction = GetLandBuyAction();
-                GameActions::Execute(&landBuyRightsAction);
+                GameActions::Execute(&landBuyRightsAction, gameState);
             }
         }
 

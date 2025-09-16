@@ -279,7 +279,7 @@ namespace OpenRCT2::Ui::Windows
                     OpenAllRides();
                     break;
                 case WIDX_QUICK_DEMOLISH:
-                    if (NetworkGetMode() != NETWORK_MODE_CLIENT)
+                    if (Network::GetMode() != Network::Mode::client)
                     {
                         _quickDemolishMode = !_quickDemolishMode;
                     }
@@ -315,7 +315,6 @@ namespace OpenRCT2::Ui::Windows
                     lastType = INFORMATION_TYPE_RUNNING_COST;
 
                 int32_t numItems = 0;
-                int32_t selectedIndex = -1;
                 for (int32_t type = INFORMATION_TYPE_STATUS; type <= lastType; type++)
                 {
                     if ((getGameState().park.flags & PARK_FLAGS_NO_MONEY))
@@ -326,12 +325,12 @@ namespace OpenRCT2::Ui::Windows
                         }
                     }
 
+                    gDropdown.items[numItems] = Dropdown::MenuLabel(ride_info_type_string_mapping[type]);
+                    gDropdown.items[numItems].value = type;
                     if (type == _windowRideListInformationType)
                     {
-                        selectedIndex = numItems;
+                        gDropdown.items[numItems].setChecked(true);
                     }
-
-                    gDropdown.items[numItems] = Dropdown::MenuLabel(ride_info_type_string_mapping[type]);
                     numItems++;
                 }
 
@@ -342,11 +341,6 @@ namespace OpenRCT2::Ui::Windows
                 WindowDropdownShowTextCustomWidth(
                     { windowPos.x + headerWidget.left, windowPos.y + headerWidget.top }, headerWidget.height(), colours[1], 0,
                     Dropdown::Flag::StayOpen, numItems, totalWidth);
-
-                if (selectedIndex != -1)
-                {
-                    gDropdown.items[selectedIndex].setChecked(true);
-                }
             }
         }
 
@@ -375,14 +369,9 @@ namespace OpenRCT2::Ui::Windows
                     return;
 
                 int32_t informationType = INFORMATION_TYPE_STATUS;
-                uint32_t arg = static_cast<uint32_t>(gDropdown.items[dropdownIndex].args.generic);
-                for (size_t i = 0; i < std::size(ride_info_type_string_mapping); i++)
-                {
-                    if (arg == ride_info_type_string_mapping[i])
-                    {
-                        informationType = static_cast<int32_t>(i);
-                    }
-                }
+                auto selectedValue = gDropdown.items[dropdownIndex].value;
+                if (selectedValue < std::size(ride_info_type_string_mapping))
+                    informationType = selectedValue;
 
                 _windowRideListInformationType = InformationType(informationType);
                 Invalidate();
@@ -470,10 +459,10 @@ namespace OpenRCT2::Ui::Windows
 
             // Open ride window
             const auto selectedRideId = _rideList[index].Id;
-            if (_quickDemolishMode && NetworkGetMode() != NETWORK_MODE_CLIENT)
+            if (_quickDemolishMode && Network::GetMode() != Network::Mode::client)
             {
                 auto gameAction = GameActions::RideDemolishAction(selectedRideId, GameActions::RideModifyType::demolish);
-                GameActions::Execute(&gameAction);
+                GameActions::Execute(&gameAction, getGameState());
                 RefreshList();
             }
             else
@@ -552,7 +541,8 @@ namespace OpenRCT2::Ui::Windows
                 widgets[WIDX_CLOSE_LIGHT].type = WidgetType::imgBtn;
                 widgets[WIDX_OPEN_LIGHT].type = WidgetType::imgBtn;
 
-                const auto& rideManager = GetRideManager();
+                const auto& gameState = getGameState();
+                const auto& rideManager = RideManager(gameState);
                 auto allClosed = true;
                 auto allOpen = false;
                 if (_rideList.size() > 0 && std::size(rideManager) != 0)
@@ -582,8 +572,8 @@ namespace OpenRCT2::Ui::Windows
                 widgets[WIDX_QUICK_DEMOLISH].top = widgets[WIDX_OPEN_CLOSE_ALL].bottom + 3;
             }
             widgets[WIDX_QUICK_DEMOLISH].bottom = widgets[WIDX_QUICK_DEMOLISH].top + 23;
-            widgets[WIDX_QUICK_DEMOLISH].type = NetworkGetMode() != NETWORK_MODE_CLIENT ? WidgetType::flatBtn
-                                                                                        : WidgetType::empty;
+            widgets[WIDX_QUICK_DEMOLISH].type = Network::GetMode() != Network::Mode::client ? WidgetType::flatBtn
+                                                                                            : WidgetType::empty;
         }
 
         /**
@@ -961,7 +951,8 @@ namespace OpenRCT2::Ui::Windows
         void RefreshList()
         {
             _rideList.clear();
-            for (auto& rideRef : GetRideManager())
+            const auto& gameState = getGameState();
+            for (auto& rideRef : RideManager(gameState))
             {
                 if (rideRef.getClassification() != static_cast<RideClassification>(page)
                     || (rideRef.status == RideStatus::closed && !RideHasAnyTrackElements(rideRef)))
@@ -1104,13 +1095,14 @@ namespace OpenRCT2::Ui::Windows
         // window_ride_list_close_all
         void CloseAllRides()
         {
-            for (auto& rideRef : GetRideManager())
+            const auto& gameState = getGameState();
+            for (auto& rideRef : RideManager(gameState))
             {
                 if (rideRef.status != RideStatus::closed
                     && rideRef.getClassification() == static_cast<RideClassification>(page))
                 {
                     auto gameAction = GameActions::RideSetStatusAction(rideRef.id, RideStatus::closed);
-                    GameActions::Execute(&gameAction);
+                    GameActions::Execute(&gameAction, getGameState());
                 }
             }
         }
@@ -1118,12 +1110,13 @@ namespace OpenRCT2::Ui::Windows
         // window_ride_list_open_all
         void OpenAllRides()
         {
-            for (auto& rideRef : GetRideManager())
+            const auto& gameState = getGameState();
+            for (auto& rideRef : RideManager(gameState))
             {
                 if (rideRef.status != RideStatus::open && rideRef.getClassification() == static_cast<RideClassification>(page))
                 {
                     auto gameAction = GameActions::RideSetStatusAction(rideRef.id, RideStatus::open);
-                    GameActions::Execute(&gameAction);
+                    GameActions::Execute(&gameAction, getGameState());
                 }
             }
         }

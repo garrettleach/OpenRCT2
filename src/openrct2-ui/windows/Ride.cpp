@@ -67,6 +67,7 @@
 #include <openrct2/ui/WindowManager.h>
 #include <openrct2/util/Util.h>
 #include <openrct2/windows/Intent.h>
+#include <openrct2/world/Map.h>
 #include <openrct2/world/Park.h>
 #include <openrct2/world/tile_element/EntranceElement.h>
 #include <openrct2/world/tile_element/TrackElement.h>
@@ -1517,7 +1518,7 @@ namespace OpenRCT2::Ui::Windows
                 const auto* rideEntry = ride->getRideEntry();
                 if (rideEntry != nullptr && rideEntry->TabCar != 0)
                 {
-                    Vehicle* vehicle = GetEntity<Vehicle>(vehId);
+                    Vehicle* vehicle = getGameState().entities.GetEntity<Vehicle>(vehId);
                     if (vehicle == nullptr)
                     {
                         vehId = EntityId::GetNull();
@@ -1672,7 +1673,7 @@ namespace OpenRCT2::Ui::Windows
                                 break;
                         }
                         auto gameAction = GameActions::RideSetStatusAction(ride->id, status);
-                        GameActions::Execute(&gameAction);
+                        GameActions::Execute(&gameAction, getGameState());
                     }
                     break;
                 }
@@ -1768,8 +1769,10 @@ namespace OpenRCT2::Ui::Windows
             int32_t name = GetRideComponentName(rtd.NameConvention.vehicle).number;
             for (int32_t i = 0; i < ride->numTrains; i++)
             {
-                gDropdown.items[currentItem].format = STR_DROPDOWN_MENU_LABEL;
-                gDropdown.items[currentItem].args.generic = name | (currentItem << 16);
+                Formatter ft;
+                ft.Add<uint16_t>(i + 1);
+                gDropdown.items[currentItem] = Dropdown::MenuLabel(name, ft);
+
                 if (TrainMustBeHidden(*ride, i))
                 {
                     gDropdown.items[currentItem].setDisabled(true);
@@ -1779,10 +1782,11 @@ namespace OpenRCT2::Ui::Windows
 
             // Stations
             name = GetRideComponentName(rtd.NameConvention.station).number;
-            for (int32_t i = 1; i <= ride->numStations; i++)
+            for (int32_t i = 0; i < ride->numStations; i++)
             {
-                gDropdown.items[currentItem].format = STR_DROPDOWN_MENU_LABEL;
-                gDropdown.items[currentItem].args.generic = name | (i << 16);
+                Formatter ft;
+                ft.Add<uint16_t>(i + 1);
+                gDropdown.items[currentItem] = Dropdown::MenuLabel(name, ft);
                 currentItem++;
             }
 
@@ -1832,6 +1836,7 @@ namespace OpenRCT2::Ui::Windows
             {
                 auto index = info.NumItems;
                 gDropdown.items[index] = Dropdown::MenuLabel(text);
+                gDropdown.items[index].value = EnumValue(status);
                 if (info.CurrentStatus == status)
                 {
                     info.CheckedIndex = index;
@@ -1861,7 +1866,10 @@ namespace OpenRCT2::Ui::Windows
             SetDropdown(info, RideStatus::open, STR_OPEN_RIDE);
             WindowDropdownShowText(
                 { windowPos.x + widget->left, windowPos.y + widget->top }, widget->height() + 1, colours[1], 0, info.NumItems);
-            gDropdown.items[info.CheckedIndex].setChecked(true);
+            if (info.CheckedIndex != -1)
+            {
+                gDropdown.items[info.CheckedIndex].setChecked(true);
+            }
             gDropdown.defaultIndex = info.DefaultIndex;
         }
 
@@ -1977,7 +1985,7 @@ namespace OpenRCT2::Ui::Windows
                     {
                         if (_viewIndex <= ride->numTrains)
                         {
-                            Vehicle* vehicle = GetEntity<Vehicle>(ride->vehicles[_viewIndex - 1]);
+                            Vehicle* vehicle = getGameState().entities.GetEntity<Vehicle>(ride->vehicles[_viewIndex - 1]);
                             if (vehicle != nullptr)
                             {
                                 auto headVehicleSpriteIndex = vehicle->Id;
@@ -2132,7 +2140,7 @@ namespace OpenRCT2::Ui::Windows
             {
                 gDropdown.items[i] = Dropdown::MenuLabel(_entranceDropdownData[i].LabelId);
                 if (_entranceDropdownData[i].EntranceTypeId == ride->entranceStyle)
-                    gDropdown.items[i].format = STR_DROPDOWN_MENU_LABEL_SELECTED;
+                    gDropdown.items[i].setChecked(true);
             }
 
             WindowDropdownShowTextCustomWidth(
@@ -2162,6 +2170,7 @@ namespace OpenRCT2::Ui::Windows
 
         void MainOnDropdown(WidgetIndex widgetIndex, int32_t dropdownIndex)
         {
+            auto& gameState = getGameState();
             switch (widgetIndex)
             {
                 case WIDX_VIEW_DROPDOWN:
@@ -2199,24 +2208,10 @@ namespace OpenRCT2::Ui::Windows
                         }
                         if (dropdownIndex < static_cast<int32_t>(std::size(gDropdown.items)))
                         {
-                            switch (gDropdown.items[dropdownIndex].args.generic)
-                            {
-                                case STR_CLOSE_RIDE:
-                                    status = RideStatus::closed;
-                                    break;
-                                case STR_SIMULATE_RIDE:
-                                    status = RideStatus::simulating;
-                                    break;
-                                case STR_TEST_RIDE:
-                                    status = RideStatus::testing;
-                                    break;
-                                case STR_OPEN_RIDE:
-                                    status = RideStatus::open;
-                                    break;
-                            }
+                            status = static_cast<RideStatus>(gDropdown.items[dropdownIndex].value);
                         }
                         auto gameAction = GameActions::RideSetStatusAction(ride->id, status);
-                        GameActions::Execute(&gameAction);
+                        GameActions::Execute(&gameAction, gameState);
                     }
                     break;
                 }
@@ -2237,7 +2232,7 @@ namespace OpenRCT2::Ui::Windows
                                     _currentTrackAlternative.clearAll();
                                     RideConstructionSetDefaultNextPiece();
                                 });
-                            GameActions::Execute(&rideSetSetting);
+                            GameActions::Execute(&rideSetSetting, gameState);
                         }
                     }
                     break;
@@ -2274,7 +2269,7 @@ namespace OpenRCT2::Ui::Windows
 
                     if (_viewIndex <= ride->numTrains)
                     {
-                        Vehicle* vehicle = GetEntity<Vehicle>(ride->vehicles[_viewIndex - 1]);
+                        Vehicle* vehicle = getGameState().entities.GetEntity<Vehicle>(ride->vehicles[_viewIndex - 1]);
                         if (vehicle == nullptr
                             || (vehicle->status != Vehicle::Status::Travelling
                                 && vehicle->status != Vehicle::Status::TravellingCableLift
@@ -2300,7 +2295,7 @@ namespace OpenRCT2::Ui::Windows
             {
                 auto strText = std::string(text);
                 auto gameAction = GameActions::RideSetNameAction(ride->id, strText);
-                GameActions::Execute(&gameAction);
+                GameActions::Execute(&gameAction, getGameState());
             }
         }
 
@@ -2468,7 +2463,7 @@ namespace OpenRCT2::Ui::Windows
             if (ride == nullptr)
                 return kStringIdEmpty;
 
-            auto vehicle = GetEntity<Vehicle>(ride->vehicles[_viewIndex - 1]);
+            auto vehicle = getGameState().entities.GetEntity<Vehicle>(ride->vehicles[_viewIndex - 1]);
             if (vehicle == nullptr)
                 return kStringIdEmpty;
 
@@ -3898,8 +3893,9 @@ namespace OpenRCT2::Ui::Windows
                                     break;
                                 for (int32_t i = 0; i < ride->numTrains; ++i)
                                 {
-                                    for (vehicle = GetEntity<Vehicle>(ride->vehicles[i]); vehicle != nullptr;
-                                         vehicle = GetEntity<Vehicle>(vehicle->next_vehicle_on_train))
+                                    for (vehicle = getGameState().entities.GetEntity<Vehicle>(ride->vehicles[i]);
+                                         vehicle != nullptr;
+                                         vehicle = getGameState().entities.GetEntity<Vehicle>(vehicle->next_vehicle_on_train))
                                     {
                                         vehicle->ClearFlag(
                                             VehicleFlags::CarIsBroken | VehicleFlags::StoppedOnLift
@@ -3911,14 +3907,14 @@ namespace OpenRCT2::Ui::Windows
                             case BREAKDOWN_RESTRAINTS_STUCK_OPEN:
                             case BREAKDOWN_DOORS_STUCK_CLOSED:
                             case BREAKDOWN_DOORS_STUCK_OPEN:
-                                vehicle = GetEntity<Vehicle>(ride->vehicles[ride->brokenTrain]);
+                                vehicle = getGameState().entities.GetEntity<Vehicle>(ride->vehicles[ride->brokenTrain]);
                                 if (vehicle != nullptr)
                                 {
                                     vehicle->ClearFlag(VehicleFlags::CarIsBroken);
                                 }
                                 break;
                             case BREAKDOWN_VEHICLE_MALFUNCTION:
-                                vehicle = GetEntity<Vehicle>(ride->vehicles[ride->brokenTrain]);
+                                vehicle = getGameState().entities.GetEntity<Vehicle>(ride->vehicles[ride->brokenTrain]);
                                 if (vehicle != nullptr)
                                 {
                                     vehicle->ClearFlag(VehicleFlags::TrainIsBroken);
@@ -4001,7 +3997,7 @@ namespace OpenRCT2::Ui::Windows
 
             WindowAlignTabs(this, WIDX_TAB_1, WIDX_TAB_10);
 
-            if (Config::Get().general.DebuggingTools && NetworkGetMode() == NETWORK_MODE_NONE)
+            if (Config::Get().general.DebuggingTools && Network::GetMode() == Network::Mode::none)
             {
                 widgets[WIDX_FORCE_BREAKDOWN].type = WidgetType::flatBtn;
             }
@@ -4126,7 +4122,7 @@ namespace OpenRCT2::Ui::Windows
                     }
                     else
                     {
-                        auto staff = GetEntity<Staff>(ride->mechanic);
+                        auto staff = getGameState().entities.GetEntity<Staff>(ride->mechanic);
                         if (staff != nullptr && staff->IsMechanic())
                         {
                             ft = Formatter();
@@ -4189,7 +4185,7 @@ namespace OpenRCT2::Ui::Windows
             auto gameAction = GameActions::RideSetColourSchemeAction(
                 CoordsXYZD{ info.Loc, z, static_cast<Direction>(direction) }, info.Element->AsTrack()->GetTrackType(),
                 newColourScheme);
-            GameActions::Execute(&gameAction);
+            GameActions::Execute(&gameAction, getGameState());
         }
 
         void ColourClose()
@@ -4200,6 +4196,7 @@ namespace OpenRCT2::Ui::Windows
 
         void ColourOnMouseUp(WidgetIndex widgetIndex)
         {
+            auto& gameState = getGameState();
             switch (widgetIndex)
             {
                 case WIDX_CLOSE:
@@ -4228,7 +4225,7 @@ namespace OpenRCT2::Ui::Windows
                         const bool currentlyEnabled = ride->hasLifecycleFlag(RIDE_LIFECYCLE_RANDOM_SHOP_COLOURS);
                         auto rideSetAppearanceAction = GameActions::RideSetAppearanceAction(
                             rideId, GameActions::RideSetAppearanceType::SellingItemColourIsRandom, currentlyEnabled ? 0 : 1, 0);
-                        GameActions::Execute(&rideSetAppearanceAction);
+                        GameActions::Execute(&rideSetAppearanceAction, gameState);
                     }
                     break;
                 }
@@ -4270,7 +4267,7 @@ namespace OpenRCT2::Ui::Windows
                             colour_t colour = UtilRand() % kColourNumNormal;
                             auto vehicleSetBodyColourAction = GameActions::RideSetAppearanceAction(
                                 rideId, GameActions::RideSetAppearanceType::VehicleColourBody, colour, i);
-                            GameActions::Execute(&vehicleSetBodyColourAction);
+                            GameActions::Execute(&vehicleSetBodyColourAction, gameState);
                         }
 
                         if (allowChangingTrimColour)
@@ -4278,7 +4275,7 @@ namespace OpenRCT2::Ui::Windows
                             colour_t colour = UtilRand() % kColourNumNormal;
                             auto vehicleSetTrimColourAction = GameActions::RideSetAppearanceAction(
                                 rideId, GameActions::RideSetAppearanceType::VehicleColourTrim, colour, i);
-                            GameActions::Execute(&vehicleSetTrimColourAction);
+                            GameActions::Execute(&vehicleSetTrimColourAction, gameState);
                         }
 
                         if (allowChangingTertiaryColour)
@@ -4286,7 +4283,7 @@ namespace OpenRCT2::Ui::Windows
                             colour_t colour = UtilRand() % kColourNumNormal;
                             auto vehicleSetTertiaryColourAction = GameActions::RideSetAppearanceAction(
                                 rideId, GameActions::RideSetAppearanceType::VehicleColourTertiary, colour, i);
-                            GameActions::Execute(&vehicleSetTertiaryColourAction);
+                            GameActions::Execute(&vehicleSetTertiaryColourAction, gameState);
                         }
                     }
                     break;
@@ -4369,8 +4366,9 @@ namespace OpenRCT2::Ui::Windows
 
                     auto numDropdownItems = 2;
                     gDropdown.items[0] = Dropdown::MenuLabel(STR_ALL_VEHICLES_IN_SAME_COLOURS);
-                    gDropdown.items[1].format = STR_DROPDOWN_MENU_LABEL;
-                    gDropdown.items[1].args.generic = (vehicleTypeName << 16) | STR_DIFFERENT_COLOURS_PER;
+                    Formatter ft;
+                    ft.Add<StringId>(vehicleTypeName);
+                    gDropdown.items[1] = Dropdown::MenuLabel(STR_DIFFERENT_COLOURS_PER, ft);
 
                     if (getNumVisibleCars() > 1)
                     {
@@ -4407,11 +4405,13 @@ namespace OpenRCT2::Ui::Windows
                             }
                         }
 
-                        int64_t vehicleIndex = dropdownIndex + 1;
-                        gDropdown.items[dropdownIndex].format = STR_DROPDOWN_MENU_LABEL;
-                        gDropdown.items[dropdownIndex].args.generic = (vehicleIndex << 32)
-                            | ((GetRideComponentName(ride->getRideTypeDescriptor().NameConvention.vehicle).capitalised) << 16)
-                            | stringId;
+                        uint16_t vehicleIndex = dropdownIndex + 1;
+                        Formatter ft;
+                        ft.Add<StringId>(
+                            GetRideComponentName(ride->getRideTypeDescriptor().NameConvention.vehicle).capitalised);
+                        ft.Add<uint16_t>(vehicleIndex);
+
+                        gDropdown.items[dropdownIndex] = Dropdown::MenuLabel(stringId, ft);
                         dropdownIndex++;
                     }
 
@@ -4443,6 +4443,7 @@ namespace OpenRCT2::Ui::Windows
             if (dropdownIndex == -1)
                 return;
 
+            auto& gameState = getGameState();
             switch (widgetIndex)
             {
                 case WIDX_TRACK_COLOUR_SCHEME_DROPDOWN:
@@ -4454,7 +4455,7 @@ namespace OpenRCT2::Ui::Windows
                     auto rideSetAppearanceAction = GameActions::RideSetAppearanceAction(
                         rideId, GameActions::RideSetAppearanceType::TrackColourMain, ColourDropDownIndexToColour(dropdownIndex),
                         _rideColour);
-                    GameActions::Execute(&rideSetAppearanceAction);
+                    GameActions::Execute(&rideSetAppearanceAction, gameState);
                 }
                 break;
                 case WIDX_TRACK_ADDITIONAL_COLOUR:
@@ -4462,7 +4463,7 @@ namespace OpenRCT2::Ui::Windows
                     auto rideSetAppearanceAction = GameActions::RideSetAppearanceAction(
                         rideId, GameActions::RideSetAppearanceType::TrackColourAdditional,
                         ColourDropDownIndexToColour(dropdownIndex), _rideColour);
-                    GameActions::Execute(&rideSetAppearanceAction);
+                    GameActions::Execute(&rideSetAppearanceAction, gameState);
                 }
                 break;
                 case WIDX_TRACK_SUPPORT_COLOUR:
@@ -4470,14 +4471,14 @@ namespace OpenRCT2::Ui::Windows
                     auto rideSetAppearanceAction = GameActions::RideSetAppearanceAction(
                         rideId, GameActions::RideSetAppearanceType::TrackColourSupports,
                         ColourDropDownIndexToColour(dropdownIndex), _rideColour);
-                    GameActions::Execute(&rideSetAppearanceAction);
+                    GameActions::Execute(&rideSetAppearanceAction, gameState);
                 }
                 break;
                 case WIDX_MAZE_STYLE_DROPDOWN:
                 {
                     auto rideSetAppearanceAction = GameActions::RideSetAppearanceAction(
                         rideId, GameActions::RideSetAppearanceType::MazeStyle, dropdownIndex, _rideColour);
-                    GameActions::Execute(&rideSetAppearanceAction);
+                    GameActions::Execute(&rideSetAppearanceAction, gameState);
                 }
                 break;
                 case WIDX_ENTRANCE_STYLE_DROPDOWN:
@@ -4495,7 +4496,7 @@ namespace OpenRCT2::Ui::Windows
                                 return;
                             getGameState().lastEntranceStyle = objIndex;
                         });
-                    GameActions::Execute(&rideSetAppearanceAction);
+                    GameActions::Execute(&rideSetAppearanceAction, gameState);
                     break;
                 }
                 case WIDX_VEHICLE_COLOUR_SCHEME_DROPDOWN:
@@ -4509,7 +4510,7 @@ namespace OpenRCT2::Ui::Windows
                                 ResetVehicleIndex();
                             }
                         });
-                    GameActions::Execute(&rideSetAppearanceAction);
+                    GameActions::Execute(&rideSetAppearanceAction, gameState);
                     break;
                 }
                 case WIDX_VEHICLE_COLOUR_INDEX_DROPDOWN:
@@ -4521,7 +4522,7 @@ namespace OpenRCT2::Ui::Windows
                     auto rideSetAppearanceAction = GameActions::RideSetAppearanceAction(
                         rideId, GameActions::RideSetAppearanceType::VehicleColourBody,
                         ColourDropDownIndexToColour(dropdownIndex), _vehicleIndex);
-                    GameActions::Execute(&rideSetAppearanceAction);
+                    GameActions::Execute(&rideSetAppearanceAction, gameState);
                 }
                 break;
                 case WIDX_VEHICLE_TRIM_COLOUR:
@@ -4529,7 +4530,7 @@ namespace OpenRCT2::Ui::Windows
                     auto rideSetAppearanceAction = GameActions::RideSetAppearanceAction(
                         rideId, GameActions::RideSetAppearanceType::VehicleColourTrim,
                         ColourDropDownIndexToColour(dropdownIndex), _vehicleIndex);
-                    GameActions::Execute(&rideSetAppearanceAction);
+                    GameActions::Execute(&rideSetAppearanceAction, gameState);
                 }
                 break;
                 case WIDX_VEHICLE_TERTIARY_COLOUR:
@@ -4537,7 +4538,7 @@ namespace OpenRCT2::Ui::Windows
                     auto rideSetAppearanceAction = GameActions::RideSetAppearanceAction(
                         rideId, GameActions::RideSetAppearanceType::VehicleColourTertiary,
                         ColourDropDownIndexToColour(dropdownIndex), _vehicleIndex);
-                    GameActions::Execute(&rideSetAppearanceAction);
+                    GameActions::Execute(&rideSetAppearanceAction, gameState);
                 }
                 break;
             }
@@ -6246,7 +6247,7 @@ namespace OpenRCT2::Ui::Windows
             }
 
             auto parkSetParameter = GameActions::ParkSetParameterAction(GameActions::ParkParameter::SamePriceInPark, newFlags);
-            GameActions::Execute(&parkSetParameter);
+            GameActions::Execute(&parkSetParameter, getGameState());
         }
 
         void IncomeTogglePrimaryPrice()
@@ -6279,7 +6280,7 @@ namespace OpenRCT2::Ui::Windows
             UpdateSamePriceThroughoutFlags(shopItem);
 
             auto rideSetPriceAction = GameActions::RideSetPriceAction(rideId, ride->price[0], true);
-            GameActions::Execute(&rideSetPriceAction);
+            GameActions::Execute(&rideSetPriceAction, getGameState());
         }
 
         void IncomeToggleSecondaryPrice()
@@ -6299,13 +6300,13 @@ namespace OpenRCT2::Ui::Windows
             UpdateSamePriceThroughoutFlags(shop_item);
 
             auto rideSetPriceAction = GameActions::RideSetPriceAction(rideId, ride->price[1], false);
-            GameActions::Execute(&rideSetPriceAction);
+            GameActions::Execute(&rideSetPriceAction, getGameState());
         }
 
         void IncomeSetPrimaryPrice(money64 price)
         {
             auto rideSetPriceAction = GameActions::RideSetPriceAction(rideId, price, true);
-            GameActions::Execute(&rideSetPriceAction);
+            GameActions::Execute(&rideSetPriceAction, getGameState());
         }
 
         void IncomeIncreasePrimaryPrice()
@@ -6352,7 +6353,7 @@ namespace OpenRCT2::Ui::Windows
         void IncomeSetSecondaryPrice(money64 price)
         {
             auto rideSetPriceAction = GameActions::RideSetPriceAction(rideId, price, false);
-            GameActions::Execute(&rideSetPriceAction);
+            GameActions::Execute(&rideSetPriceAction, getGameState());
         }
 
         bool IncomeCanModifyPrimaryPrice()
@@ -7099,7 +7100,7 @@ namespace OpenRCT2::Ui::Windows
                 int32_t numPeepsLeft = vehicle->num_peeps;
                 for (int32_t i = 0; i < 32 && numPeepsLeft > 0; i++)
                 {
-                    Peep* peep = GetEntity<Guest>(vehicle->peep[i]);
+                    Peep* peep = getGameState().entities.GetEntity<Guest>(vehicle->peep[i]);
                     if (peep == nullptr)
                         continue;
 

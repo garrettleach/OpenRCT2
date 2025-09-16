@@ -102,9 +102,9 @@ void ScenarioReset(GameState_t& gameState)
     News::InitQueue(gameState);
 
     auto& park = gameState.park;
-    park.rating = Park::CalculateParkRating();
-    park.value = Park::CalculateParkValue();
-    park.companyValue = Park::CalculateCompanyValue();
+    park.rating = Park::CalculateParkRating(park, gameState);
+    park.value = Park::CalculateParkValue(park, gameState);
+    park.companyValue = Park::CalculateCompanyValue(park);
     park.historicalProfit = gameState.scenarioOptions.initialCash - park.bankLoan;
     park.cash = gameState.scenarioOptions.initialCash;
 
@@ -138,7 +138,7 @@ void ScenarioReset(GameState_t& gameState)
     ResetAllRideBuildDates();
     ResetDate();
     Duck::RemoveAll();
-    Park::UpdateSize(gameState);
+    Park::UpdateSize(park);
     MapCountRemainingLandRights();
     Staff::ResetStats();
 
@@ -530,7 +530,7 @@ static ResultWithMessage ScenarioPrepareRidesForSave(GameState_t& gameState)
     bool isFiveCoasterObjective = gameState.scenarioOptions.objective.Type == ObjectiveType::finishFiveRollercoasters;
     uint8_t rcs = 0;
 
-    for (auto& ride : GetRideManager())
+    for (auto& ride : RideManager(gameState))
     {
         const auto* rideEntry = ride.getRideEntry();
         if (rideEntry != nullptr)
@@ -607,12 +607,12 @@ ResultWithMessage ScenarioPrepareForSave(GameState_t& gameState)
  */
 bool AllowEarlyCompletion()
 {
-    switch (NetworkGetMode())
+    switch (Network::GetMode())
     {
-        case NETWORK_MODE_CLIENT:
+        case Network::Mode::client:
             return gAllowEarlyCompletionInNetworkPlay;
-        case NETWORK_MODE_NONE:
-        case NETWORK_MODE_SERVER:
+        case Network::Mode::none:
+        case Network::Mode::server:
         default:
             return Config::Get().general.AllowEarlyCompletion;
     }

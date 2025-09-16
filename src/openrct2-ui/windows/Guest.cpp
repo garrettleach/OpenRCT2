@@ -41,6 +41,7 @@
 #include <openrct2/util/Util.h>
 #include <openrct2/windows/Intent.h>
 #include <openrct2/world/Footpath.h>
+#include <openrct2/world/MapSelection.h>
 #include <openrct2/world/Park.h>
 
 namespace OpenRCT2::Ui::Windows
@@ -426,7 +427,7 @@ namespace OpenRCT2::Ui::Windows
     private:
         Guest* GetGuest()
         {
-            auto guest = GetEntity<Guest>(EntityId::FromUnderlying(number));
+            auto guest = getGameState().entities.GetEntity<Guest>(EntityId::FromUnderlying(number));
             if (guest == nullptr)
             {
                 Close();
@@ -640,6 +641,7 @@ namespace OpenRCT2::Ui::Windows
                 return;
             }
 
+            auto& gameState = getGameState();
             switch (widgetIndex)
             {
                 case WIDX_PICKUP:
@@ -653,7 +655,7 @@ namespace OpenRCT2::Ui::Windows
                     nullLoc.SetNull();
                     GameActions::PeepPickupAction pickupAction{ GameActions::PeepPickupType::Pickup,
                                                                 EntityId::FromUnderlying(number), nullLoc,
-                                                                NetworkGetCurrentPlayerId() };
+                                                                Network::GetCurrentPlayerId() };
                     pickupAction.SetCallback(
                         [peepnum = number](const GameActions::GameAction* ga, const GameActions::Result* result) {
                             if (result->Error != GameActions::Status::Ok)
@@ -665,7 +667,7 @@ namespace OpenRCT2::Ui::Windows
                                 ToolSet(*wind, WC_PEEP__WIDX_PICKUP, Tool::picker);
                             }
                         });
-                    GameActions::Execute(&pickupAction);
+                    GameActions::Execute(&pickupAction, gameState);
                 }
                 break;
                 case WIDX_RENAME:
@@ -680,7 +682,7 @@ namespace OpenRCT2::Ui::Windows
                     uint32_t guestFlags = peep->PeepFlags ^ PEEP_FLAGS_TRACKING;
 
                     auto guestSetFlagsAction = GameActions::GuestSetFlagsAction(EntityId::FromUnderlying(number), guestFlags);
-                    GameActions::Execute(&guestSetFlagsAction);
+                    GameActions::Execute(&guestSetFlagsAction, gameState);
                 }
                 break;
             }
@@ -717,9 +719,9 @@ namespace OpenRCT2::Ui::Windows
 
         void ShowLocateDropdown(Widget& widget)
         {
-            constexpr std::array<Dropdown::Item, 2> dropdownItems = {
-                Dropdown::Item{ STR_LOCATE_SUBJECT_TIP },
-                Dropdown::Item{ STR_FOLLOW_SUBJECT_TIP },
+            std::array<Dropdown::Item, 2> dropdownItems = {
+                Dropdown::PlainMenuLabel(STR_LOCATE_SUBJECT_TIP),
+                Dropdown::PlainMenuLabel(STR_FOLLOW_SUBJECT_TIP),
             };
 
             WindowDropdownShowText(
@@ -922,7 +924,7 @@ namespace OpenRCT2::Ui::Windows
             _beingWatchedTimer++;
 
             // Disable peep watching thought for multiplayer as it's client specific
-            if (NetworkGetMode() == NETWORK_MODE_NONE)
+            if (Network::GetMode() == Network::Mode::none)
             {
                 // Create the "I have the strangest feeling I am being watched thought"
                 if (_beingWatchedTimer >= 3840)
@@ -964,7 +966,7 @@ namespace OpenRCT2::Ui::Windows
                 return;
             std::string sText(text);
             auto gameAction = GameActions::GuestSetNameAction(EntityId::FromUnderlying(number), sText);
-            GameActions::Execute(&gameAction);
+            GameActions::Execute(&gameAction, getGameState());
         }
 
         void OnToolUpdateOverview(WidgetIndex widgetIndex, const ScreenCoordsXY& screenCoords)
@@ -974,13 +976,13 @@ namespace OpenRCT2::Ui::Windows
 
             MapInvalidateSelectionRect();
 
-            gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE;
+            gMapSelectFlags.unset(MapSelectFlag::enable);
 
             auto mapCoords = FootpathGetCoordinatesFromPos({ screenCoords.x, screenCoords.y + 16 }, nullptr, nullptr);
             if (!mapCoords.IsNull())
             {
-                gMapSelectFlags |= MAP_SELECT_FLAG_ENABLE;
-                gMapSelectType = MAP_SELECT_TYPE_FULL;
+                gMapSelectFlags.set(MapSelectFlag::enable);
+                gMapSelectType = MapSelectType::full;
                 gMapSelectPositionA = mapCoords;
                 gMapSelectPositionB = mapCoords;
                 MapInvalidateSelectionRect();
@@ -1023,14 +1025,14 @@ namespace OpenRCT2::Ui::Windows
             GameActions::PeepPickupAction pickupAction{ GameActions::PeepPickupType::Place,
                                                         EntityId::FromUnderlying(number),
                                                         { destCoords, tileElement->GetBaseZ() },
-                                                        NetworkGetCurrentPlayerId() };
+                                                        Network::GetCurrentPlayerId() };
             pickupAction.SetCallback([](const GameActions::GameAction* ga, const GameActions::Result* result) {
                 if (result->Error != GameActions::Status::Ok)
                     return;
                 ToolCancel();
                 gPickupPeepImage = ImageId();
             });
-            GameActions::Execute(&pickupAction);
+            GameActions::Execute(&pickupAction, getGameState());
         }
 
         void OnToolAbortOverview(WidgetIndex widgetIndex)
@@ -1041,8 +1043,8 @@ namespace OpenRCT2::Ui::Windows
             GameActions::PeepPickupAction pickupAction{ GameActions::PeepPickupType::Cancel,
                                                         EntityId::FromUnderlying(number),
                                                         { _pickedPeepX, 0, 0 },
-                                                        NetworkGetCurrentPlayerId() };
-            GameActions::Execute(&pickupAction);
+                                                        Network::GetCurrentPlayerId() };
+            GameActions::Execute(&pickupAction, getGameState());
         }
 
 #pragma endregion
@@ -1242,7 +1244,9 @@ namespace OpenRCT2::Ui::Windows
 
             const auto oldSize = _riddenRides.size();
             _riddenRides.clear();
-            for (const auto& r : GetRideManager())
+
+            const auto& gameState = getGameState();
+            for (const auto& r : RideManager(gameState))
             {
                 if (r.isRide() && guest->HasRidden(r))
                 {

@@ -1,6 +1,21 @@
-0.4.26 (in development)
+0.4.27 (in development)
+------------------------------------------------------------------------
+- Improved: [#2296, #2307] The land tool now takes sloped track and paths into account when modifying land.
+- Change: [#25161] Revert to the ‘fair ride price’ calculation of vanilla RCT2.
+- Fix: [#25131] The Reverse Freefall Coaster On-ride photo section track has incorrectly coloured ties.
+- Fix: [#25132] Crash when trying to use simulate on incomplete ride.
+- Fix: [#25134] Vehicles visually glitch on diagonal steep slopes.
+- Fix: [#25146] The support clearance height of the diagonal brakes for the Junior, inverted Flying and inverted Lay-down Roller Coasters is too high.
+- Fix: [#25147] The wooden support clearance heights for steep Log Flume track pieces are too low.
+- Fix: [#25160] The Go-Karts steep to flat track piece has incorrect wooden support clearance heights.
+- Fix: [#25163] Some of the Junior Roller Coaster flat to steep track wooden support clearance heights are different to RCT1.
+- Fix: [#25173] Desync when placing a park entrance in multiplayer.
+- Fix: [#25179] The LIM Launched Roller Coaster inline twists have incorrect wooden support clearance heights (original bug).
+
+0.4.26 (2025-09-06)
 ------------------------------------------------------------------------
 - Feature: [#24949] Add an option to the command line screenshot function to draw debug bounding boxes.
+- Feature: [#25070] Allow custom number of spin frames for some types of spinning vehicles.
 - Improved: [#9890, #18714] Rides using block-sectioned operating modes can now enter simulating mode without having to complete the circuit first.
 - Improved: [#24734] Save files now use Zstd compression for faster saving and smaller files.
 - Improved: [#24890] The ride list is now searchable.
@@ -12,14 +27,14 @@
 - Change: [#23351] Diagonal sloped Go-Kart track can no longer be built without cheats if the karts do not have sprites for them.
 - Change: [#24606] Increase Misc Entity limit from 1600 to 3200.
 - Change: [#24974] Raise the Go-Karts maximum support height to allow 2 large sloped turns to be built on flat ground.
+- Change: [#25024] Guests in mazes no longer jump during heavy snow or blizzards, as they would when it rains.
 - Fix: [#12831] Zooming to cursor on land edges sometimes causes the camera to move to the wrong position.
 - Fix: [#16988] AppImage version does not show changelog.
-- Fix: [#18048] Play music from all ride's stations.
 - Fix: [#19137] Non-inverted left corkscrew supports are incorrect at one angle (original bug).
 - Fix: [#23440] Quarter loops do not block metal supports correctly (original bug).
 - Fix: [#24001] Sloped diagonal metal supports that are offset with a crossbeam draw incorrectly.
 - Fix: [#24151] Sprites are cut off by 1 row of pixels when using OpenGL on Intel Macs.
-- Fix: [#24173] Allow all game speeds between 1 and 8 if developer mode is on.
+- Fix: [#24173] Allow all game speeds between 1 and 8 when debugging tools are enabled.
 - Fix: [#24745] Potential crash when lighting effects are enabled and loading a save or a new scenario.
 - Fix: [#24835] Dive loop track pieces do not have tunnels.
 - Fix: [#24884] Smooth map and add beaches functions use incorrect map size with height map image files.
@@ -131,7 +146,7 @@
 - Fix: [#24343] Large gently sloped turns are buildable without cheats when the vehicles do not have sprites for them.
 - Fix: [#24346] Possible crash during line drawing in OpenGL mode.
 - Fix: [#24353] ‘Show dirty visuals’ is off by one pixel and does not work correctly with higher framerates.
-- Fix: [#24362] When upgrading from an older version on Windows, old versions of official objects are not always removed.  
+- Fix: [#24362] When upgrading from an older version on Windows, old versions of official objects are not always removed.
 - Fix: [#24366] Zero G Rolls have some incorrect vehicle yaw rotations.
 - Fix: [#24371] Fix divide by zero in the scenery window when there is no scenery.
 - Fix: [#24378] Prevent ride and stall statistics from overflowing.

@@ -17,7 +17,6 @@
 #include "ride/Ride.h"
 #include "world/Climate.h"
 #include "world/Footpath.h"
-#include "world/Map.h"
 #include "world/Park.h"
 #include "world/Scenery.h"
 
@@ -62,7 +61,7 @@ void CheatsReset()
 void CheatsSet(CheatType cheatType, int64_t param1 /* = 0*/, int64_t param2 /* = 0*/)
 {
     auto cheatSetAction = GameActions::CheatSetAction(cheatType, param1, param2);
-    GameActions::Execute(&cheatSetAction);
+    GameActions::Execute(&cheatSetAction, getGameState());
 }
 
 template<typename T>

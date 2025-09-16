@@ -22,7 +22,6 @@
 #include "../ride/RideData.h"
 #include "../ride/Vehicle.h"
 #include "../util/Util.h"
-#include "../world/Map.h"
 #include "../world/tile_element/TileElement.h"
 #include "Drawing.h"
 
@@ -729,7 +728,7 @@ namespace OpenRCT2::Drawing::LightFx
     void AddLightsMagicVehicle_BoatHire(const Vehicle* vehicle)
     {
         Vehicle* vehicle_draw = vehicle->TrainHead();
-        auto* nextVeh = GetEntity<Vehicle>(vehicle_draw->next_vehicle_on_train);
+        auto* nextVeh = getGameState().entities.GetEntity<Vehicle>(vehicle_draw->next_vehicle_on_train);
         if (nextVeh != nullptr)
         {
             vehicle_draw = nextVeh;

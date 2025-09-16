@@ -36,6 +36,7 @@
 #include <openrct2/ui/WindowManager.h>
 #include <openrct2/windows/Intent.h>
 #include <openrct2/world/Footpath.h>
+#include <openrct2/world/MapSelection.h>
 #include <openrct2/world/Park.h>
 
 using namespace OpenRCT2::Numerics;
@@ -141,7 +142,7 @@ namespace OpenRCT2::Ui::Windows
             if (staff == nullptr)
                 return;
 
-            if (staff->AssignedStaffType == StaffType::Entertainer)
+            if (staff->isEntertainer())
                 _availableCostumes = getAvailableCostumeStrings(AnimationPeepType::Entertainer);
 
             ViewportInit();
@@ -163,7 +164,7 @@ namespace OpenRCT2::Ui::Windows
             if (staff == nullptr)
                 return;
 
-            if (staff->AssignedStaffType == StaffType::Entertainer)
+            if (staff->isEntertainer())
                 _availableCostumes = getAvailableCostumeStrings(AnimationPeepType::Entertainer);
         }
 
@@ -374,6 +375,7 @@ namespace OpenRCT2::Ui::Windows
                 return;
             }
 
+            auto& gameState = getGameState();
             switch (widgetIndex)
             {
                 case WIDX_PICKUP:
@@ -383,7 +385,7 @@ namespace OpenRCT2::Ui::Windows
                     nullLoc.SetNull();
                     GameActions::PeepPickupAction pickupAction{ GameActions::PeepPickupType::Pickup,
                                                                 EntityId::FromUnderlying(number), nullLoc,
-                                                                NetworkGetCurrentPlayerId() };
+                                                                Network::GetCurrentPlayerId() };
                     pickupAction.SetCallback(
                         [peepnum = number](const GameActions::GameAction* ga, const GameActions::Result* result) {
                             if (result->Error != GameActions::Status::Ok)
@@ -396,7 +398,7 @@ namespace OpenRCT2::Ui::Windows
                                 ToolSet(*wind, WC_STAFF__WIDX_PICKUP, Tool::picker);
                             }
                         });
-                    GameActions::Execute(&pickupAction);
+                    GameActions::Execute(&pickupAction, gameState);
                 }
                 break;
                 case WIDX_FIRE:
@@ -454,6 +456,7 @@ namespace OpenRCT2::Ui::Windows
 
         void OverviewOnDropdown(WidgetIndex widgetIndex, int32_t dropdownIndex)
         {
+            auto& gameState = getGameState();
             switch (widgetIndex)
             {
                 case WIDX_LOCATE:
@@ -484,7 +487,7 @@ namespace OpenRCT2::Ui::Windows
 
                         auto staffSetPatrolAreaAction = GameActions::StaffSetPatrolAreaAction(
                             staff->Id, {}, GameActions::StaffSetPatrolAreaMode::ClearAll);
-                        GameActions::Execute(&staffSetPatrolAreaAction);
+                        GameActions::Execute(&staffSetPatrolAreaAction, gameState);
                     }
                     else
                     {
@@ -598,7 +601,7 @@ namespace OpenRCT2::Ui::Windows
                 return;
             }
 
-            if (staff->Is<Staff>() && staff->AssignedStaffType == StaffType::Entertainer)
+            if (staff->isEntertainer())
                 screenCoords.y++;
 
             auto& objManager = GetContext()->GetObjectManager();
@@ -661,13 +664,13 @@ namespace OpenRCT2::Ui::Windows
 
             MapInvalidateSelectionRect();
 
-            gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE;
+            gMapSelectFlags.unset(MapSelectFlag::enable);
 
             auto mapCoords = FootpathGetCoordinatesFromPos({ screenCoords.x, screenCoords.y + 16 }, nullptr, nullptr);
             if (!mapCoords.IsNull())
             {
-                gMapSelectFlags |= MAP_SELECT_FLAG_ENABLE;
-                gMapSelectType = MAP_SELECT_TYPE_FULL;
+                gMapSelectFlags.set(MapSelectFlag::enable);
+                gMapSelectType = MapSelectType::full;
                 gMapSelectPositionA = mapCoords;
                 gMapSelectPositionB = mapCoords;
                 MapInvalidateSelectionRect();
@@ -711,14 +714,14 @@ namespace OpenRCT2::Ui::Windows
             GameActions::PeepPickupAction pickupAction{ GameActions::PeepPickupType::Place,
                                                         staffEntityId,
                                                         { destCoords, tileElement->GetBaseZ() },
-                                                        NetworkGetCurrentPlayerId() };
+                                                        Network::GetCurrentPlayerId() };
             pickupAction.SetCallback([](const GameActions::GameAction* ga, const GameActions::Result* result) {
                 if (result->Error != GameActions::Status::Ok)
                     return;
                 ToolCancel();
                 gPickupPeepImage = ImageId();
             });
-            GameActions::Execute(&pickupAction);
+            GameActions::Execute(&pickupAction, getGameState());
         }
 
         void OverviewToolAbort(WidgetIndex widgetIndex)
@@ -729,8 +732,8 @@ namespace OpenRCT2::Ui::Windows
             GameActions::PeepPickupAction pickupAction{ GameActions::PeepPickupType::Cancel,
                                                         EntityId::FromUnderlying(number),
                                                         { _pickedPeepOldX, 0, 0 },
-                                                        NetworkGetCurrentPlayerId() };
-            GameActions::Execute(&pickupAction);
+                                                        Network::GetCurrentPlayerId() };
+            GameActions::Execute(&pickupAction, getGameState());
         }
 
         void OverviewViewportRotate()
@@ -747,7 +750,7 @@ namespace OpenRCT2::Ui::Windows
                 return;
 
             auto gameAction = GameActions::StaffSetNameAction(EntityId::FromUnderlying(number), std::string{ text });
-            GameActions::Execute(&gameAction);
+            GameActions::Execute(&gameAction, getGameState());
         }
 #pragma endregion
 
@@ -814,7 +817,7 @@ namespace OpenRCT2::Ui::Windows
 
             ObjectEntryIndex costume = _availableCostumes[dropdownIndex].index;
             auto staffSetCostumeAction = GameActions::StaffSetCostumeAction(EntityId::FromUnderlying(number), costume);
-            GameActions::Execute(&staffSetCostumeAction);
+            GameActions::Execute(&staffSetCostumeAction, getGameState());
         }
 
         void OptionsPrepareDraw()
@@ -1101,7 +1104,7 @@ namespace OpenRCT2::Ui::Windows
 
             uint8_t newOrders = staff->StaffOrders ^ (1 << orderId);
             auto staffSetOrdersAction = GameActions::StaffSetOrdersAction(EntityId::FromUnderlying(number), newOrders);
-            GameActions::Execute(&staffSetOrdersAction);
+            GameActions::Execute(&staffSetOrdersAction, getGameState());
         }
 
         void ViewportInit()
@@ -1208,7 +1211,7 @@ namespace OpenRCT2::Ui::Windows
 
         Staff* GetStaff()
         {
-            return GetEntity<Staff>(EntityId::FromUnderlying(number));
+            return getGameState().entities.GetEntity<Staff>(EntityId::FromUnderlying(number));
         }
 
         static constexpr int32_t TabAnimationDivisor[] = {

@@ -31,6 +31,8 @@
 #include <openrct2/ride/TrackDesignRepository.h>
 #include <openrct2/ui/WindowManager.h>
 #include <openrct2/windows/Intent.h>
+#include <openrct2/world/Map.h>
+#include <openrct2/world/MapSelection.h>
 #include <openrct2/world/Park.h>
 #include <openrct2/world/tile_element/Slope.h>
 #include <openrct2/world/tile_element/SurfaceElement.h>
@@ -117,8 +119,8 @@ namespace OpenRCT2::Ui::Windows
             ClearProvisional();
             ViewportSetVisibility(ViewportVisibility::Default);
             MapInvalidateMapSelectionTiles();
-            gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE_CONSTRUCT;
-            gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE_ARROW;
+            gMapSelectFlags.unset(MapSelectFlag::enableConstruct);
+            gMapSelectFlags.unset(MapSelectFlag::enableArrow);
             HideGridlines();
             _miniPreview.clear();
             _miniPreview.shrink_to_fit();
@@ -168,9 +170,9 @@ namespace OpenRCT2::Ui::Windows
             TrackDesignState tds{};
 
             MapInvalidateMapSelectionTiles();
-            gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE;
-            gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE_CONSTRUCT;
-            gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE_ARROW;
+            gMapSelectFlags.unset(MapSelectFlag::enable);
+            gMapSelectFlags.unset(MapSelectFlag::enableConstruct);
+            gMapSelectFlags.unset(MapSelectFlag::enableArrow);
 
             // Take shift modifier into account
             ScreenCoordsXY targetScreenCoords = screenCoords;
@@ -223,7 +225,7 @@ namespace OpenRCT2::Ui::Windows
                             _hasPlacementGhost = true;
                         }
                     });
-                    res = GameActions::Execute(&tdAction);
+                    res = GameActions::Execute(&tdAction, getGameState());
                     cost = res.Error == GameActions::Status::Ok ? res.Cost : kMoney64Undefined;
 
                     VirtualFloorSetHeight(trackLoc.z);
@@ -244,9 +246,9 @@ namespace OpenRCT2::Ui::Windows
         {
             ClearProvisional();
             MapInvalidateMapSelectionTiles();
-            gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE;
-            gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE_CONSTRUCT;
-            gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE_ARROW;
+            gMapSelectFlags.unset(MapSelectFlag::enable);
+            gMapSelectFlags.unset(MapSelectFlag::enableConstruct);
+            gMapSelectFlags.unset(MapSelectFlag::enableArrow);
 
             // Take shift modifier into account
             ScreenCoordsXY targetScreenCoords = screenCoords;
@@ -316,7 +318,7 @@ namespace OpenRCT2::Ui::Windows
                     }
                 }
             });
-            GameActions::Execute(&tdAction);
+            GameActions::Execute(&tdAction, getGameState());
         }
 
         void OnToolAbort(WidgetIndex widgetIndex) override
@@ -380,7 +382,7 @@ namespace OpenRCT2::Ui::Windows
             {
                 auto tdAction = GameActions::TrackDesignAction({ _placementGhostLoc }, *_trackDesign);
                 tdAction.SetFlags(GAME_COMMAND_FLAG_NO_SPEND | GAME_COMMAND_FLAG_GHOST);
-                auto res = GameActions::Execute(&tdAction);
+                auto res = GameActions::Execute(&tdAction, getGameState());
                 if (res.Error != GameActions::Status::Ok)
                 {
                     _hasPlacementGhost = false;
@@ -706,7 +708,7 @@ namespace OpenRCT2::Ui::Windows
                 auto tdAction = GameActions::TrackDesignAction(
                     CoordsXYZD{ loc.x, loc.y, loc.z, _currentTrackPieceDirection }, *_trackDesign);
                 tdAction.SetFlags(newFlags);
-                res = GameActions::Query(&tdAction);
+                res = GameActions::Query(&tdAction, getGameState());
 
                 // If successful don't keep trying.
                 // If failure due to no money then increasing height only makes problem worse

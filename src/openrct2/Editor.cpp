@@ -45,6 +45,8 @@
 #include "world/Climate.h"
 #include "world/Entrance.h"
 #include "world/Footpath.h"
+#include "world/Map.h"
+#include "world/MapLimits.h"
 #include "world/Park.h"
 #include "world/Scenery.h"
 
@@ -236,16 +238,17 @@ namespace OpenRCT2::Editor
     static void SetAllLandOwned()
     {
         auto& gameState = getGameState();
+
         MapRange range = { 2 * kCoordsXYStep, 2 * kCoordsXYStep, (gameState.mapSize.x - 3) * kCoordsXYStep,
                            (gameState.mapSize.y - 3) * kCoordsXYStep };
 
         auto landSetRightsAction = GameActions::LandSetRightsAction(range, GameActions::LandSetRightSetting::SetForSale);
         landSetRightsAction.SetFlags(GAME_COMMAND_FLAG_NO_SPEND);
-        GameActions::Execute(&landSetRightsAction);
+        GameActions::Execute(&landSetRightsAction, gameState);
 
         auto landBuyRightsAction = GameActions::LandBuyRightsAction(range, GameActions::LandBuyRightSetting::BuyLand);
         landBuyRightsAction.SetFlags(GAME_COMMAND_FLAG_NO_SPEND);
-        GameActions::Execute(&landBuyRightsAction);
+        GameActions::Execute(&landBuyRightsAction, gameState);
     }
 
     static void AfterLoadCleanup(bool loadedFromSave)
@@ -300,7 +303,7 @@ namespace OpenRCT2::Editor
             staff->SetName({});
         }
 
-        ResetAllEntities();
+        getGameState().entities.ResetAllEntities();
         UpdateConsolidatedPatrolAreas();
 
         auto& gameState = getGameState();
@@ -496,7 +499,8 @@ namespace OpenRCT2::Editor
     ResultWithMessage CheckPark()
     {
         auto& gameState = getGameState();
-        int32_t parkSize = Park::UpdateSize(gameState);
+        auto& park = gameState.park;
+        int32_t parkSize = Park::UpdateSize(park);
         if (parkSize == 0)
         {
             return { false, STR_PARK_MUST_OWN_SOME_LAND };

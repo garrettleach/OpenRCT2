@@ -77,6 +77,13 @@
 #include <iterator>
 #include <memory>
 
+#ifdef __EMSCRIPTEN__
+extern "C" {
+extern void EmscriptenSaveGame(bool isTrackDesign, bool isAutosave, LoadSaveType type);
+extern void EmscriptenResetAutosave();
+}
+#endif
+
 using namespace OpenRCT2;
 
 uint16_t gCurrentDeltaTime;
@@ -103,7 +110,7 @@ using namespace OpenRCT2;
 void GameResetSpeed()
 {
     auto setSpeedAction = GameActions::GameSetSpeedAction(1);
-    GameActions::Execute(&setSpeedAction);
+    GameActions::Execute(&setSpeedAction, getGameState());
 }
 
 void GameIncreaseGameSpeed()
@@ -113,7 +120,7 @@ void GameIncreaseGameSpeed()
         newSpeed = 8;
 
     auto setSpeedAction = GameActions::GameSetSpeedAction(newSpeed);
-    GameActions::Execute(&setSpeedAction);
+    GameActions::Execute(&setSpeedAction, getGameState());
 }
 
 void GameReduceGameSpeed()
@@ -123,7 +130,7 @@ void GameReduceGameSpeed()
         newSpeed = 4;
 
     auto setSpeedAction = GameActions::GameSetSpeedAction(newSpeed);
-    GameActions::Execute(&setSpeedAction);
+    GameActions::Execute(&setSpeedAction, getGameState());
 }
 
 /**
@@ -197,7 +204,7 @@ static void FixGuestsHeadingToParkCount()
     auto& park = getGameState().park;
     if (park.numGuestsHeadingForPark != guestsHeadingToPark)
     {
-        LOG_WARNING(
+        LOG_VERBOSE(
             "Corrected bad amount of guests heading to park: %u -> %u", park.numGuestsHeadingForPark, guestsHeadingToPark);
     }
 
@@ -220,7 +227,7 @@ static void FixGuestCount()
     auto& park = getGameState().park;
     if (park.numGuestsInPark != guestCount)
     {
-        LOG_WARNING("Corrected bad amount of guests in park: %u -> %u", park.numGuestsInPark, guestCount);
+        LOG_VERBOSE("Corrected bad amount of guests in park: %u -> %u", park.numGuestsInPark, guestCount);
     }
 
     park.numGuestsInPark = guestCount;
@@ -270,7 +277,7 @@ static void FixPeepsWithInvalidRideReference()
     if (!peepsToRemove.empty())
     {
         // Some broken saves have broken spatial indexes
-        ResetEntitySpatialIndices();
+        getGameState().entities.ResetEntitySpatialIndices();
     }
 
     for (auto ptr : peepsToRemove)
@@ -370,11 +377,11 @@ void GameLoadInit()
     auto& gameState = getGameState();
     windowManager->SetMainView(gameState.savedView, gameState.savedViewZoom, gameState.savedViewRotation);
 
-    if (NetworkGetMode() != NETWORK_MODE_CLIENT)
+    if (Network::GetMode() != Network::Mode::client)
     {
         GameActions::ClearQueue();
     }
-    ResetEntitySpatialIndices();
+    getGameState().entities.ResetEntitySpatialIndices();
     ResetAllSpriteQuadrantPlacements();
 
     gWindowUpdateTicks = 0;
@@ -443,7 +450,7 @@ void ResetAllSpriteQuadrantPlacements()
 {
     for (EntityId::UnderlyingType i = 0; i < kMaxEntities; i++)
     {
-        auto* spr = GetEntity(EntityId::FromUnderlying(i));
+        auto* spr = getGameState().entities.GetEntity(EntityId::FromUnderlying(i));
         if (spr != nullptr && spr->Type != EntityType::Null)
         {
             spr->MoveTo(spr->GetLocation());
@@ -455,8 +462,14 @@ void SaveGame()
 {
     if (!gFirstTimeSaving && !gIsAutosaveLoaded)
     {
+#ifndef __EMSCRIPTEN__
         const auto savePath = Path::WithExtension(gScenarioSavePath, ".park");
         SaveGameWithName(savePath);
+#else
+        const auto savePath = Path::WithExtension("save", ".park");
+        SaveGameWithName(savePath);
+        EmscriptenSaveGame(false, false, LoadSaveType::park);
+#endif
     }
     else
     {
@@ -508,10 +521,14 @@ std::unique_ptr<Intent> CreateSaveGameAsIntent()
 
 void SaveGameAs()
 {
+#ifdef __EMSCRIPTEN__
+    EmscriptenResetAutosave();
+#endif
     auto intent = CreateSaveGameAsIntent();
     ContextOpenIntent(intent.get());
 }
 
+#ifndef __EMSCRIPTEN__
 static void LimitAutosaveCount(const size_t numberOfFilesToKeep, bool processLandscapeFolder)
 {
     size_t autosavesCount = 0;
@@ -613,6 +630,14 @@ void GameAutosave()
     if (!ScenarioSave(gameState, path, saveFlags))
         Console::Error::WriteLine("Could not autosave the scenario. Is the save folder writeable?");
 }
+#else
+void GameAutosave()
+{
+    const auto savePath = Path::WithExtension("save", ".park");
+    SaveGameWithName(savePath);
+    EmscriptenSaveGame(false, true, LoadSaveType::park);
+}
+#endif // __EMSCRIPTEN__
 
 static void GameLoadOrQuitNoSavePromptCallback(ModalResult result, const utf8* path)
 {
@@ -643,6 +668,9 @@ static void NewGameWindowCallback(const utf8* path)
     GetContext()->LoadParkFromFile(path, false, true);
     GameLoadScripts();
     GameNotifyMapChanged();
+#ifdef __EMSCRIPTEN__
+    EmscriptenResetAutosave();
+#endif
 }
 
 /**
@@ -651,12 +679,14 @@ static void NewGameWindowCallback(const utf8* path)
  */
 void GameLoadOrQuitNoSavePrompt()
 {
+    auto& gameState = getGameState();
+
     switch (gSavePromptMode)
     {
         case PromptMode::saveBeforeLoad:
         {
             auto loadOrQuitAction = GameActions::LoadOrQuitAction(GameActions::LoadOrQuitModes::CloseSavePrompt);
-            GameActions::Execute(&loadOrQuitAction);
+            GameActions::Execute(&loadOrQuitAction, gameState);
             ToolCancel();
             if (gLegacyScene == LegacyScene::scenarioEditor)
             {
@@ -675,16 +705,19 @@ void GameLoadOrQuitNoSavePrompt()
         case PromptMode::saveBeforeQuit:
         {
             auto loadOrQuitAction = GameActions::LoadOrQuitAction(GameActions::LoadOrQuitModes::CloseSavePrompt);
-            GameActions::Execute(&loadOrQuitAction);
+            GameActions::Execute(&loadOrQuitAction, gameState);
             ToolCancel();
-            if (gInputFlags.has(InputFlag::unk5))
+            if (gInputFlags.has(InputFlag::rightMousePressed))
             {
-                gInputFlags.unset(InputFlag::unk5);
+                gInputFlags.unset(InputFlag::rightMousePressed);
             }
             GameResetSpeed();
             gFirstTimeSaving = true;
             GameNotifyMapChange();
             GameUnloadScripts();
+#ifdef __EMSCRIPTEN__
+            EmscriptenResetAutosave();
+#endif
 
             auto* context = OpenRCT2::GetContext();
             context->SetActiveScene(context->GetTitleScene());
@@ -693,7 +726,7 @@ void GameLoadOrQuitNoSavePrompt()
         case PromptMode::saveBeforeNewGame:
         {
             auto loadOrQuitAction = GameActions::LoadOrQuitAction(GameActions::LoadOrQuitModes::CloseSavePrompt);
-            GameActions::Execute(&loadOrQuitAction);
+            GameActions::Execute(&loadOrQuitAction, gameState);
             ToolCancel();
             auto intent = Intent(WindowClass::ScenarioSelect);
             intent.PutExtra(INTENT_EXTRA_CALLBACK, reinterpret_cast<CloseCallback>(NewGameWindowCallback));
@@ -702,8 +735,8 @@ void GameLoadOrQuitNoSavePrompt()
         }
         default:
             GameUnloadScripts();
-            ResetAllEntities();
-            OpenRCT2Finish();
+            getGameState().entities.ResetAllEntities();
+            GetContext()->Finish();
             break;
     }
 }

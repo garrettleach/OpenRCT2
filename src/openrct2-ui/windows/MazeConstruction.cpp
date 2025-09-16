@@ -14,6 +14,7 @@
 #include <openrct2-ui/windows/Windows.h>
 #include <openrct2/Context.h>
 #include <openrct2/Game.h>
+#include <openrct2/GameState.h>
 #include <openrct2/Input.h>
 #include <openrct2/SpriteIds.h>
 #include <openrct2/actions/MazeSetTrackAction.h>
@@ -27,6 +28,8 @@
 #include <openrct2/ride/Track.h>
 #include <openrct2/ui/WindowManager.h>
 #include <openrct2/windows/Intent.h>
+#include <openrct2/world/Map.h>
+#include <openrct2/world/MapSelection.h>
 #include <openrct2/world/tile_element/EntranceElement.h>
 
 namespace OpenRCT2::Ui::Windows
@@ -116,8 +119,8 @@ namespace OpenRCT2::Ui::Windows
             ViewportSetVisibility(ViewportVisibility::Default);
 
             MapInvalidateMapSelectionTiles();
-            gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE_CONSTRUCT;
-            gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE_ARROW;
+            gMapSelectFlags.unset(MapSelectFlag::enableConstruct);
+            gMapSelectFlags.unset(MapSelectFlag::enableArrow);
 
             // In order to cancel the yellow arrow correctly the
             // selection tool should be cancelled.
@@ -132,7 +135,7 @@ namespace OpenRCT2::Ui::Windows
                 {
                     auto gameAction = GameActions::RideDemolishAction(currentRide->id, GameActions::RideModifyType::demolish);
                     gameAction.SetFlags(GAME_COMMAND_FLAG_ALLOW_DURING_PAUSED);
-                    GameActions::Execute(&gameAction);
+                    GameActions::Execute(&gameAction, getGameState());
                 }
                 else
                 {
@@ -343,8 +346,8 @@ namespace OpenRCT2::Ui::Windows
 
             MapInvalidateSelectionRect();
 
-            gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE;
-            gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE_ARROW;
+            gMapSelectFlags.unset(MapSelectFlag::enable);
+            gMapSelectFlags.unset(MapSelectFlag::enableArrow);
 
             CoordsXYZD entranceOrExitCoords = RideGetEntranceOrExitPositionFromScreenPosition(screenCoords);
             if (entranceOrExitCoords.IsNull())
@@ -391,7 +394,7 @@ namespace OpenRCT2::Ui::Windows
                     WindowMazeConstructionUpdatePressedWidgets();
                 }
             });
-            auto res = GameActions::Execute(&rideEntranceExitPlaceAction);
+            auto res = GameActions::Execute(&rideEntranceExitPlaceAction, getGameState());
         }
 
         void WindowMazeConstructionConstruct(int32_t direction)
@@ -400,7 +403,7 @@ namespace OpenRCT2::Ui::Windows
 
             _currentTrackSelectionFlags.clearAll();
             _rideConstructionNextArrowPulse = 0;
-            gMapSelectFlags &= ~MAP_SELECT_FLAG_ENABLE_ARROW;
+            gMapSelectFlags.unset(MapSelectFlag::enableArrow);
             RideConstructionInvalidateCurrentTrack();
 
             x = _currentTrackBegin.x + (CoordsDirectionDelta[direction].x / 2);
@@ -424,7 +427,7 @@ namespace OpenRCT2::Ui::Windows
             const auto loc = CoordsXYZD{ x, y, z, static_cast<uint8_t>(direction) };
             auto action = GameActions::MazeSetTrackAction(loc, false, _currentRideIndex, mode);
             action.SetFlags(actionFlags);
-            const auto res = GameActions::Execute(&action);
+            const auto res = GameActions::Execute(&action, getGameState());
             if (res.Error != GameActions::Status::Ok)
             {
                 return;
