@@ -22,14 +22,17 @@ layout(location = 2) flat out uint outMaskIndex;
 layout(location = 3) flat out uint outRemapPalette;
 layout(location = 4) flat out uint outInstanceIndex;
 layout(location = 5) out vec2 outTexCoord;
+layout(location = 6) out vec2 outTexCoordUnnormalized;
 
 void main() {
     int xPosition = (inPosition.x == 0 ? bounds.x : bounds.z);
     int yPosition = (inPosition.y == 0 ? bounds.y : bounds.w);
 
     ivec2 clippedBoundPosition = ivec2(clamp(xPosition, clip.x, clip.z),clamp(yPosition, clip.y, clip.w));
+    
+    ivec2 texCoordUnnorm = ivec2(clippedBoundPosition.x - bounds.x, clippedBoundPosition.y - bounds.y);
 
-    vec2 texCoord = vec2((float(clippedBoundPosition.x - bounds.x)/float(bounds.z - bounds.x)), (float(clippedBoundPosition.y - bounds.y)/float(bounds.w - bounds.y)));
+    vec2 texCoord = vec2((float(texCoordUnnorm.x)/float(bounds.z - bounds.x)), (float(texCoordUnnorm.y)/float(bounds.w - bounds.y)));
 
     gl_Position = ubo.transform * vec4(vec2(clippedBoundPosition), 0.0, 1.0);
 
@@ -39,4 +42,5 @@ void main() {
     outRemapPalette = remapPalette;
     outInstanceIndex = gl_InstanceIndex;
     outTexCoord = texCoord;
+    outTexCoordUnnormalized = vec2(texCoordUnnorm);
 }

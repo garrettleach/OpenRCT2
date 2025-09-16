@@ -602,10 +602,14 @@ namespace OpenRCT2::Ui::Vulkan
                 maskIndex = imageIndex;
                 flags = RectFlags::Mask; // double check this
             }
-            else if (data.drawType == DrawType::FillRect)
+            else if (data.drawType == DrawType::FillRect || data.drawType == DrawType::FillRectCrossHatch)
             {
                 flags = RectFlags::ColourOnly;
                 imageIndex = data.colour;
+                if (data.drawType == DrawType::FillRectCrossHatch)
+                {
+                    flags |= RectFlags::CrossHatch;
+                }
             }
             else if (data.drawType == DrawType::Placeholder)
             {
@@ -936,8 +940,15 @@ namespace OpenRCT2::Ui::Vulkan
         int32_t right2 = right + clip.x - rt.x;
         int32_t bottom2 = bottom + clip.y - rt.y;
 
+        bool crossHatch = false;
+        if (colour & 0x1000000)
+        {
+            colour = colour & (~0x1000000); // cross hatch
+            crossHatch = true;
+        }
+        
         _inProgressSprites.emplace_back(
-            glm::ivec4{ left2, top2, right2 + 1, bottom2 + 1 }, clip, DrawType::FillRect,
+            glm::ivec4{ left2, top2, right2 + 1, bottom2 + 1 }, clip, crossHatch ? DrawType::FillRectCrossHatch : DrawType::FillRect,
             ImageId(), ImageId(), uint8_t{}, colour);
     }
 

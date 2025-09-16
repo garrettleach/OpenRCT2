@@ -21,7 +21,8 @@ namespace OpenRCT2::Ui::Vulkan
             DrawSpriteRawMasked,
             DrawSpriteSolid,
             DrawGlyph,
-            Placeholder
+            Placeholder,
+            FillRectCrossHatch,
         };
 
         struct DrawCommand
@@ -86,6 +87,7 @@ namespace OpenRCT2::Ui::Vulkan
             None = 0,
             ColourOnly = 1, // use colour instead of image index
             Mask = 2,       // use masking logic against an image (DrawSprite and DrawSpriteRawMask only)
+            CrossHatch = 4
         };
 
         struct Rect
@@ -249,4 +251,11 @@ namespace OpenRCT2::Ui::Vulkan
 
         void ReleaseUploadedSprites(std::vector<DrawSpritePipeline::UploadedSpriteInfo>& sprites);
     };
+
+    inline DrawSpritePipeline::RectFlags operator|(DrawSpritePipeline::RectFlags lhs, DrawSpritePipeline::RectFlags rhs)
+    {
+        return static_cast<DrawSpritePipeline::RectFlags>(
+            static_cast<std::underlying_type_t<DrawSpritePipeline::RectFlags>>(lhs)
+            | static_cast<std::underlying_type_t<DrawSpritePipeline::RectFlags>>(rhs));
+    }
 } // namespace OpenRCT2::Ui::Vulkan

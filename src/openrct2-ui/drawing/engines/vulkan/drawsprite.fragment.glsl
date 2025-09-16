@@ -7,6 +7,7 @@ const uint PALETTE_COUNT_MASK = 0x3;
 
 const uint FLAG_COLOR_ONLY = 1;
 const uint FLAG_MASK = 2;
+const uint FLAG_CROSS_HATCH = 4;
 
 const uint kPaletteOffsetRemapPrimary = 243; // if secondary also did not apply then if we have at least 1 palette use the palette color as-is
 const uint kPaletteOffsetRemapSecondary = 202; // if tertiary did not apply and we have at least 2 palette and the second is in the range [202,202+12) remap to 243+[0,12)
@@ -31,6 +32,7 @@ layout(location = 2) flat in uint maskIndex;
 layout(location = 3) flat in uint remapPalette;// 0xFF Primary, 0xFF00 Seconday, 0xFF0000 Tertiary, 0x3000000 count of palettes
 layout(location = 4) flat in uint inInstanceIndex;
 layout(location = 5) in vec2 texCoord;
+layout(location = 6) in vec2 texCoordUnnormalized;
 
 layout(location = 0) out uint outColour;
 layout(location = 1) out uint outInstanceIndex;
@@ -70,6 +72,15 @@ void main() {
         discard;
     }
 
+    if((flags & FLAG_CROSS_HATCH) != 0)
+    {
+        vec2 position = vec2(texCoordUnnormalized);
+        int posSum = int(position.x) + int(position.y);
+        if ((posSum % 2) != 0)
+        {
+            discard;
+        }
+    }
     if((flags & FLAG_MASK) != 0)
     {
         uint maskValue = texture(usampler2D(textures[maskIndex], singleSampler), texCoord).r;
