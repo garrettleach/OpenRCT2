@@ -609,7 +609,7 @@ namespace OpenRCT2::Ui::Vulkan
                 imageIndex = data.colour;
                 if (data.drawType == DrawType::FillRectCrossHatch)
                 {
-                    flags |= RectFlags::CrossHatch;
+                    flags = flags | RectFlags::CrossHatch;
                 }
             }
             else if (data.drawType == DrawType::Placeholder)
