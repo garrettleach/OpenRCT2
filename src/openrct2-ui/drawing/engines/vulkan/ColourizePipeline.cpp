@@ -524,15 +524,16 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::Draw(
     PushConstants pushConsts(static_cast<uint32_t>(_inProgressFilterRects.size()), Config::Get().general.WindowScale);
     commandBuffer.pushConstants(*_pipelineLayout, vk::ShaderStageFlagBits::eFragment, 0, sizeof(pushConsts), &pushConsts);
 
-    uint32_t bufferSizeNeeded = static_cast<uint32_t>(_inProgressFilterRects.size() * sizeof(decltype(_inProgressFilterRects)::value_type));
+    uint32_t bufferSizeNeeded = static_cast<uint32_t>(
+        _inProgressFilterRects.size() * sizeof(decltype(_inProgressFilterRects)::value_type));
 
     if (_storageBufferSize[currentFrame] < bufferSizeNeeded)
     {
         vmaDestroyBuffer(_vma, _storageBuffer[currentFrame], _storageAllocation[currentFrame]);
 
         vk::BufferCreateInfo bufferCreate(
-            vk::BufferCreateFlags{}, vk::DeviceSize(bufferSizeNeeded), vk::BufferUsageFlagBits::eStorageBuffer, vk::SharingMode::eExclusive,
-            {_graphicsQueueIndex});
+            vk::BufferCreateFlags{}, vk::DeviceSize(bufferSizeNeeded), vk::BufferUsageFlagBits::eStorageBuffer,
+            vk::SharingMode::eExclusive, { _graphicsQueueIndex });
 
         VmaAllocationCreateInfo allocInfo = {};
         allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
@@ -557,7 +558,8 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::Draw(
         _storageBufferPointer[currentFrame] = newAllocationInfo.pMappedData;
         _storageBufferSize[currentFrame] = bufferSizeNeeded;
 
-        vk::DescriptorBufferInfo storageCreate(_storageBuffer[currentFrame], vk::DeviceSize(0), vk::DeviceSize(_storageBufferSize[currentFrame]));
+        vk::DescriptorBufferInfo storageCreate(
+            _storageBuffer[currentFrame], vk::DeviceSize(0), vk::DeviceSize(_storageBufferSize[currentFrame]));
         std::vector<vk::WriteDescriptorSet> writeDescSet{
             { _dynamicDescriptorSets[currentFrame], 3, 0, vk::DescriptorType::eStorageBuffer, {}, { storageCreate } }
         };

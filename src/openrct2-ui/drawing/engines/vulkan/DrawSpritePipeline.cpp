@@ -309,7 +309,8 @@ namespace OpenRCT2::Ui::Vulkan
         vk::DescriptorPoolSize poolSizeUniformBuffer(
             vk::DescriptorType::eUniformBuffer, static_cast<uint32_t>(_framesInFlight * 2));
         vk::DescriptorPoolSize poolSizeSampler(vk::DescriptorType::eSampler, static_cast<uint32_t>(_framesInFlight));
-        vk::DescriptorPoolSize poolSizeFilterPaletteImage(vk::DescriptorType::eSampledImage, static_cast<uint32_t>(_framesInFlight));
+        vk::DescriptorPoolSize poolSizeFilterPaletteImage(
+            vk::DescriptorType::eSampledImage, static_cast<uint32_t>(_framesInFlight));
 
         std::vector<vk::DescriptorPoolSize> poolSizes{ poolSizeUniformBuffer, poolSizeSampler, poolSizeFilterPaletteImage };
 
@@ -352,7 +353,7 @@ namespace OpenRCT2::Ui::Vulkan
 
             vk::DescriptorImageInfo filterPaletteImageInfo(
                 nullptr, *_filterPaletteImageView, vk::ImageLayout::eShaderReadOnlyOptimal);
-            
+
             vk::WriteDescriptorSet filterPaletteDescriptorWrite(
                 _uniformBufferDescriptorSets[i], 2, 0, vk::DescriptorType::eSampledImage, { filterPaletteImageInfo }, {}, {});
 
@@ -948,8 +949,8 @@ namespace OpenRCT2::Ui::Vulkan
         }
         
         _inProgressSprites.emplace_back(
-            glm::ivec4{ left2, top2, right2 + 1, bottom2 + 1 }, clip, crossHatch ? DrawType::FillRectCrossHatch : DrawType::FillRect,
-            ImageId(), ImageId(), uint8_t{}, colour);
+            glm::ivec4{ left2, top2, right2 + 1, bottom2 + 1 }, clip,
+            crossHatch ? DrawType::FillRectCrossHatch : DrawType::FillRect, ImageId(), ImageId(), uint8_t{}, colour);
     }
 
     uint32_t DrawSpritePipeline::QueuePlaceholder()

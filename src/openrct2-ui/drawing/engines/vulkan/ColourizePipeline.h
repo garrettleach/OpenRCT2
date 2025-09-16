@@ -17,7 +17,7 @@ namespace OpenRCT2::Ui::Vulkan
             alignas(4) uint32_t drawIndex;
         };
 
-        OpenRCT2::Drawing::IDrawingEngine& _engine; 
+        OpenRCT2::Drawing::IDrawingEngine& _engine;
         const vk::Device& _device;
         size_t _framesInFlight;
         VulkanMemoryAllocator& _vma;
