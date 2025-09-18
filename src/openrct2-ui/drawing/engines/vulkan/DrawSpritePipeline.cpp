@@ -161,6 +161,9 @@ namespace OpenRCT2::Ui::Vulkan
         vk::PipelineMultisampleStateCreateInfo pipelineMultisampleStateCreate(
             vk::PipelineMultisampleStateCreateFlags(), vk::SampleCountFlagBits::e1, false);
 
+        vk::PipelineDepthStencilStateCreateInfo pipelineDepthStateCreate(
+            vk::PipelineDepthStencilStateCreateFlags(), true, true, vk::CompareOp::eGreaterOrEqual, false, false);
+
         vk::PipelineColorBlendAttachmentState pipelineColorBlendOffAttachment(
             false, vk::BlendFactor::eZero, vk::BlendFactor::eZero, vk::BlendOp::eAdd, vk::BlendFactor::eZero,
             vk::BlendFactor::eZero, vk::BlendOp::eAdd,
@@ -168,7 +171,6 @@ namespace OpenRCT2::Ui::Vulkan
                 | vk::ColorComponentFlagBits::eA);
 
         std::vector<vk::PipelineColorBlendAttachmentState> colorBlendOffAttachments = { pipelineColorBlendOffAttachment,
-                                                                                        pipelineColorBlendOffAttachment,
                                                                                         pipelineColorBlendOffAttachment };
 
         vk::PipelineColorBlendStateCreateInfo pipelineColorBlendStateCreate(
@@ -181,22 +183,21 @@ namespace OpenRCT2::Ui::Vulkan
 
         vector<vk::DescriptorSetLayout> descriptorSetLayouts{ descriptorSetLayout }; // TODO: add images
 
-        std::vector<vk::Format> colourAttachmentFormats{ vk::Format::eR8Uint, vk::Format::eR32Uint,
-                                                         vk::Format::eB8G8R8A8Unorm };
+        std::vector<vk::Format> colourAttachmentFormats{ vk::Format::eR8Uint, vk::Format::eB8G8R8A8Unorm };
 
-        std::vector<uint32_t> colourAttachmentInputIndicies{ 0, 1, VK_ATTACHMENT_UNUSED };
+        std::vector<uint32_t> colourAttachmentInputIndicies{ 0, VK_ATTACHMENT_UNUSED };
 
         vk::StructureChain<
             vk::GraphicsPipelineCreateInfo, vk::PipelineRenderingCreateInfo, vk::RenderingInputAttachmentIndexInfo>
             graphicsPipelineCreate{ { vk::PipelineCreateFlags{}, shaderStages, &pipelineVertexInputStateCreateInfo,
                                       &pipelineInputAssemblyStateCreate, nullptr, &pipelineViewportStateCreate,
-                                      &pipelineRasterizationStateCreate, &pipelineMultisampleStateCreate, nullptr,
+                                      &pipelineRasterizationStateCreate, &pipelineMultisampleStateCreate, &pipelineDepthStateCreate,
                                       &pipelineColorBlendStateCreate, &pipelineDynamicStateCreate, pipelineLayout, nullptr, 0 },
                                     {
                                         {},
-                                        colourAttachmentFormats,
+                                        colourAttachmentFormats, vk::Format::eD32Sfloat
                                     },
-                                    { colourAttachmentInputIndicies } };
+                                    { colourAttachmentInputIndicies, } };
 
         auto pipeline = device.createGraphicsPipelineUnique(nullptr, graphicsPipelineCreate.get());
 

@@ -372,7 +372,6 @@ namespace OpenRCT2::Ui::Vulkan
             _queueIndicies.graphics, vk::ImageLayout::eUndefined);
 
         VmaAllocationCreateInfo vmaAllocCreateInfo{
-
             .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
         };
 
@@ -394,10 +393,10 @@ namespace OpenRCT2::Ui::Vulkan
         }
 
         vk::ImageCreateInfo imageDepthCreateInfo(
-            vk::ImageCreateFlags{}, vk::ImageType::e2D, vk::Format::eR32Uint, vk::Extent3D{ _swapchainExtent, 1 }, 1, 1,
+            vk::ImageCreateFlags{}, vk::ImageType::e2D, vk::Format::eD32Sfloat, vk::Extent3D{ _swapchainExtent, 1 }, 1, 1,
             vk::SampleCountFlagBits::e1, vk::ImageTiling::eOptimal,
-            vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eInputAttachment, vk::SharingMode::eExclusive,
-            _queueIndicies.graphics, vk::ImageLayout::eUndefined);
+            vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eInputAttachment,
+            vk::SharingMode::eExclusive, _queueIndicies.graphics, vk::ImageLayout::eUndefined);
 
         for (size_t i = 0; i < _framesInFlight; i++)
         {
@@ -433,10 +432,10 @@ namespace OpenRCT2::Ui::Vulkan
         for (auto& image : _intermediateDepthImages)
         {
             vk::ImageViewCreateInfo createInfo(
-                vk::ImageViewCreateFlags(), image, vk::ImageViewType::e2D, vk::Format::eR32Uint,
+                vk::ImageViewCreateFlags(), image, vk::ImageViewType::e2D, vk::Format::eD32Sfloat,
                 { vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity,
                   vk::ComponentSwizzle::eIdentity },
-                vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
+                vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1));
 
             _intermediateDepthImageViews.push_back(_device->createImageViewUnique(createInfo));
         }
@@ -511,9 +510,10 @@ namespace OpenRCT2::Ui::Vulkan
         {
             imageBarriers.emplace_back(
                 vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone,
-                vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eColorAttachmentWrite,
+                vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
+                vk::AccessFlagBits2::eDepthStencilAttachmentWrite | vk::AccessFlagBits2::eDepthStencilAttachmentRead,
                 vk::ImageLayout::eUndefined, vk::ImageLayout::eRenderingLocalRead, _queueIndicies.graphics,
-                _queueIndicies.graphics, image, vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
+                _queueIndicies.graphics, image, vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1 });
         }
 
         vk::DependencyInfo depInfo(vk::DependencyFlags(), {}, {}, imageBarriers);
@@ -688,13 +688,6 @@ namespace OpenRCT2::Ui::Vulkan
                                                                    VULKAN_HPP_NAMESPACE::ImageLayout::eUndefined,
                                                                    vk::AttachmentLoadOp::eClear,
                                                                    vk::AttachmentStoreOp::eDontCare },
-                                                                 { *_intermediateDepthImageViews[_currentFrame],
-                                                                   vk::ImageLayout::eRenderingLocalRead,
-                                                                   vk::ResolveModeFlagBits::eNone,
-                                                                   {},
-                                                                   VULKAN_HPP_NAMESPACE::ImageLayout::eUndefined,
-                                                                   vk::AttachmentLoadOp::eClear,
-                                                                   vk::AttachmentStoreOp::eDontCare },
                                                                  { *_swapchainImageViews[_imageIndex],
                                                                    vk::ImageLayout::eColorAttachmentOptimal,
                                                                    vk::ResolveModeFlagBits::eNone,
@@ -703,7 +696,13 @@ namespace OpenRCT2::Ui::Vulkan
                                                                    vk::AttachmentLoadOp::eClear,
                                                                    vk::AttachmentStoreOp::eStore } };
 
-        vk::RenderingInfo renderingInfo({}, vk::Rect2D{ vk::Offset2D{ 0, 0 }, _swapchainExtent }, 1, 0, attachmentInfo, {}, {});
+        vk::RenderingAttachmentInfo depthAttachment(
+            *_intermediateDepthImageViews[_currentFrame], vk::ImageLayout::eRenderingLocalRead, vk::ResolveModeFlagBits::eNone,
+            {}, VULKAN_HPP_NAMESPACE::ImageLayout::eUndefined, vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eDontCare,
+            vk::ClearValue(vk::ClearDepthStencilValue(0.0f, 0)));
+
+        vk::RenderingInfo renderingInfo(
+            {}, vk::Rect2D{ vk::Offset2D{ 0, 0 }, _swapchainExtent }, 1, 0, attachmentInfo, &depthAttachment, {});
 
         currentFramePrimaryCommandBuffer->beginRendering(renderingInfo);
 
@@ -712,16 +711,16 @@ namespace OpenRCT2::Ui::Vulkan
         vk::ImageMemoryBarrier2 nextSubpassMemBarPalette(
             vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eColorAttachmentWrite,
             vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eInputAttachmentRead,
-            vk::ImageLayout::eAttachmentOptimal, vk::ImageLayout::eAttachmentOptimal, _queueIndicies.graphics,
+            vk::ImageLayout::eRenderingLocalRead, vk::ImageLayout::eRenderingLocalRead, _queueIndicies.graphics,
             _queueIndicies.graphics, _intermediatePaletteImages[_currentFrame],
             vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
         vk::ImageMemoryBarrier2 nextSubpassMemBarDepth(
-            vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eColorAttachmentWrite,
+            vk::PipelineStageFlagBits2::eEarlyFragmentTests, vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
             vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eInputAttachmentRead,
-            vk::ImageLayout::eAttachmentOptimal, vk::ImageLayout::eAttachmentOptimal, _queueIndicies.graphics,
+            vk::ImageLayout::eRenderingLocalRead, vk::ImageLayout::eRenderingLocalRead, _queueIndicies.graphics,
             _queueIndicies.graphics, _intermediateDepthImages[_currentFrame],
-            vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
+            vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eDepth, 0, 1, 0, 1));
 
         std::vector<vk::ImageMemoryBarrier2> nextSubpassMemBars{ { nextSubpassMemBarPalette, nextSubpassMemBarDepth } };
 

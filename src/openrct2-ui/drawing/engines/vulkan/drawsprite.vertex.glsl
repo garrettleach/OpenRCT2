@@ -2,6 +2,9 @@
 //#extension GL_EXT_debug_printf : enable
 #pragma shader_stage(vertex)
 
+// Allows for about 8 million draws per frame
+const float DEPTH_INCREMENT = 1.0 / float(1u << 22u);//1.0 / float(1u << 22u);
+
 layout(set = 0, binding = 0) uniform UniformBufferObject {
     mat4 transform;
     uvec2 renderTargetSize;
@@ -20,9 +23,8 @@ layout(location = 0) flat out uint outFlags;
 layout(location = 1) flat out uint outTextureIndex;
 layout(location = 2) flat out uint outMaskIndex;
 layout(location = 3) flat out uint outRemapPalette;
-layout(location = 4) flat out uint outInstanceIndex;
-layout(location = 5) out vec2 outTexCoord;
-layout(location = 6) out vec2 outTexCoordUnnormalized;
+layout(location = 4) out vec2 outTexCoord;
+layout(location = 5) out vec2 outTexCoordUnnormalized;
 
 void main() {
     int xPosition = (inPosition.x == 0 ? bounds.x : bounds.z);
@@ -34,13 +36,12 @@ void main() {
 
     vec2 texCoord = vec2((float(texCoordUnnorm.x)/float(bounds.z - bounds.x)), (float(texCoordUnnorm.y)/float(bounds.w - bounds.y)));
 
-    gl_Position = ubo.transform * vec4(vec2(clippedBoundPosition), 0.0, 1.0);
+    gl_Position = ubo.transform * vec4(vec2(clippedBoundPosition), 1.0 - gl_InstanceIndex * DEPTH_INCREMENT, 1.0);
 
     outFlags = flags;
     outTextureIndex = index;
     outMaskIndex = maskIndex;
     outRemapPalette = remapPalette;
-    outInstanceIndex = gl_InstanceIndex;
     outTexCoord = texCoord;
     outTexCoordUnnormalized = vec2(texCoordUnnorm);
 }

@@ -133,14 +133,16 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateGraphicsPipeline()
     vk::PipelineMultisampleStateCreateInfo pipelineMultisampleStateCreate(
         vk::PipelineMultisampleStateCreateFlags(), vk::SampleCountFlagBits::e1, false);
 
+    vk::PipelineDepthStencilStateCreateInfo pipelineDepthStencilAttachmentCreate(
+        vk::PipelineDepthStencilStateCreateFlags(), false, false, vk::CompareOp::eNever, false, false);
+
     vk::PipelineColorBlendAttachmentState pipelineColorBlendOffAttachment(
         false, vk::BlendFactor::eZero, vk::BlendFactor::eZero, vk::BlendOp::eAdd, vk::BlendFactor::eZero,
         vk::BlendFactor::eZero, vk::BlendOp::eAdd,
         vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB
             | vk::ColorComponentFlagBits::eA);
 
-    std::array<vk::PipelineColorBlendAttachmentState, 3> pipelineColorBlendOffAttachments{ pipelineColorBlendOffAttachment,
-                                                                                           pipelineColorBlendOffAttachment,
+    std::array<vk::PipelineColorBlendAttachmentState, 2> pipelineColorBlendOffAttachments{ pipelineColorBlendOffAttachment,
                                                                                            pipelineColorBlendOffAttachment };
 
     vk::PipelineColorBlendStateCreateInfo pipelineColorBlendAttachmentCreate(
@@ -179,17 +181,19 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateGraphicsPipeline()
 
     _pipelineLayout = _device.createPipelineLayoutUnique(pipelineCreateInfo);
 
-    std::vector<vk::Format> colorAttachmentFormats{ vk::Format::eR8Uint, vk::Format::eR32Uint, vk::Format::eB8G8R8A8Unorm };
+    std::vector<vk::Format> colorAttachmentFormats{ vk::Format::eR8Uint, vk::Format::eB8G8R8A8Unorm };
 
-    std::vector<uint32_t> colourAttachmentInputIndicies{ 0, 1, VK_ATTACHMENT_UNUSED };
+    std::vector<uint32_t> colourAttachmentInputIndicies{ 0, 1 };
+
+    uint32_t depthAttachmentInputIndex = 2;
 
     vk::StructureChain<vk::GraphicsPipelineCreateInfo, vk::PipelineRenderingCreateInfo, vk::RenderingInputAttachmentIndexInfo>
         graphicsPipelineCreate{ { vk::PipelineCreateFlags{}, shaderStages, &vertexInput, &inputAssembly, nullptr,
                                   &pipelineViewportStateCreate, &pipelineRasterizationStateCreate,
-                                  &pipelineMultisampleStateCreate, nullptr, &pipelineColorBlendAttachmentCreate,
+                                  &pipelineMultisampleStateCreate, &pipelineDepthStencilAttachmentCreate, &pipelineColorBlendAttachmentCreate,
                                   &dynamicStateCreate, *_pipelineLayout, nullptr, 1 },
-                                { 0, colorAttachmentFormats },
-                                { colourAttachmentInputIndicies } };
+                                { 0, colorAttachmentFormats, vk::Format::eD32Sfloat, vk::Format::eUndefined },
+                                { colourAttachmentInputIndicies, &depthAttachmentInputIndex } };
 
     auto pipelineReturn = _device.createGraphicsPipelineUnique(nullptr, graphicsPipelineCreate.get());
 

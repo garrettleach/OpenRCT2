@@ -3,12 +3,15 @@
 #extension GL_EXT_nonuniform_qualifier : require
 #extension GL_EXT_scalar_block_layout : require
 
+// Allows for about 8 million draws per frame
+const float DEPTH_INCREMENT = 1.0 / float(1u << 22u);//1.0 / float(1u << 22u);
+
 layout (set = 0, binding = 0) uniform sampler singleSampler;
 
 layout (set = 0, binding = 1) uniform utexture2D filterPalette;
 
 layout (input_attachment_index = 0, set = 1, binding = 0) uniform usubpassInput inputColour;
-layout (input_attachment_index = 1, set = 1, binding = 1) uniform usubpassInput inputDepth;
+layout (input_attachment_index = 2, set = 1, binding = 1) uniform subpassInput inputDepth;
 
 layout (set = 1, binding = 2, std430) uniform globals{
     uint colourPalette[256]; //palette to BGRA colour mapping
@@ -32,16 +35,16 @@ layout (set = 1, binding = 3, std430) readonly buffer FilterRects {
     FilterRect[] rects;
 };
 
-layout (location = 2) out vec3 outColour;
+layout (location = 1) out vec3 outColour;
 
 void main() {
     uint colour = subpassLoad(inputColour).x;
-    uint depth = subpassLoad(inputDepth).x;
+    float depth = subpassLoad(inputDepth).x;
     vec2 coords = gl_FragCoord.xy;
 
     for(uint i = 0; i < push.rectCount; i++)
     {
-        if(depth < rects[i].depth)
+        if(depth < (rects[i].depth * DEPTH_INCREMENT))
         {
             vec4 bounds = rects[i].bounds * push.scaleFactor;
             if(

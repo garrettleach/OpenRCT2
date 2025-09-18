@@ -30,12 +30,10 @@ layout(location = 0) flat in uint flags;
 layout(location = 1) flat in uint textureIndex;
 layout(location = 2) flat in uint maskIndex;
 layout(location = 3) flat in uint remapPalette;// 0xFF Primary, 0xFF00 Seconday, 0xFF0000 Tertiary, 0x3000000 count of palettes
-layout(location = 4) flat in uint inInstanceIndex;
-layout(location = 5) in vec2 texCoord;
-layout(location = 6) in vec2 texCoordUnnormalized;
+layout(location = 4) in vec2 texCoord;
+layout(location = 5) in vec2 texCoordUnnormalized;
 
 layout(location = 0) out uint outColour;
-layout(location = 1) out uint outInstanceIndex;
 
 void main() {
     uint upaletteindex;
@@ -92,5 +90,4 @@ void main() {
     }
 
     outColour = upaletteindex;
-    outInstanceIndex = inInstanceIndex;
 }
