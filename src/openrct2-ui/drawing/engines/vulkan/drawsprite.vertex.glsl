@@ -36,7 +36,7 @@ void main() {
 
     vec2 texCoord = vec2((float(texCoordUnnorm.x)/float(bounds.z - bounds.x)), (float(texCoordUnnorm.y)/float(bounds.w - bounds.y)));
 
-    gl_Position = ubo.transform * vec4(vec2(clippedBoundPosition), 1.0 - gl_InstanceIndex * DEPTH_INCREMENT, 1.0);
+    gl_Position = ubo.transform * vec4(vec2(clippedBoundPosition), gl_InstanceIndex * DEPTH_INCREMENT, 1.0);
 
     outFlags = flags;
     outTextureIndex = index;
