@@ -517,7 +517,7 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::UpdateInputViews(
 }
 
 void OpenRCT2::Ui::Vulkan::ColourizePipeline::Draw(
-    const vk::CommandBuffer& commandBuffer, RenderTarget& renderTarget, vk::Extent2D extent, uint32_t currentFrame)
+    const vk::CommandBuffer& commandBuffer, RenderTarget& renderTarget, uint32_t currentFrame)
 {
     std::call_once(_initializedFilterPaletteData, [this]() { CreateFilterPaletteImage(); });
 
@@ -574,10 +574,10 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::Draw(
     std::memcpy(_storageBufferPointer[currentFrame], _inProgressFilterRects.data(), bufferSizeNeeded);
     _inProgressFilterRects.clear();
 
-    vk::Viewport viewport(0.0f, 0.0f, extent.width, extent.height, 0.0f, 1.0f);
+    vk::Viewport viewport(0.0f, 0.0f, renderTarget.width, renderTarget.height, 0.0f, 1.0f);
     commandBuffer.setViewport(0, { viewport });
 
-    vk::Rect2D scissor({ 0, 0 }, vk::Extent2D(extent.width, extent.height));
+    vk::Rect2D scissor({ 0, 0 }, vk::Extent2D(renderTarget.width, renderTarget.height));
     commandBuffer.setScissor(0, scissor);
 
     commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *_pipeline);

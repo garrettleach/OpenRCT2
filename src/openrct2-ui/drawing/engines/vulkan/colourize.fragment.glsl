@@ -20,7 +20,6 @@ layout (set = 1, binding = 2, std430) uniform globals{
 layout(push_constant) uniform pushConstants
 {
     uint rectCount;
-    float scaleFactor;
 } push;
 
 struct FilterRect
@@ -46,12 +45,11 @@ void main() {
     {
         if(depth < (rects[i].depth * DEPTH_INCREMENT))
         {
-            vec4 bounds = rects[i].bounds * push.scaleFactor;
             if(
-                coords.x > bounds.x &&
-                coords.y > bounds.y &&
-                coords.x < bounds.z &&
-                coords.y < bounds.w)
+                coords.x > rects[i].bounds.x &&
+                coords.y > rects[i].bounds.y &&
+                coords.x < rects[i].bounds.z &&
+                coords.y < rects[i].bounds.w)
             {
                 //vec4 clipRect = rects[i].clip * push.scaleFactor;
                 ivec2 uv = ivec2(colour, rects[i].filterId);
