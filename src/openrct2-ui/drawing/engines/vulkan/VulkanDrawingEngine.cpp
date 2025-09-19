@@ -447,6 +447,10 @@ namespace OpenRCT2::Ui::Vulkan
             *this, *_debug, _physicalDevice, *_device, _framesInFlight, *_vmaAllocator, _graphicsQueue,
             _queueIndicies.graphics);
 
+        _linePipeline = std::make_unique<LinePipeline>(
+            *this, *_debug, _physicalDevice, *_device, _framesInFlight, *_vmaAllocator, _graphicsQueue,
+            _queueIndicies.graphics);
+
         std::vector<vk::ImageView> paletteImageViews;
         for (auto& imageView : _intermediatePaletteImageViews)
         {
@@ -708,6 +712,8 @@ namespace OpenRCT2::Ui::Vulkan
 
         _drawSpritePipeline->Draw(*currentFramePrimaryCommandBuffer, _mainRT, _swapchainExtent, _currentFrame);
 
+        _linePipeline->Draw(*currentFramePrimaryCommandBuffer, _mainRT, _swapchainExtent, _currentFrame);
+
         vk::ImageMemoryBarrier2 nextSubpassMemBarPalette(
             vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eColorAttachmentWrite,
             vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eInputAttachmentRead,
@@ -836,6 +842,11 @@ namespace OpenRCT2::Ui::Vulkan
     ColourizePipeline& VulkanDrawingEngine::GetColourizePipeline()
     {
         return *_colourizePipeline;
+    }
+
+    LinePipeline& VulkanDrawingEngine::GetLinePipeline()
+    {
+        return *_linePipeline;
     }
 } // namespace OpenRCT2::Ui::Vulkan
 

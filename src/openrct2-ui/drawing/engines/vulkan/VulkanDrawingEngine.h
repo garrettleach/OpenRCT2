@@ -2,6 +2,7 @@
 
 #include "ColourizePipeline.h"
 #include "DrawSpritePipeline.h"
+#include "LinePipeline.h"
 #include "SwapchainSync.h"
 #include "VulkanDebug.h"
 #include "VulkanInstance.h"
@@ -70,6 +71,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         std::unique_ptr<DrawSpritePipeline> _drawSpritePipeline;
         std::unique_ptr<ColourizePipeline> _colourizePipeline;
+        std::unique_ptr<LinePipeline> _linePipeline;
 
         vk::UniqueCommandPool _commandPool;
         std::vector<vk::UniqueCommandBuffer> _primaryCommandBuffers; //[0,_framesInFlight)
@@ -120,6 +122,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         DrawSpritePipeline& GetDrawSpritePipeline();
         ColourizePipeline& GetColourizePipeline();
+        LinePipeline& GetLinePipeline();
 
     private:
         void CreateInstance();

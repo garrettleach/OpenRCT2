@@ -181,8 +181,6 @@ namespace OpenRCT2::Ui::Vulkan
 
         vk::PipelineDynamicStateCreateInfo pipelineDynamicStateCreate(vk::PipelineDynamicStateCreateFlags(), dynamicStates);
 
-        vector<vk::DescriptorSetLayout> descriptorSetLayouts{ descriptorSetLayout }; // TODO: add images
-
         std::vector<vk::Format> colourAttachmentFormats{ vk::Format::eR8Uint, vk::Format::eB8G8R8A8Unorm };
 
         std::vector<uint32_t> colourAttachmentInputIndicies{ 0, VK_ATTACHMENT_UNUSED };
