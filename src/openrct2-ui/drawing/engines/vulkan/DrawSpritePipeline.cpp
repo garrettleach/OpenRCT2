@@ -633,10 +633,6 @@ namespace OpenRCT2::Ui::Vulkan
         std::memcpy(_instanceMappedMemory[currentFrame], _workingInstances.data(), neededInstanceMem);
 
         DrawSpritePipeline::UniformBufferObject ubo{
-            .transform = glm::ortho(0.0f, (float)renderTarget.width, 0.00f, (float)renderTarget.height, 2.0f, 0.0f)
-                * glm::lookAt(
-                             glm::vec3(0.0f, 0.0f, 1.0f), glm::vec3(0.0f, 0.0f, 0.0f),
-                             glm::vec3(0.0f, ((float)renderTarget.height), 0.0f)),
             .renderTargetSize = { renderTarget.width, renderTarget.height }
         };
 

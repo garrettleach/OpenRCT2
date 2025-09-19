@@ -78,7 +78,6 @@ namespace OpenRCT2::Ui::Vulkan
     public:
         struct UniformBufferObject
         {
-            alignas(16) glm::mat4 transform;
             alignas(8) glm::uvec2 renderTargetSize;
         };
 

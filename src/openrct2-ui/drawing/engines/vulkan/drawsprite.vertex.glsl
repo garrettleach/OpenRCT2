@@ -6,7 +6,6 @@
 const float DEPTH_INCREMENT = 1.0 / float(1u << 22u);//1.0 / float(1u << 22u);
 
 layout(set = 0, binding = 0) uniform UniformBufferObject {
-    mat4 transform;
     uvec2 renderTargetSize;
 } ubo;
 
@@ -36,7 +35,7 @@ void main() {
 
     vec2 texCoord = vec2((float(texCoordUnnorm.x)/float(bounds.z - bounds.x)), (float(texCoordUnnorm.y)/float(bounds.w - bounds.y)));
 
-    gl_Position = ubo.transform * vec4(vec2(clippedBoundPosition), gl_InstanceIndex * DEPTH_INCREMENT, 1.0);
+    gl_Position = vec4((vec2(clippedBoundPosition) / vec2(ubo.renderTargetSize) * 2.0)-vec2(1,1), gl_InstanceIndex * DEPTH_INCREMENT, 1.0);
 
     outFlags = flags;
     outTextureIndex = index;
