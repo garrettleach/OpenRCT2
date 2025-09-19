@@ -189,13 +189,13 @@ namespace OpenRCT2::Ui::Vulkan
             vk::GraphicsPipelineCreateInfo, vk::PipelineRenderingCreateInfo, vk::RenderingInputAttachmentIndexInfo>
             graphicsPipelineCreate{ { vk::PipelineCreateFlags{}, shaderStages, &pipelineVertexInputStateCreateInfo,
                                       &pipelineInputAssemblyStateCreate, nullptr, &pipelineViewportStateCreate,
-                                      &pipelineRasterizationStateCreate, &pipelineMultisampleStateCreate, &pipelineDepthStateCreate,
-                                      &pipelineColorBlendStateCreate, &pipelineDynamicStateCreate, pipelineLayout, nullptr, 0 },
+                                      &pipelineRasterizationStateCreate, &pipelineMultisampleStateCreate,
+                                      &pipelineDepthStateCreate, &pipelineColorBlendStateCreate, &pipelineDynamicStateCreate,
+                                      pipelineLayout, nullptr, 0 },
+                                    { {}, colourAttachmentFormats, vk::Format::eD32Sfloat },
                                     {
-                                        {},
-                                        colourAttachmentFormats, vk::Format::eD32Sfloat
-                                    },
-                                    { colourAttachmentInputIndicies, } };
+                                        colourAttachmentInputIndicies,
+                                    } };
 
         auto pipeline = device.createGraphicsPipelineUnique(nullptr, graphicsPipelineCreate.get());
 
@@ -630,9 +630,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         std::memcpy(_instanceMappedMemory[currentFrame], _workingInstances.data(), neededInstanceMem);
 
-        DrawSpritePipeline::UniformBufferObject ubo{
-            .renderTargetSize = { renderTarget.width, renderTarget.height }
-        };
+        DrawSpritePipeline::UniformBufferObject ubo{ .renderTargetSize = { renderTarget.width, renderTarget.height } };
 
         std::memcpy(_uniformBufferObjectMappedMemory[currentFrame], &ubo, sizeof(ubo));
 

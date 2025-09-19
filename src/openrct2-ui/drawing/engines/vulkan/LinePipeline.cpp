@@ -1,18 +1,19 @@
 #include "LinePipeline.h"
 
-#include "VulkanDrawingEngine.h"
 #include "SpirV.h"
+#include "VulkanDrawingEngine.h"
 
 vk::VertexInputBindingDescription OpenRCT2::Ui::Vulkan::LinePipeline::GetBindingDescription()
 {
-    return vk::VertexInputBindingDescription(0, sizeof(OpenRCT2::Ui::Vulkan::LinePipeline::PointData), vk::VertexInputRate::eVertex);
+    return vk::VertexInputBindingDescription(
+        0, sizeof(OpenRCT2::Ui::Vulkan::LinePipeline::PointData), vk::VertexInputRate::eVertex);
 }
 
 std::vector<vk::VertexInputAttributeDescription> OpenRCT2::Ui::Vulkan::LinePipeline::GetAttributeDescriptions()
 {
     return { { 0, 0, vk::Format::eR32G32Sint, offsetof(LinePipeline::PointData, pos) },
-        { 1, 0, vk::Format::eR32Uint, offsetof(LinePipeline::PointData, depth) },
-        { 2, 0, vk::Format::eR8Uint, offsetof(LinePipeline::PointData, colour) } };
+             { 1, 0, vk::Format::eR32Uint, offsetof(LinePipeline::PointData, depth) },
+             { 2, 0, vk::Format::eR8Uint, offsetof(LinePipeline::PointData, colour) } };
 }
 
 OpenRCT2::Ui::Vulkan::LinePipeline::LinePipeline(
@@ -95,10 +96,10 @@ void OpenRCT2::Ui::Vulkan::LinePipeline::Draw(
 
     commandBuffer.bindVertexBuffers(0, { _linePointBuffer[currentFrame] }, { 0 });
 
-	glm::uvec2 renderTargetSize(renderTarget.width, renderTarget.height);
+    glm::uvec2 renderTargetSize(renderTarget.width, renderTarget.height);
 
-	commandBuffer.pushConstants(
-            *_pipelineLayout, vk::ShaderStageFlagBits::eVertex, 0, sizeof(renderTargetSize), &renderTargetSize);
+    commandBuffer.pushConstants(
+        *_pipelineLayout, vk::ShaderStageFlagBits::eVertex, 0, sizeof(renderTargetSize), &renderTargetSize);
 
     commandBuffer.draw(static_cast<uint32_t>(points.size()), 1, 0, 0);
 
@@ -131,10 +132,10 @@ void OpenRCT2::Ui::Vulkan::LinePipeline::Queue(uint32_t depth, RenderTarget& rt,
 
     auto& zoom = rt.zoom_level;
     ScreenLine zoomedLine{ { zoom.ApplyInversedTo(line.GetX1()), zoom.ApplyInversedTo(line.GetY1()) },
-                            { zoom.ApplyInversedTo(line.GetX2()), zoom.ApplyInversedTo(line.GetY2()) } };
+                           { zoom.ApplyInversedTo(line.GetX2()), zoom.ApplyInversedTo(line.GetY2()) } };
 
     glm::ivec4 finalLine{ zoomedLine.GetX1() - rt.x + clip.GetLeft(), zoomedLine.GetY1() - rt.y + clip.GetTop(),
-        zoomedLine.GetX2() - rt.x + clip.GetLeft(), zoomedLine.GetY2() - rt.y + clip.GetTop() };
+                          zoomedLine.GetX2() - rt.x + clip.GetLeft(), zoomedLine.GetY2() - rt.y + clip.GetTop() };
 
     _inProgressLines.emplace_back(finalLine, depth, colour & 0xFF);
 }

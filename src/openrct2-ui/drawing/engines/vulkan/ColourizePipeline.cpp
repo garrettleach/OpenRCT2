@@ -190,8 +190,8 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateGraphicsPipeline()
     vk::StructureChain<vk::GraphicsPipelineCreateInfo, vk::PipelineRenderingCreateInfo, vk::RenderingInputAttachmentIndexInfo>
         graphicsPipelineCreate{ { vk::PipelineCreateFlags{}, shaderStages, &vertexInput, &inputAssembly, nullptr,
                                   &pipelineViewportStateCreate, &pipelineRasterizationStateCreate,
-                                  &pipelineMultisampleStateCreate, &pipelineDepthStencilAttachmentCreate, &pipelineColorBlendAttachmentCreate,
-                                  &dynamicStateCreate, *_pipelineLayout, nullptr, 1 },
+                                  &pipelineMultisampleStateCreate, &pipelineDepthStencilAttachmentCreate,
+                                  &pipelineColorBlendAttachmentCreate, &dynamicStateCreate, *_pipelineLayout, nullptr, 1 },
                                 { 0, colorAttachmentFormats, vk::Format::eD32Sfloat, vk::Format::eUndefined },
                                 { colourAttachmentInputIndicies, &depthAttachmentInputIndex } };
 
