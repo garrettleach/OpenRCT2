@@ -1,4 +1,5 @@
 #include "LinePipeline.h"
+#include "VulkanUtils.h"
 
 #include "SpirV.h"
 #include "VulkanDrawingEngine.h"
@@ -68,12 +69,12 @@ void OpenRCT2::Ui::Vulkan::LinePipeline::Draw(
         allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
         allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
-        VkBuffer buffer;
+        vk::Buffer buffer;
         VmaAllocation vmaAllocation;
         VmaAllocationInfo allocationInfo;
 
-        auto result = vmaCreateBuffer(_alloc, bufferInfo, &allocInfo, &buffer, &vmaAllocation, &allocationInfo);
-        if (vk::Result(result) != vk::Result::eSuccess)
+        auto result = vmaCreateBuffer(_alloc, bufferInfo, &allocInfo, buffer, vmaAllocation, &allocationInfo);
+        if (result != vk::Result::eSuccess)
         {
             throw std::runtime_error("Failed to reallocate buffer");
         }
@@ -245,12 +246,12 @@ void OpenRCT2::Ui::Vulkan::LinePipeline::CreateBuffers()
         allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
         allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
-        VkBuffer buffer;
+        vk::Buffer buffer;
         VmaAllocation vmaAllocation;
         VmaAllocationInfo allocationInfo;
 
-        auto result = vmaCreateBuffer(_alloc, bufferInfo, &allocInfo, &buffer, &vmaAllocation, &allocationInfo);
-        if (result != VK_SUCCESS)
+        auto result = vmaCreateBuffer(_alloc, bufferInfo, &allocInfo, buffer, vmaAllocation, &allocationInfo);
+        if (result != vk::Result::eSuccess)
         {
             throw std::runtime_error("Failed to allocate buffer for line pipeline");
         }

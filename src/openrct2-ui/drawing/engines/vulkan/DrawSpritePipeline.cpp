@@ -1091,13 +1091,13 @@ namespace OpenRCT2::Ui::Vulkan
         VmaAllocationCreateInfo allocImageCreateInfo{};
         allocImageCreateInfo.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO;
 
-        VkImage filterPaletteImage;
+        vk::Image filterPaletteImage;
         VmaAllocation filterPaletteImageAllocation;
 
         auto imageResult = vmaCreateImage(
-            _alloc, filterImageCreateInfo, &allocImageCreateInfo, &filterPaletteImage, &filterPaletteImageAllocation, nullptr);
+            _alloc, filterImageCreateInfo, &allocImageCreateInfo, filterPaletteImage, filterPaletteImageAllocation, nullptr);
 
-        if (VK_SUCCESS != imageResult)
+        if (vk::Result::eSuccess != imageResult)
         {
             throw std::runtime_error("Vulkan memory error while creating image");
         }

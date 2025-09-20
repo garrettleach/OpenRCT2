@@ -1,6 +1,7 @@
 #ifndef DISABLE_VULKAN
 
     #include "VulkanDrawingEngine.h"
+    #include "VulkanUtils.h"
 
     #include "MemoryType.h"
     #include "SpirV.h"
@@ -387,12 +388,12 @@ namespace OpenRCT2::Ui::Vulkan
 
         for (size_t i = 0; i < _framesInFlight; i++)
         {
-            VkImage image;
+            vk::Image image;
             VmaAllocation allocation;
 
-            if (VK_SUCCESS
+            if (vk::Result::eSuccess
                 != vmaCreateImage(
-                    static_cast<VmaAllocator>(*_vmaAllocator), paletteImageCreateInfo, &vmaAllocCreateInfo, &image, &allocation,
+                    static_cast<VmaAllocator>(*_vmaAllocator), paletteImageCreateInfo, &vmaAllocCreateInfo, image, allocation,
                     nullptr))
             {
                 throw std::runtime_error("Could not create intermediate image");
@@ -411,12 +412,12 @@ namespace OpenRCT2::Ui::Vulkan
 
         for (size_t i = 0; i < _framesInFlight; i++)
         {
-            VkImage image;
+            vk::Image image;
             VmaAllocation allocation;
 
-            if (VK_SUCCESS
+            if (vk::Result::eSuccess
                 != vmaCreateImage(
-                    static_cast<VmaAllocator>(*_vmaAllocator), imageDepthCreateInfo, &vmaAllocCreateInfo, &image, &allocation,
+                    static_cast<VmaAllocator>(*_vmaAllocator), imageDepthCreateInfo, &vmaAllocCreateInfo, image, allocation,
                     nullptr))
             {
                 throw std::runtime_error("Could not create intermediate depth image");
@@ -435,12 +436,12 @@ namespace OpenRCT2::Ui::Vulkan
 
         for (size_t i = 0; i < _framesInFlight; i++)
         {
-            VkImage image;
+            vk::Image image;
             VmaAllocation allocation;
 
-            if (VK_SUCCESS
+            if (vk::Result::eSuccess
                 != vmaCreateImage(
-                    static_cast<VmaAllocator>(*_vmaAllocator), imageColourCreateInfo, &vmaAllocCreateInfo, &image, &allocation,
+                    static_cast<VmaAllocator>(*_vmaAllocator), imageColourCreateInfo, &vmaAllocCreateInfo, image, allocation,
                     nullptr))
             {
                 throw std::runtime_error("Could not create intermediate colour image");

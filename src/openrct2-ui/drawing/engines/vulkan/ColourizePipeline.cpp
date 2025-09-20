@@ -218,12 +218,12 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateBuffers()
     allocInfo.preferredFlags = (VkMemoryPropertyFlags)(vk::MemoryPropertyFlagBits::eHostCoherent
                                                        | vk::MemoryPropertyFlagBits::eHostCached);
 
-    VkBuffer vertexBuffer;
+    vk::Buffer vertexBuffer;
     VmaAllocation vertexAllocation;
     VmaAllocationInfo vertexAllocationInfo;
 
-    if (VK_SUCCESS
-        != vmaCreateBuffer(_vma, bufferCreateVerticies, &allocInfo, &vertexBuffer, &vertexAllocation, &vertexAllocationInfo))
+    if (vk::Result::eSuccess
+        != vmaCreateBuffer(_vma, bufferCreateVerticies, &allocInfo, vertexBuffer, vertexAllocation, &vertexAllocationInfo))
     {
         throw std::runtime_error("Vulkan memory error while creating vertex buffer");
     }
@@ -239,13 +239,12 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateBuffers()
             vk::BufferCreateFlags{}, vk::DeviceSize(sizeof(UniformValues)), vk::BufferUsageFlagBits::eUniformBuffer,
             vk::SharingMode::eExclusive, { _graphicsQueueIndex });
 
-        VkBuffer uniformBuffer;
+        vk::Buffer uniformBuffer;
         VmaAllocation uniformAllocation;
         VmaAllocationInfo uniformAllocationInfo;
 
-        if (VK_SUCCESS
-            != vmaCreateBuffer(
-                _vma, uniformBufferCreate, &allocInfo, &uniformBuffer, &uniformAllocation, &uniformAllocationInfo))
+        if (vk::Result::eSuccess
+            != vmaCreateBuffer(_vma, uniformBufferCreate, &allocInfo, uniformBuffer, uniformAllocation, &uniformAllocationInfo))
         {
             throw std::runtime_error("Vulkan memory error while creating uniform buffer");
         }
@@ -260,13 +259,12 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateBuffers()
             vk::BufferCreateFlags{}, vk::DeviceSize(_storageBufferSize[i]), vk::BufferUsageFlagBits::eStorageBuffer,
             vk::SharingMode::eExclusive, { _graphicsQueueIndex });
 
-        VkBuffer storageBuffer;
+        vk::Buffer storageBuffer;
         VmaAllocation storageAllocation;
         VmaAllocationInfo storageAllocationInfo;
 
-        if (VK_SUCCESS
-            != vmaCreateBuffer(
-                _vma, storageBufferCreate, &allocInfo, &storageBuffer, &storageAllocation, &storageAllocationInfo))
+        if (vk::Result::eSuccess
+            != vmaCreateBuffer(_vma, storageBufferCreate, &allocInfo, storageBuffer, storageAllocation, &storageAllocationInfo))
         {
             throw std::runtime_error("Vulkan memory error while creating storage buffer");
         }
@@ -332,13 +330,13 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateImages()
     VmaAllocationCreateInfo allocImageCreateInfo{};
     allocImageCreateInfo.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO;
 
-    VkImage filterPaletteImage;
+    vk::Image filterPaletteImage;
     VmaAllocation filterPaletteImageAllocation;
 
     auto imageResult = vmaCreateImage(
-        _vma, filterImageCreateInfo, &allocImageCreateInfo, &filterPaletteImage, &filterPaletteImageAllocation, nullptr);
+        _vma, filterImageCreateInfo, &allocImageCreateInfo, filterPaletteImage, filterPaletteImageAllocation, nullptr);
 
-    if (VK_SUCCESS != imageResult)
+    if (vk::Result::eSuccess != imageResult)
     {
         throw std::runtime_error("Vulkan memory error while creating image");
     }
@@ -436,13 +434,13 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateFilterPaletteImage()
     allocStagingCreateInfo.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO;
     allocStagingCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
-    VkBuffer stagingBuffer;
+    vk::Buffer stagingBuffer;
     VmaAllocation stagingBufferAllocation;
     VmaAllocationInfo stagingBufferAllocInfo;
 
     auto stagingResult = vmaCreateBuffer(
-        _vma, bufferCreateInfo, &allocStagingCreateInfo, &stagingBuffer, &stagingBufferAllocation, &stagingBufferAllocInfo);
-    if (VK_SUCCESS != stagingResult)
+        _vma, bufferCreateInfo, &allocStagingCreateInfo, stagingBuffer, stagingBufferAllocation, &stagingBufferAllocInfo);
+    if (vk::Result::eSuccess != stagingResult)
     {
         throw std::runtime_error("Vulkan memory error while creating staging buffer");
     }
@@ -535,13 +533,13 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::Draw(
         allocInfo.preferredFlags = (VkMemoryPropertyFlags)(vk::MemoryPropertyFlagBits::eHostCoherent
                                                            | vk::MemoryPropertyFlagBits::eHostCached);
 
-        VkBuffer newBuffer;
+        vk::Buffer newBuffer;
         VmaAllocation newAllocation;
         VmaAllocationInfo newAllocationInfo;
 
-        VkResult createResult = vmaCreateBuffer(_vma, bufferCreate, &allocInfo, &newBuffer, &newAllocation, &newAllocationInfo);
+        vk::Result createResult = vmaCreateBuffer(_vma, bufferCreate, &allocInfo, newBuffer, newAllocation, &newAllocationInfo);
 
-        if (vk::Result::eSuccess != vk::Result(createResult))
+        if (vk::Result::eSuccess != createResult)
         {
             throw std::runtime_error("Failed to allocate larger buffer for filter rects");
         }
