@@ -75,6 +75,7 @@
     <ClInclude Include="drawing\engines\vulkan\VulkanDrawingEngine.h" />
     <ClInclude Include="drawing\engines\vulkan\VulkanInstance.h" />
     <ClInclude Include="drawing\engines\vulkan\VulkanMemoryAllocator.h" />
+    <ClInclude Include="drawing\engines\vulkan\VulkanUtils.h" />
     <ClInclude Include="input\InputManager.h" />
     <ClInclude Include="input\MouseInput.h" />
     <ClInclude Include="input\ShortcutIds.h" />
@@ -153,6 +154,7 @@
     <ClCompile Include="drawing\engines\vulkan\VulkanDrawingEngine.cpp" />
     <ClCompile Include="drawing\engines\vulkan\VulkanInstance.cpp" />
     <ClCompile Include="drawing\engines\vulkan\VulkanMemoryAllocator.cpp" />
+    <ClCompile Include="drawing\engines\vulkan\VulkanUtils.cpp" />
     <ClCompile Include="input\InputManager.cpp" />
     <ClCompile Include="input\Shortcuts.cpp" />
     <ClCompile Include="input\MouseInput.cpp" />

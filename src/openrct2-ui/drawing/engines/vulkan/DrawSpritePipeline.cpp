@@ -1,5 +1,6 @@
 #ifndef DISABLE_VULKAN
     #include "DrawSpritePipeline.h"
+    #include "VulkanUtils.h"
 
     #include "MemoryType.h"
     #include "SpirV.h"
@@ -380,13 +381,13 @@ namespace OpenRCT2::Ui::Vulkan
             allocInfo.preferredFlags = (VkMemoryPropertyFlags)(vk::MemoryPropertyFlagBits::eHostCoherent
                                                                | vk::MemoryPropertyFlagBits::eHostCached);
 
-            VkBuffer uniformBuffer;
+            vk::Buffer uniformBuffer;
             VmaAllocation uniformAllocation;
             VmaAllocationInfo uniformAllocationInfo;
 
-            if (VK_SUCCESS
+            if (vk::Result::eSuccess
                 == vmaCreateBuffer(
-                    _alloc, uniformBufferInfo, &allocInfo, &uniformBuffer, &uniformAllocation, &uniformAllocationInfo))
+                    _alloc, uniformBufferInfo, &allocInfo, uniformBuffer, uniformAllocation, &uniformAllocationInfo))
             {
                 // testing: using a host buffer
                 _uniformBufferObjectBuffer.push_back(uniformBuffer);
@@ -401,12 +402,12 @@ namespace OpenRCT2::Ui::Vulkan
     }
 
     void CreateSingleBuffer(
-        VmaAllocator& allocator, vk::BufferCreateInfo bufferInfo, VmaAllocationCreateInfo allocInfo, VkBuffer& buffer,
+        VmaAllocator& allocator, vk::BufferCreateInfo bufferInfo, VmaAllocationCreateInfo allocInfo, vk::Buffer& buffer,
         VmaAllocation& allocation, void*& memoryMappedPointers)
     {
         VmaAllocationInfo allocationInfo;
 
-        if (VK_SUCCESS == vmaCreateBuffer(allocator, bufferInfo, &allocInfo, &buffer, &allocation, &allocationInfo))
+        if (vk::Result::eSuccess == vmaCreateBuffer(allocator, bufferInfo, &allocInfo, buffer, allocation, &allocationInfo))
         {
             memoryMappedPointers = allocationInfo.pMappedData;
         }
@@ -418,12 +419,12 @@ namespace OpenRCT2::Ui::Vulkan
 
     void CreateMultipleBuffers(
         VmaAllocator& allocator, size_t framesInFlight, vk::BufferCreateInfo bufferInfo, VmaAllocationCreateInfo allocInfo,
-        std::vector<VkBuffer>& buffers, std::vector<VmaAllocation>& allocations, std::vector<uint64_t>& sizes,
+        std::vector<vk::Buffer>& buffers, std::vector<VmaAllocation>& allocations, std::vector<uint64_t>& sizes,
         std::vector<void*>& memoryMappedPointers)
     {
         for (size_t i = 0; i < framesInFlight; i++)
         {
-            VkBuffer buffer;
+            vk::Buffer buffer;
             VmaAllocation allocation;
             void* memoryMappedPointer = nullptr;
 
@@ -497,7 +498,7 @@ namespace OpenRCT2::Ui::Vulkan
     }
 
     void ResizeBufferIfNeeded(
-        uint32_t neededMem, VmaAllocator allocator, VkBuffer& buffer, VmaAllocation& memory, uint64_t& memSize,
+        uint32_t neededMem, VmaAllocator allocator, vk::Buffer& buffer, VmaAllocation& memory, uint64_t& memSize,
         void*& memoryMapLocation, vk::BufferUsageFlags bufferUsageFlags, VmaAllocationCreateInfo vmaAllocCreateInfo)
     {
         if (memSize < neededMem)
@@ -509,7 +510,8 @@ namespace OpenRCT2::Ui::Vulkan
 
             VmaAllocationInfo allocationInfo;
 
-            if (VK_SUCCESS == vmaCreateBuffer(allocator, bufferInfo, &vmaAllocCreateInfo, &buffer, &memory, &allocationInfo))
+            if (vk::Result::eSuccess
+                == vmaCreateBuffer(allocator, bufferInfo, &vmaAllocCreateInfo, buffer, memory, &allocationInfo))
             {
                 memSize = neededMem;
                 memoryMapLocation = allocationInfo.pMappedData;
@@ -686,18 +688,6 @@ namespace OpenRCT2::Ui::Vulkan
 
         extent = vk::Extent2D(width, height);
         return pixels8;
-    }
-
-    glm::ivec4 CalcClip(const RenderTarget& rt, const RenderTarget& mainRT)
-    {
-        auto bitsOffset = static_cast<int32_t>(rt.bits - mainRT.bits);
-
-        auto fullLineWidth = (mainRT.width + mainRT.pitch);
-
-        auto rtDownShift = bitsOffset / fullLineWidth;
-        auto rtRightShift = bitsOffset - (rtDownShift * fullLineWidth);
-
-        return { rtRightShift, rtDownShift, rtRightShift + rt.width, rtDownShift + rt.height };
     }
 
     void DrawSpritePipeline::QueueDraw(RenderTarget& rt, ImageId imageId, int32_t x, int32_t y)
@@ -1011,12 +1001,13 @@ namespace OpenRCT2::Ui::Vulkan
             tempImage[i] = static_cast<uint8_t>(0xFF & i);
         }
 
-        if (CreateImage(extent, _sampleImage, _sampleImageAllocation) != VK_SUCCESS)
+        if (vk::Result::eSuccess != CreateImage(_alloc, extent, _sampleImage, _sampleImageAllocation, _graphicsQueueIndex))
         {
             throw std::runtime_error("Failed to create sample image");
         }
 
-        if (CreateStagingBuffer(tempImage.get(), size, _sampleStagingBuffer, _sampleStagingBufferAllocation))
+        if (vk::Result::eSuccess
+            != CreateStagingBuffer(_alloc, tempImage.get(), size, _sampleStagingBuffer, _sampleStagingBufferAllocation))
         {
             throw std::runtime_error("Failed to create staging buffer for sample image");
         }
@@ -1136,17 +1127,17 @@ namespace OpenRCT2::Ui::Vulkan
         vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
         commandBuffer.begin(beginInfo);
 
-        VkBuffer stagingBuffer;
+        vk::Buffer stagingBuffer;
         VmaAllocation stagingBufferAllocation;
 
         auto stagingResult = CreateStagingBuffer(
-            imageData.get(), extent.width * extent.height, stagingBuffer, stagingBufferAllocation);
-        if (VK_SUCCESS != stagingResult)
+            _alloc, imageData.get(), extent.width * extent.height, stagingBuffer, stagingBufferAllocation);
+        if (vk::Result::eSuccess != stagingResult)
         {
             throw std::runtime_error("Vulkan memory error while creating staging buffer");
         }
 
-        VkImage tempFilterImage = (VkImage)_filterPaletteImage;
+        vk::Image tempFilterImage = _filterPaletteImage;
         TransitionImageToTransferDst(commandBuffer, tempFilterImage);
 
         CopyBufferToImage(commandBuffer, stagingBuffer, tempFilterImage, filterImageExtent);
@@ -1162,105 +1153,6 @@ namespace OpenRCT2::Ui::Vulkan
         _graphicsQueue.waitIdle();
 
         vmaDestroyBuffer(_alloc, stagingBuffer, stagingBufferAllocation);
-    }
-
-    VkResult DrawSpritePipeline::CreateImage(vk::Extent2D extent, VkImage& image, VmaAllocation& vmaAllocation)
-    {
-        std::vector<uint32_t> queueIndicies{ _graphicsQueueIndex };
-
-        vk::ImageCreateInfo imageCreateInfo(
-            vk::ImageCreateFlags{}, vk::ImageType::e2D, vk::Format::eR8Uint, vk::Extent3D{ extent, 1 }, 1u, 1u,
-            vk::SampleCountFlagBits::e1, vk::ImageTiling::eOptimal,
-            vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled, vk::SharingMode::eExclusive, queueIndicies,
-            vk::ImageLayout::eUndefined);
-
-        VmaAllocationCreateInfo allocCreateInfo{};
-        allocCreateInfo.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO;
-
-        return vmaCreateImage(_alloc, &*imageCreateInfo, &allocCreateInfo, &image, &vmaAllocation, nullptr);
-    }
-
-    VkResult DrawSpritePipeline::CreateStagingBuffer(
-        void* data, vk::DeviceSize size, VkBuffer& buffer, VmaAllocation& vmaAllocation)
-    {
-        vk::BufferCreateInfo bufferInfo(
-            vk::BufferCreateFlags{}, size, vk::BufferUsageFlagBits::eTransferSrc, vk::SharingMode::eExclusive, {});
-
-        VmaAllocationCreateInfo allocInfo = {};
-        allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
-        allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
-
-        VmaAllocationInfo allocationInfo;
-
-        auto result = vmaCreateBuffer(_alloc, bufferInfo, &allocInfo, &buffer, &vmaAllocation, &allocationInfo);
-        if (result != VK_SUCCESS)
-        {
-            return result;
-        }
-
-        std::memcpy(allocationInfo.pMappedData, data, size);
-
-        return VK_SUCCESS;
-    }
-
-    void DrawSpritePipeline::TransitionImageToTransferDst(vk::CommandBuffer& commandBuffer, VkImage& image)
-    {
-        vk::ImageMemoryBarrier preCopyBarrier(
-            {}, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal,
-            VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, image, { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-
-        commandBuffer.pipelineBarrier(
-            vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, {}, {}, nullptr, preCopyBarrier);
-    }
-
-    void DrawSpritePipeline::CopyBufferToImage(
-        vk::CommandBuffer& commandBuffer, VkBuffer& buffer, VkImage& image, vk::Extent2D extent)
-    {
-        vk::BufferImageCopy region(
-            0, 0, 0, { vk::ImageAspectFlagBits::eColor, 0, 0, 1 }, { 0, 0, 0 }, vk::Extent3D{ extent, 1 });
-
-        commandBuffer.copyBufferToImage(buffer, image, vk::ImageLayout::eTransferDstOptimal, { region });
-    }
-
-    void DrawSpritePipeline::TransitionImageToFragmentReadOpt(vk::CommandBuffer& commandBuffer, VkImage& image)
-    {
-        vk::ImageMemoryBarrier postCopyBarrier(
-            vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead, vk::ImageLayout::eTransferDstOptimal,
-            vk::ImageLayout::eShaderReadOnlyOptimal, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, image,
-            { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-
-        commandBuffer.pipelineBarrier(
-            vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, nullptr, postCopyBarrier);
-    }
-
-    vk::ImageView DrawSpritePipeline::AddUpload(
-        vk::CommandBuffer& commandBuffer, uint8_t* data, vk::Extent2D extent, VkImage& image, VmaAllocation& imageAllocation,
-        VkBuffer& stagingBuffer, VmaAllocation& stagingAllocation)
-    {
-        auto imageResult = CreateImage(extent, image, imageAllocation);
-        if (imageResult != VK_SUCCESS)
-        {
-            throw std::runtime_error("Could not create image");
-        }
-
-        auto stagingResult = CreateStagingBuffer(
-            data, vk::DeviceSize(extent.width * extent.height), stagingBuffer, stagingAllocation);
-        if (stagingResult != VK_SUCCESS)
-        {
-            throw std::runtime_error("Could not create staging buffer for image");
-        }
-
-        TransitionImageToTransferDst(commandBuffer, image);
-
-        CopyBufferToImage(commandBuffer, stagingBuffer, image, extent);
-
-        TransitionImageToFragmentReadOpt(commandBuffer, image);
-
-        vk::ImageViewCreateInfo imageViewCreateInfo(
-            vk::ImageViewCreateFlags(), image, vk::ImageViewType::e2D, vk::Format::eR8Uint, {},
-            vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
-
-        return _device.createImageView(imageViewCreateInfo);
     }
 
     void DrawSpritePipeline::UploadSprites()
@@ -1289,15 +1181,15 @@ namespace OpenRCT2::Ui::Vulkan
 
                 vk::CommandBuffer commandBuffer = **uniqueCommandBuffer;
 
-                VkImage image;
+                vk::Image image;
                 VmaAllocation imageAllocation;
 
-                VkBuffer stagingBuffer;
+                vk::Buffer stagingBuffer;
                 VmaAllocation stagingAllocation;
 
                 auto imageView = AddUpload(
-                    commandBuffer, sprite.second.data.get(), sprite.second.size, image, imageAllocation, stagingBuffer,
-                    stagingAllocation);
+                    _alloc, _device, commandBuffer, _graphicsQueueIndex, sprite.second.data.get(), sprite.second.size, image,
+                    imageAllocation, stagingBuffer, stagingAllocation);
 
                 _uploadedSprites.insert(
                     std::make_pair(
@@ -1326,15 +1218,15 @@ namespace OpenRCT2::Ui::Vulkan
 
                 vk::CommandBuffer commandBuffer = **uniqueCommandBuffer;
 
-                VkImage image;
+                vk::Image image;
                 VmaAllocation imageAllocation;
 
-                VkBuffer stagingBuffer;
+                vk::Buffer stagingBuffer;
                 VmaAllocation stagingAllocation;
 
                 auto imageView = AddUpload(
-                    commandBuffer, glyph.second.data.get(), glyph.second.size, image, imageAllocation, stagingBuffer,
-                    stagingAllocation);
+                    _alloc, _device, commandBuffer, _graphicsQueueIndex, glyph.second.data.get(), glyph.second.size, image,
+                    imageAllocation, stagingBuffer, stagingAllocation);
 
                 _uploadedGlyphs.insert(
                     std::make_pair(

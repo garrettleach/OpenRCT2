@@ -1,4 +1,5 @@
 #include "ColourizePipeline.h"
+#include "VulkanUtils.h"
 
 #include "SpirV.h"
 
@@ -44,18 +45,6 @@ namespace
     constexpr size_t initialStorageBufferSize = sizeof(FilterRect) * 100;
 
     constexpr vk::Extent2D filterImageExtent(256, kPaletteTotalOffsets);
-
-    glm::ivec4 CalcClip(const RenderTarget& rt, const RenderTarget& mainRT)
-    {
-        auto bitsOffset = static_cast<int32_t>(rt.bits - mainRT.bits);
-
-        auto fullLineWidth = (mainRT.width + mainRT.pitch);
-
-        auto rtDownShift = bitsOffset / fullLineWidth;
-        auto rtRightShift = bitsOffset - (rtDownShift * fullLineWidth);
-
-        return { rtRightShift, rtDownShift, rtRightShift + rt.width, rtDownShift + rt.height };
-    }
 } // namespace
 
 OpenRCT2::Ui::Vulkan::ColourizePipeline::ColourizePipeline(

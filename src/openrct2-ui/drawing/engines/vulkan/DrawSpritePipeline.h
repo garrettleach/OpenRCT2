@@ -115,10 +115,10 @@ namespace OpenRCT2::Ui::Vulkan
 
         VmaAllocator _alloc;
 
-        VkImage _sampleImage;
+        vk::Image _sampleImage;
         VmaAllocation _sampleImageAllocation;
 
-        VkBuffer _sampleStagingBuffer;
+        vk::Buffer _sampleStagingBuffer;
         VmaAllocation _sampleStagingBufferAllocation;
 
         vk::ImageView _sampleImageView;
@@ -131,22 +131,22 @@ namespace OpenRCT2::Ui::Vulkan
         vk::UniquePipeline _pipeline;
 
         std::vector<VmaAllocation> _uniformBufferObjectMemory;
-        std::vector<VkBuffer> _uniformBufferObjectBuffer;
+        std::vector<vk::Buffer> _uniformBufferObjectBuffer;
         std::vector<void*> _uniformBufferObjectMappedMemory;
         vk::UniqueDescriptorPool _uniformBufferDescriptorPool;
         std::vector<vk::DescriptorSet> _uniformBufferDescriptorSets;
 
         std::vector<VmaAllocation> _instanceDeviceMemory;
-        std::vector<VkBuffer> _instanceBuffers;
+        std::vector<vk::Buffer> _instanceBuffers;
         std::vector<void*> _instanceMappedMemory;
         std::vector<vk::DeviceSize> _instanceDeviceMemorySize;
 
         VmaAllocation _vertexDeviceMemory;
-        VkBuffer _vertexBuffer;
+        vk::Buffer _vertexBuffer;
         void* _vertexMappedMemory;
 
         VmaAllocation _indexDeviceMemory;
-        VkBuffer _indexBuffer;
+        vk::Buffer _indexBuffer;
         void* _indexMappedMemory;
 
         std::vector<vk::DescriptorPool> _descriptorIndexPools;
@@ -231,15 +231,6 @@ namespace OpenRCT2::Ui::Vulkan
         void CreateFilterPaletteImage();
         void UploadFilterPaletteImage();
 
-        VkResult CreateImage(vk::Extent2D extent, VkImage& image, VmaAllocation& vmaAllocation);
-        VkResult CreateStagingBuffer(void* data, vk::DeviceSize size, VkBuffer& buffer, VmaAllocation& vmaAllocation);
-        void TransitionImageToTransferDst(vk::CommandBuffer& commandBuffer, VkImage& image);
-        void CopyBufferToImage(vk::CommandBuffer& commandBuffer, VkBuffer& buffer, VkImage& image, vk::Extent2D extent);
-        void TransitionImageToFragmentReadOpt(vk::CommandBuffer& commandBuffer, VkImage& image);
-
-        vk::ImageView AddUpload(
-            vk::CommandBuffer& commandBuffer, uint8_t* data, vk::Extent2D extent, VkImage& image,
-            VmaAllocation& imageAllocation, VkBuffer& stagingBuffer, VmaAllocation& stagingAllocation);
         void UploadSprites();
         void GetSpriteDescriptors(
             size_t descriptorStartIndex, std::vector<vk::DescriptorImageInfo>& descriptors,
