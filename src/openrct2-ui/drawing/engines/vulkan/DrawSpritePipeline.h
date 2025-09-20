@@ -115,13 +115,6 @@ namespace OpenRCT2::Ui::Vulkan
 
         VmaAllocator _alloc;
 
-        vk::Image _sampleImage;
-        VmaAllocation _sampleImageAllocation;
-
-        vk::Buffer _sampleStagingBuffer;
-        VmaAllocation _sampleStagingBufferAllocation;
-
-        vk::ImageView _sampleImageView;
         vk::Sampler _sampler;
 
         vk::UniqueDescriptorSetLayout _descriptorSetLayout;
@@ -226,14 +219,12 @@ namespace OpenRCT2::Ui::Vulkan
 
         void CreateIndexDescriptors();
 
-        void SetupSampleImage();
-
         void CreateFilterPaletteImage();
         void UploadFilterPaletteImage();
 
         void UploadSprites();
         void GetSpriteDescriptors(
-            size_t descriptorStartIndex, std::vector<vk::DescriptorImageInfo>& descriptors,
+            std::vector<vk::DescriptorImageInfo>& descriptors,
             std::unordered_map<ImageId, uint32_t, ImageIdHasher>& descriptorMapImages,
             std::unordered_map<GlyphIdentifier, uint32_t, GlyphIdentifierHash>& descriptorMapGlyphs);
 

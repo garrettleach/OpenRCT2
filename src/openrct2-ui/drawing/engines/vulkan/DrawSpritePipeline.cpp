@@ -230,7 +230,6 @@ namespace OpenRCT2::Ui::Vulkan
         CreateIndexBuffer();
         CreateCommandPool();
         CreateIndexDescriptors();
-        SetupSampleImage();
     }
 
     DrawSpritePipeline::~DrawSpritePipeline()
@@ -296,12 +295,6 @@ namespace OpenRCT2::Ui::Vulkan
         _spritesToUpload.clear();
         _glyphsToUpload.clear();
         _inProgressSprites.clear();
-
-        _device.destroyImageView(_sampleImageView);
-
-        vmaDestroyImage(_alloc, _sampleImage, _sampleImageAllocation);
-
-        vmaDestroyBuffer(_alloc, _sampleStagingBuffer, _sampleStagingBufferAllocation);
     }
 
     void DrawSpritePipeline::CreateDescriptorPool()
@@ -528,21 +521,13 @@ namespace OpenRCT2::Ui::Vulkan
 
         UploadSprites();
 
-        // TODO: Update descriptor set for frame
-        vk::DescriptorImageInfo descImageInfo(nullptr, _sampleImageView, vk::ImageLayout::eShaderReadOnlyOptimal);
-
-        vk::WriteDescriptorSet writeSampleImageDesc(
-            _descriptorIndexSets[currentFrame], 0, 0, vk::DescriptorType::eSampledImage, { descImageInfo }, nullptr, nullptr);
-
-        uint32_t descriptorStartIndex = 1;
-
-        GetSpriteDescriptors(descriptorStartIndex, _tmpDescriptors, _tmpImageDescriptorMap, _tmpGlyphDescriptorMap);
+        GetSpriteDescriptors(_tmpDescriptors, _tmpImageDescriptorMap, _tmpGlyphDescriptorMap);
 
         vk::WriteDescriptorSet writeAllImageDesc(
-            _descriptorIndexSets[currentFrame], 0, descriptorStartIndex, vk::DescriptorType::eSampledImage, _tmpDescriptors, {},
+            _descriptorIndexSets[currentFrame], 0, 0, vk::DescriptorType::eSampledImage, _tmpDescriptors, {},
             {});
 
-        _device.updateDescriptorSets({ writeSampleImageDesc, writeAllImageDesc }, nullptr);
+        _device.updateDescriptorSets({ writeAllImageDesc }, nullptr);
 
         for (auto& data : _inProgressSprites)
         {
@@ -989,58 +974,6 @@ namespace OpenRCT2::Ui::Vulkan
         }
     }
 
-    void DrawSpritePipeline::SetupSampleImage()
-    {
-        const vk::Extent2D extent(16, 16);
-        const size_t len = extent.width * extent.height;
-        auto size = vk::DeviceSize(len);
-        std::unique_ptr<uint8_t[]> tempImage = std::make_unique<uint8_t[]>(len);
-
-        for (size_t i = 0; i < len; i++)
-        {
-            tempImage[i] = static_cast<uint8_t>(0xFF & i);
-        }
-
-        if (vk::Result::eSuccess != CreateImage(_alloc, extent, _sampleImage, _sampleImageAllocation, _graphicsQueueIndex))
-        {
-            throw std::runtime_error("Failed to create sample image");
-        }
-
-        if (vk::Result::eSuccess
-            != CreateStagingBuffer(_alloc, tempImage.get(), size, _sampleStagingBuffer, _sampleStagingBufferAllocation))
-        {
-            throw std::runtime_error("Failed to create staging buffer for sample image");
-        }
-
-        vk::CommandBufferAllocateInfo allocInfo(*_commandPool, vk::CommandBufferLevel::ePrimary, 1);
-        auto uniqueCommandBuffer = std::move(_device.allocateCommandBuffersUnique(allocInfo).front());
-
-        vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-        uniqueCommandBuffer->begin(beginInfo);
-
-        TransitionImageToTransferDst(*uniqueCommandBuffer, _sampleImage);
-
-        CopyBufferToImage(*uniqueCommandBuffer, _sampleStagingBuffer, _sampleImage, extent);
-
-        TransitionImageToFragmentReadOpt(*uniqueCommandBuffer, _sampleImage);
-
-        uniqueCommandBuffer->end();
-
-        std::vector<vk::CommandBuffer> commandBuf{ (*uniqueCommandBuffer) };
-
-        vk::SubmitInfo submitInfo({}, { /*vk::PipelineStageFlags::BitsType::eTransfer?*/ }, commandBuf, {});
-        _graphicsQueue.submit(submitInfo, nullptr);
-        //_graphicsQueue.waitIdle(); // we are before the first frame so we don't need to wait
-
-        std::ignore = uniqueCommandBuffer.release();
-
-        vk::ImageViewCreateInfo imageViewCreateInfo(
-            vk::ImageViewCreateFlags(), _sampleImage, vk::ImageViewType::e2D, vk::Format::eR8Uint, {},
-            vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
-
-        _sampleImageView = _device.createImageView(imageViewCreateInfo);
-    }
-
     std::unique_ptr<uint8_t[]> CreateFilterPaletteMapData(vk::Extent2D& extent)
     {
         constexpr int32_t height = filterImageExtent.height;
@@ -1247,7 +1180,7 @@ namespace OpenRCT2::Ui::Vulkan
 
     // imageid to descriptor number and return the vector of descriptors
     void DrawSpritePipeline::GetSpriteDescriptors(
-        size_t descriptorStartIndex, std::vector<vk::DescriptorImageInfo>& descriptors,
+        std::vector<vk::DescriptorImageInfo>& descriptors,
         std::unordered_map<ImageId, uint32_t, ImageIdHasher>& descriptorMapImages,
         std::unordered_map<GlyphIdentifier, uint32_t, GlyphIdentifierHash>& descriptorMapGlyphs)
     {
@@ -1255,7 +1188,7 @@ namespace OpenRCT2::Ui::Vulkan
         descriptorMapImages.clear();
         descriptorMapGlyphs.clear();
 
-        size_t descriptorIndex = descriptorStartIndex;
+        size_t descriptorIndex = 0;
 
         for (auto& uploadedGlyph : _uploadedGlyphs)
         {
