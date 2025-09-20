@@ -64,8 +64,7 @@ namespace OpenRCT2::Ui::Vulkan
             const std::vector<vk::ImageView>& paletteInputViews, const std::vector<vk::ImageView>& depthInputViews);
         ~ColourizePipeline();
 
-        void Draw(
-            const vk::CommandBuffer& commandBuffer, RenderTarget& renderTarget, uint32_t currentFrame);
+        void Draw(const vk::CommandBuffer& commandBuffer, RenderTarget& renderTarget, uint32_t currentFrame);
 
         void SetPalette(const OpenRCT2::Drawing::GamePalette& colours);
 

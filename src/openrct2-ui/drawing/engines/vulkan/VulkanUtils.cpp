@@ -26,7 +26,8 @@ vk::Result OpenRCT2::Ui::Vulkan::CreateStagingBuffer(
 }
 
 vk::Result OpenRCT2::Ui::Vulkan::CreateImage(
-    VmaAllocator allocator, vk::Extent2D extent, vk::Image& image, VmaAllocation& vmaAllocation, uint32_t graphicsQueueFamilyIndex)
+    VmaAllocator allocator, vk::Extent2D extent, vk::Image& image, VmaAllocation& vmaAllocation,
+    uint32_t graphicsQueueFamilyIndex)
 {
     std::vector<uint32_t> queueIndicies{ graphicsQueueFamilyIndex };
 
@@ -41,7 +42,8 @@ vk::Result OpenRCT2::Ui::Vulkan::CreateImage(
 
     VkImage tempImage;
 
-    auto result = vk::Result(vmaCreateImage(allocator, &*imageCreateInfo, &allocCreateInfo, &tempImage, &vmaAllocation, nullptr));
+    auto result = vk::Result(
+        vmaCreateImage(allocator, &*imageCreateInfo, &allocCreateInfo, &tempImage, &vmaAllocation, nullptr));
 
     if (result == vk::Result::eSuccess)
     {
@@ -92,8 +94,7 @@ vk::ImageView OpenRCT2::Ui::Vulkan::AddUpload(
     }
 
     auto stagingResult = OpenRCT2::Ui::Vulkan::CreateStagingBuffer(
-        allocator,
-        data, vk::DeviceSize(extent.width * extent.height), stagingBuffer, stagingAllocation);
+        allocator, data, vk::DeviceSize(extent.width * extent.height), stagingBuffer, stagingAllocation);
     if (stagingResult != vk::Result::eSuccess)
     {
         throw std::runtime_error("Could not create staging buffer for image");

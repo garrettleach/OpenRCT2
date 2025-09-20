@@ -1,7 +1,7 @@
 #include "ColourizePipeline.h"
-#include "VulkanUtils.h"
 
 #include "SpirV.h"
+#include "VulkanUtils.h"
 
 #include <array>
 #include <limits>

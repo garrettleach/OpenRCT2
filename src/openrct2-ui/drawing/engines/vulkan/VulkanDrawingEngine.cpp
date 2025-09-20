@@ -1,11 +1,11 @@
 #ifndef DISABLE_VULKAN
 
     #include "VulkanDrawingEngine.h"
-    #include "VulkanUtils.h"
 
     #include "MemoryType.h"
     #include "SpirV.h"
     #include "VulkanDrawingContext.h"
+    #include "VulkanUtils.h"
 
     #include <SDL2/SDL_vulkan.h>
     #include <algorithm>
@@ -756,9 +756,7 @@ namespace OpenRCT2::Ui::Vulkan
               _queueIndicies.graphics, _queueIndicies.graphics, _intermediateColourImages[_currentFrame],
               vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1) }
         };
-        vk::DependencyInfo makeColourWritableDependency{
-            vk::DependencyFlagBits::eByRegion, {}, {}, barriersMakeColorWritable
-        };
+        vk::DependencyInfo makeColourWritableDependency{ vk::DependencyFlagBits::eByRegion, {}, {}, barriersMakeColorWritable };
 
         currentFramePrimaryCommandBuffer->pipelineBarrier2(makeColourWritableDependency);
 
@@ -783,7 +781,8 @@ namespace OpenRCT2::Ui::Vulkan
             vk::ClearValue(vk::ClearDepthStencilValue(0.0f, 0)));
 
         vk::RenderingInfo renderingInfo(
-            {}, vk::Rect2D{ vk::Offset2D{ 0, 0 }, vk::Extent2D(_mainRT.width, _mainRT.height) }, 1, 0, attachmentInfo, &depthAttachment, {});
+            {}, vk::Rect2D{ vk::Offset2D{ 0, 0 }, vk::Extent2D(_mainRT.width, _mainRT.height) }, 1, 0, attachmentInfo,
+            &depthAttachment, {});
 
         currentFramePrimaryCommandBuffer->beginRendering(renderingInfo);
 
@@ -818,22 +817,23 @@ namespace OpenRCT2::Ui::Vulkan
         std::vector<vk::ImageMemoryBarrier2> barriersColourToSwapchainBarriers = {
             { vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eColorAttachmentWrite,
               vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead,
-              vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eTransferSrcOptimal,
-              _queueIndicies.graphics, _queueIndicies.graphics, _intermediateColourImages[_currentFrame],
+              vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::eTransferSrcOptimal, _queueIndicies.graphics,
+              _queueIndicies.graphics, _intermediateColourImages[_currentFrame],
               vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1) },
-            { vk::PipelineStageFlagBits2::eTopOfPipe | vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eNone, // do we need vk::PipelineStageFlagBits2::eColorAtt..Outp
-              vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite,
-              vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal,
-              _queueIndicies.graphics, _queueIndicies.graphics, _swapchainImages[_imageIndex],
-              vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1) }
+            { vk::PipelineStageFlagBits2::eTopOfPipe | vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+              vk::AccessFlagBits2::eNone, // do we need vk::PipelineStageFlagBits2::eColorAtt..Outp
+              vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite, vk::ImageLayout::eUndefined,
+              vk::ImageLayout::eTransferDstOptimal, _queueIndicies.graphics, _queueIndicies.graphics,
+              _swapchainImages[_imageIndex], vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1) }
         };
 
         vk::DependencyInfo prepColourToSwapchainDependency{ {}, {}, {}, barriersColourToSwapchainBarriers };
 
         currentFramePrimaryCommandBuffer->pipelineBarrier2(prepColourToSwapchainDependency);
 
-        std::array<vk::Offset3D, 2> offsetsSrc{ { { 0, 0, 0 }, { _mainRT.width, _mainRT.height, 1} } };
-        std::array<vk::Offset3D, 2> offsetsDst{ { { 0, 0, 0 }, vk::Offset3D(_swapchainExtent.width, _swapchainExtent.height, 1) } };
+        std::array<vk::Offset3D, 2> offsetsSrc{ { { 0, 0, 0 }, { _mainRT.width, _mainRT.height, 1 } } };
+        std::array<vk::Offset3D, 2> offsetsDst{ { { 0, 0, 0 },
+                                                  vk::Offset3D(_swapchainExtent.width, _swapchainExtent.height, 1) } };
 
         std::vector<vk::ImageBlit> imageBlits{
             { vk::ImageSubresourceLayers(vk::ImageAspectFlagBits::eColor, 0, 0, 1), offsetsSrc,
@@ -845,9 +845,10 @@ namespace OpenRCT2::Ui::Vulkan
             vk::ImageLayout::eTransferDstOptimal, imageBlits, vk::Filter::eNearest);
 
         std::vector<vk::ImageMemoryBarrier2> makeSwapchainPresentableBarriers = {
-            { vk::PipelineStageFlagBits2::eTransfer | vk::PipelineStageFlagBits2::eBottomOfPipe, vk::AccessFlagBits2::eTransferWrite,
-              vk::PipelineStageFlagBits2::eBottomOfPipe, vk::AccessFlagBits2::eNone, vk::ImageLayout::eTransferDstOptimal,
-              vk::ImageLayout::ePresentSrcKHR, _queueIndicies.graphics, _queueIndicies.graphics, _swapchainImages[_imageIndex],
+            { vk::PipelineStageFlagBits2::eTransfer | vk::PipelineStageFlagBits2::eBottomOfPipe,
+              vk::AccessFlagBits2::eTransferWrite, vk::PipelineStageFlagBits2::eBottomOfPipe, vk::AccessFlagBits2::eNone,
+              vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::ePresentSrcKHR, _queueIndicies.graphics,
+              _queueIndicies.graphics, _swapchainImages[_imageIndex],
               vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1) }
         };
 

@@ -1,8 +1,8 @@
 #include "LinePipeline.h"
-#include "VulkanUtils.h"
 
 #include "SpirV.h"
 #include "VulkanDrawingEngine.h"
+#include "VulkanUtils.h"
 
 vk::VertexInputBindingDescription OpenRCT2::Ui::Vulkan::LinePipeline::GetBindingDescription()
 {

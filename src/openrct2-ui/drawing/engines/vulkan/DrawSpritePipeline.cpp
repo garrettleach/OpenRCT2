@@ -1,9 +1,9 @@
 #ifndef DISABLE_VULKAN
     #include "DrawSpritePipeline.h"
-    #include "VulkanUtils.h"
 
     #include "MemoryType.h"
     #include "SpirV.h"
+    #include "VulkanUtils.h"
 
     #include <glm/gtc/matrix_transform.hpp>
 

@@ -1,13 +1,14 @@
 #pragma once
-#include "vulkan/vulkan.hpp"
 #include "VulkanMemoryAllocator.h"
+#include "vulkan/vulkan.hpp"
 
 #include <glm/glm.hpp>
 #include <openrct2/drawing/Drawing.h>
 
 namespace OpenRCT2::Ui::Vulkan
 {
-    vk::Result CreateStagingBuffer(VmaAllocator allocator, const void* data, vk::DeviceSize size, vk::Buffer& buffer, VmaAllocation& vmaAllocation);
+    vk::Result CreateStagingBuffer(
+        VmaAllocator allocator, const void* data, vk::DeviceSize size, vk::Buffer& buffer, VmaAllocation& vmaAllocation);
 
     vk::Result CreateImage(
         VmaAllocator allocator, vk::Extent2D extent, vk::Image& image, VmaAllocation& vmaAllocation,
