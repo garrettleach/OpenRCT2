@@ -490,8 +490,11 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::CreateGraphicsPipelines()
     {
+        _spriteManager = std::make_unique<SpriteManager>(
+            _physicalDevice, *_device, _framesInFlight, *_vmaAllocator, _graphicsQueue, _queueIndicies.graphics);
+
         _drawSpritePipeline = std::make_unique<DrawSpritePipeline>(
-            *this, *_debug, _physicalDevice, *_device, _framesInFlight, *_vmaAllocator, _graphicsQueue,
+            *this, *_spriteManager, *_debug, _physicalDevice, *_device, _framesInFlight, *_vmaAllocator, _graphicsQueue,
             _queueIndicies.graphics);
 
         _linePipeline = std::make_unique<LinePipeline>(
@@ -739,7 +742,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         _primaryCommandBuffers[_currentFrame]->reset(vk::CommandBufferResetFlags{});
 
-        _drawSpritePipeline->BeginDraw(_currentFrame);
+        _spriteManager->BeginDraw(_currentFrame);
     }
 
     void VulkanDrawingEngine::EndDraw()
@@ -748,6 +751,8 @@ namespace OpenRCT2::Ui::Vulkan
 
         vk::CommandBufferBeginInfo beginInfoPrimary{};
         currentFramePrimaryCommandBuffer->begin(beginInfoPrimary);
+
+        _spriteManager->ExecuteUpload(*currentFramePrimaryCommandBuffer);
 
         std::vector<vk::ImageMemoryBarrier2> barriersMakeColorWritable = {
             { vk::PipelineStageFlagBits2::eTopOfPipe | vk::PipelineStageFlagBits2::eColorAttachmentOutput,
@@ -938,7 +943,7 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::InvalidateImage(uint32_t image)
     {
-        _drawSpritePipeline->InvalidateImage(image);
+        _spriteManager->InvalidateImage(image);
     }
 
     DrawSpritePipeline& VulkanDrawingEngine::GetDrawSpritePipeline()

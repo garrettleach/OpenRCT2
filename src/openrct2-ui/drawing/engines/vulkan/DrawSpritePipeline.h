@@ -1,4 +1,5 @@
 #pragma once
+#include "SpriteManager.h"
 #include "VulkanDebug.h"
 #include "VulkanMemoryAllocator.h"
 
@@ -36,45 +37,6 @@ namespace OpenRCT2::Ui::Vulkan
             colour_t colour;     // for fillrect
         };
 
-        struct GlyphIdentifier
-        {
-            ImageIndex imageIndex;
-            uint64_t palette{}; // used for glyphs, 0s otherwise
-
-            auto operator<=>(const GlyphIdentifier&) const = default;
-        };
-
-        struct GlyphIdentifierHash
-        {
-            inline size_t operator()(const GlyphIdentifier& glyphIdentifier) const
-            {
-                size_t imageIndexHash = std::hash<uint32_t>{}(glyphIdentifier.imageIndex);
-                uint64_t paletteData = 0;
-                std::memcpy(
-                    &paletteData, reinterpret_cast<const uint8_t*>(&glyphIdentifier.palette), sizeof(glyphIdentifier.palette));
-                size_t paletteHash = std::hash<uint64_t>{}(paletteData);
-
-                return imageIndexHash ^ paletteHash;
-            }
-        };
-
-        struct SpriteUpload
-        {
-            std::unique_ptr<uint8_t[]> data;
-            vk::Extent2D size;
-        };
-
-        struct UploadedSpriteInfo
-        {
-            vk::Buffer buffer;
-            VmaAllocation bufferAllocation;
-
-            vk::Image image;
-            VmaAllocation imageAllocation;
-
-            vk::ImageView imageView; // This is what is passed to the shader
-        };
-
     public:
         struct UniformBufferObject
         {
@@ -106,6 +68,7 @@ namespace OpenRCT2::Ui::Vulkan
 
     private:
         OpenRCT2::Drawing::IDrawingEngine& _engine;
+        SpriteManager& _spriteManager;
         const IVulkanDebug& _vulkanDebug;
         const vk::PhysicalDevice _physicalDevice;
         const vk::Device _device;
@@ -147,35 +110,20 @@ namespace OpenRCT2::Ui::Vulkan
 
         std::vector<DrawCommand> _inProgressSprites;
 
-        std::unordered_map<ImageId, SpriteUpload, ImageIdHasher> _spritesToUpload;
-        std::unordered_map<GlyphIdentifier, SpriteUpload, GlyphIdentifierHash> _glyphsToUpload;
-
-        std::unordered_map<ImageId, UploadedSpriteInfo, ImageIdHasher> _uploadedSprites;
-        std::unordered_map<GlyphIdentifier, UploadedSpriteInfo, GlyphIdentifierHash> _uploadedGlyphs;
-
         std::unordered_map<ImageId, uint32_t, ImageIdHasher> _tmpImageDescriptorMap;
         std::unordered_map<GlyphIdentifier, uint32_t, GlyphIdentifierHash> _tmpGlyphDescriptorMap;
         std::vector<vk::DescriptorImageInfo> _tmpDescriptors;
-
-        // when an image is no longer needed we have to wait until the first frame it is not used comes back around
-        std::vector<UploadedSpriteInfo> _currentFrameQueuedImageInvalidation;
-        std::vector<std::vector<UploadedSpriteInfo>> _queuedImageInvalidation;
 
         // used to keep an appropriately sized vector ready between frames
         std::vector<Rect> _workingInstances;
 
         vk::UniqueCommandPool _commandPool;
 
-        std::once_flag _initializedFilterPaletteData;
-        vk::Image _filterPaletteImage;
-        VmaAllocation _filterPaletteImageAllocation;
-        vk::UniqueImageView _filterPaletteImageView;
-
     public:
         DrawSpritePipeline(
-            OpenRCT2::Drawing::IDrawingEngine& engine, const IVulkanDebug& vulkanDebug, const vk::PhysicalDevice physicalDevice,
-            vk::Device device, size_t framesInFlight, VulkanMemoryAllocator& vma, vk::Queue graphicsQueue,
-            uint32_t graphicsQueueIndex);
+            OpenRCT2::Drawing::IDrawingEngine& engine, SpriteManager& spriteManager, const IVulkanDebug& vulkanDebug,
+            const vk::PhysicalDevice physicalDevice, vk::Device device, size_t framesInFlight, VulkanMemoryAllocator& vma,
+            vk::Queue graphicsQueue, uint32_t graphicsQueueIndex);
 
         DrawSpritePipeline& operator=(const DrawSpritePipeline&) = delete;
         DrawSpritePipeline(const DrawSpritePipeline&) = delete;
@@ -195,8 +143,6 @@ namespace OpenRCT2::Ui::Vulkan
         void QueueRect(const RenderTarget& rt, uint32_t colour, int32_t left, int32_t top, int32_t right, int32_t bottom);
 
         uint32_t QueuePlaceholder();
-
-        void InvalidateImage(uint32_t image);
 
     private:
         static vk::UniqueDescriptorSetLayout CreateDescriptorSetLayout(const vk::Device& device);
@@ -218,17 +164,6 @@ namespace OpenRCT2::Ui::Vulkan
         void CreateCommandPool();
 
         void CreateIndexDescriptors();
-
-        void CreateFilterPaletteImage();
-        void UploadFilterPaletteImage();
-
-        void UploadSprites();
-        void GetSpriteDescriptors(
-            std::vector<vk::DescriptorImageInfo>& descriptors,
-            std::unordered_map<ImageId, uint32_t, ImageIdHasher>& descriptorMapImages,
-            std::unordered_map<GlyphIdentifier, uint32_t, GlyphIdentifierHash>& descriptorMapGlyphs);
-
-        void ReleaseUploadedSprites(std::vector<DrawSpritePipeline::UploadedSpriteInfo>& sprites);
     };
 
     inline DrawSpritePipeline::RectFlags operator|(DrawSpritePipeline::RectFlags lhs, DrawSpritePipeline::RectFlags rhs)

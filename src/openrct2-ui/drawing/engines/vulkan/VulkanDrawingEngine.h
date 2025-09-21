@@ -73,6 +73,7 @@ namespace OpenRCT2::Ui::Vulkan
         std::vector<VmaAllocation> _intermediateColourImageAllocations{}; // [0,_framesInFlight)
         std::vector<vk::UniqueImageView> _intermediateColourImageViews{}; // [0,_framesInFlight)
 
+        std::unique_ptr<SpriteManager> _spriteManager;
         std::unique_ptr<DrawSpritePipeline> _drawSpritePipeline;
         std::unique_ptr<ColourizePipeline> _colourizePipeline;
         std::unique_ptr<LinePipeline> _linePipeline;
