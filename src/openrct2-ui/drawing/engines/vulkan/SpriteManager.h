@@ -1,6 +1,6 @@
 #pragma once
-#include "vulkan/vulkan.hpp"
 #include "VulkanMemoryAllocator.h"
+#include "vulkan/vulkan.hpp"
 
 #include <openrct2/drawing/Drawing.h>
 #include <openrct2/drawing/ImageId.hpp>

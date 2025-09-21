@@ -1,4 +1,5 @@
 #include "SpriteManager.h"
+
 #include "VulkanUtils.h"
 
 #include <openrct2/drawing/ColourPalette.h>
@@ -268,8 +269,7 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::ExecuteUpload(vk::CommandBuffer comman
 
             auto imageView = AddUpload(
                 _allocator, _device, commandBuffer, _graphicsQueueFamilyIndex, glyphToUpload.second.data.get(),
-                glyphToUpload.second.size, image,
-                imageAllocation, stagingBuffer, stagingAllocation);
+                glyphToUpload.second.size, image, imageAllocation, stagingBuffer, stagingAllocation);
 
             _uploadedGlyphs.insert(
                 std::make_pair(
