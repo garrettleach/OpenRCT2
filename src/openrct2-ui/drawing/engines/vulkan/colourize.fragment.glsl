@@ -9,6 +9,7 @@ const float DEPTH_INCREMENT = 1.0 / float(1u << 22u);//1.0 / float(1u << 22u);
 layout (set = 0, binding = 0) uniform sampler singleSampler;
 
 layout (set = 0, binding = 1) uniform utexture2D filterPalette;
+layout (set = 0, binding = 2) uniform utexture2D blendPalette;
 
 layout (input_attachment_index = 0, set = 1, binding = 0) uniform usubpassInput inputColour;
 layout (input_attachment_index = 2, set = 1, binding = 1) uniform subpassInput inputDepth;

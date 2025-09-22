@@ -39,6 +39,9 @@ namespace OpenRCT2::Ui::Vulkan
         vk::Image _filterPaletteImage;
         VmaAllocation _filterPaletteImageAllocation;
 
+        vk::Image _blendPaletteImage;
+        VmaAllocation _blendPaletteImageAllocation;
+
         vk::UniquePipeline _pipeline;
         vk::UniquePipelineLayout _pipelineLayout;
 
@@ -50,10 +53,11 @@ namespace OpenRCT2::Ui::Vulkan
 
         vk::UniqueSampler _sampler;
         vk::UniqueImageView _filterPaletteImageView;
+        vk::UniqueImageView _blendPaletteImageView;
 
         OpenRCT2::Drawing::GamePalette _palette;
 
-        std::once_flag _initializedFilterPaletteData;
+        std::once_flag _initializedPaletteData;
 
         std::vector<FilterRectCommand> _inProgressFilterRects;
 
@@ -83,6 +87,7 @@ namespace OpenRCT2::Ui::Vulkan
         void CreateDescriptorPool();
         void CreateDescriptorSets();
         void CreateFilterPaletteImage();
+        void CreateBlendPaletteImage();
         void UpdateInputViews(
             const std::vector<vk::ImageView>& paletteInputViews, const std::vector<vk::ImageView>& depthInputViews);
     };
