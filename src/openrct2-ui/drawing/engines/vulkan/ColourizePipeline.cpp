@@ -49,8 +49,8 @@ namespace
 
 OpenRCT2::Ui::Vulkan::ColourizePipeline::ColourizePipeline(
     OpenRCT2::Drawing::IDrawingEngine& engine, SpriteManager& spriteManager, const vk::Device& device, size_t framesInFlight,
-    VulkanMemoryAllocator& vma, 
-    const std::vector<vk::ImageView>& paletteInputViews, const std::vector<vk::ImageView>& depthInputViews)
+    VulkanMemoryAllocator& vma, const std::vector<vk::ImageView>& paletteInputViews,
+    const std::vector<vk::ImageView>& depthInputViews)
     : _engine(engine)
     , _spriteManager(spriteManager)
     , _device(device)
@@ -424,8 +424,7 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateDescriptorSets()
     vk::DescriptorImageInfo filterPaletteImageCreate(
         nullptr, *_filterPaletteImageView, vk::ImageLayout::eShaderReadOnlyOptimal);
 
-    vk::DescriptorImageInfo blendPaletteImageCreate(
-        nullptr, *_blendPaletteImageView, vk::ImageLayout::eShaderReadOnlyOptimal);
+    vk::DescriptorImageInfo blendPaletteImageCreate(nullptr, *_blendPaletteImageView, vk::ImageLayout::eShaderReadOnlyOptimal);
 
     for (size_t i = 0; i < _framesInFlight; i++)
     {
@@ -543,8 +542,7 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateBlendPaletteImage(vk::Comman
 
     commandBuffer.pipelineBarrier2(preCopyDep);
 
-    vk::BufferImageCopy region(
-        0, 0, 0, { vk::ImageAspectFlagBits::eColor, 0, 0, 1 }, { 0, 0, 0 }, vk::Extent3D{ extent, 1 });
+    vk::BufferImageCopy region(0, 0, 0, { vk::ImageAspectFlagBits::eColor, 0, 0, 1 }, { 0, 0, 0 }, vk::Extent3D{ extent, 1 });
 
     commandBuffer.copyBufferToImage(
         vk::Buffer(stagingBuffer), _blendPaletteImage, vk::ImageLayout::eTransferDstOptimal, { region });
