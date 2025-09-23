@@ -409,11 +409,11 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::Draw(
         + offsetof(UniformValues, colourPalette);
     std::memcpy(colorPalette, _palette.data(), _palette.size() * sizeof(decltype(_palette)::value_type));
 
-    PushConstants pushConsts(static_cast<uint32_t>(_inProgressFilterRects.size()), Config::Get().general.WindowScale);
+    PushConstants pushConsts(static_cast<uint32_t>(_inProgressCommands.size()), Config::Get().general.WindowScale);
     commandBuffer.pushConstants(*_pipelineLayout, vk::ShaderStageFlagBits::eFragment, 0, sizeof(pushConsts), &pushConsts);
 
     uint32_t bufferSizeNeeded = static_cast<uint32_t>(
-        _inProgressFilterRects.size() * sizeof(decltype(_inProgressFilterRects)::value_type));
+        _inProgressCommands.size() * sizeof(decltype(_inProgressCommands)::value_type));
 
     if (_storageBufferSize[currentFrame] < bufferSizeNeeded)
     {
@@ -455,8 +455,8 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::Draw(
         _device.updateDescriptorSets(writeDescSet, {});
     }
 
-    std::memcpy(_storageBufferPointer[currentFrame], _inProgressFilterRects.data(), bufferSizeNeeded);
-    _inProgressFilterRects.clear();
+    std::memcpy(_storageBufferPointer[currentFrame], _inProgressCommands.data(), bufferSizeNeeded);
+    _inProgressCommands.clear();
 
     vk::Viewport viewport(0.0f, 0.0f, renderTarget.width, renderTarget.height, 0.0f, 1.0f);
     commandBuffer.setViewport(0, { viewport });
@@ -496,7 +496,7 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::QueueFilterRect(
     // not sure why there is +1
     glm::ivec4 bounds{ left + clip.x - rt.x, top + clip.y - rt.y, right + clip.x - rt.x + 1, bottom + clip.y - rt.y + 1 };
 
-    _inProgressFilterRects.emplace_back(bounds, clip, paletteIndex, index);
+    _inProgressCommands.emplace_back(bounds, clip, ColourizeCommandFlags::ActionFilterRect, paletteIndex, index);
 }
 
 void OpenRCT2::Ui::Vulkan::ColourizePipeline::QueueBlendedSprite(

@@ -11,10 +11,19 @@ namespace OpenRCT2::Ui::Vulkan
 {
     class ColourizePipeline
     {
-        struct FilterRectCommand
+        const static uint32_t FlagActionMask = 0x1;
+
+        enum ColourizeCommandFlags
+        {
+            ActionFilterRect = 0 & FlagActionMask,
+            ActionBlendSprite = 1 & FlagActionMask,
+        };
+
+        struct ColourizeCommand
         {
             alignas(16) glm::ivec4 bounds;
             alignas(16) glm::ivec4 clip = { INT_MIN, INT_MIN, INT_MAX, INT_MAX };
+            alignas(4) uint32_t flags;
             alignas(4) uint32_t paletteIndex;
             alignas(4) uint32_t drawIndex;
         };
@@ -52,7 +61,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         OpenRCT2::Drawing::GamePalette _palette;
 
-        std::vector<FilterRectCommand> _inProgressFilterRects;
+        std::vector<ColourizeCommand> _inProgressCommands;
 
     public:
         ColourizePipeline(

@@ -23,10 +23,16 @@ layout(push_constant) uniform pushConstants
     uint rectCount;
 } push;
 
+const uint FLAGS_ACTION_MASK = 0x1;
+
+const uint FLAGS_ACTION_FILTERRECT = 0x0;
+const uint FLAGS_ACTION_BLEND = 0x1;
+
 struct FilterRect
 {
     ivec4 bounds;
     ivec4 clip;
+	uint flags;
     uint filterId; //filter number to use for filterPalette
     uint depth;
 };
@@ -52,13 +58,20 @@ void main() {
                 coords.x < rects[i].bounds.z &&
                 coords.y < rects[i].bounds.w)
             {
-                //vec4 clipRect = rects[i].clip * push.scaleFactor;
-                ivec2 uv = ivec2(colour, rects[i].filterId);
-                uint thisColour = texelFetch(usampler2D(filterPalette, singleSampler), uv, 0).x;
-                if(thisColour != 0)
-                {
-                    colour = thisColour;
-                }
+				if((rects[i].flags & FLAGS_ACTION_MASK) == FLAGS_ACTION_FILTERRECT)
+				{
+					//vec4 clipRect = rects[i].clip * push.scaleFactor;
+					ivec2 uv = ivec2(colour, rects[i].filterId);
+					uint thisColour = texelFetch(usampler2D(filterPalette, singleSampler), uv, 0).x;
+					if(thisColour != 0)
+					{
+						colour = thisColour;
+					}
+				}
+				else
+				{
+					// temporarily empty
+				}
             }
         }
     }
