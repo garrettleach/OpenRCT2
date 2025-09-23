@@ -72,8 +72,6 @@ namespace OpenRCT2::Ui::Vulkan
         const IVulkanDebug& _vulkanDebug;
         const vk::Device _device;
         const size_t _framesInFlight{ 0 };
-        const vk::Queue _graphicsQueue;
-        const uint32_t _graphicsQueueIndex;
 
         VmaAllocator _alloc;
 
@@ -121,8 +119,7 @@ namespace OpenRCT2::Ui::Vulkan
     public:
         DrawSpritePipeline(
             OpenRCT2::Drawing::IDrawingEngine& engine, SpriteManager& spriteManager, const IVulkanDebug& vulkanDebug,
-            vk::Device device, size_t framesInFlight, VulkanMemoryAllocator& vma, vk::Queue graphicsQueue,
-            uint32_t graphicsQueueIndex);
+            vk::Device device, size_t framesInFlight, VulkanMemoryAllocator& vma);
 
         DrawSpritePipeline& operator=(const DrawSpritePipeline&) = delete;
         DrawSpritePipeline(const DrawSpritePipeline&) = delete;

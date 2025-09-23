@@ -490,15 +490,12 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::CreateGraphicsPipelines()
     {
-        _spriteManager = std::make_unique<SpriteManager>(
-            *_debug, *_device, _framesInFlight, *_vmaAllocator, _graphicsQueue, _queueIndicies.graphics);
+        _spriteManager = std::make_unique<SpriteManager>(*_debug, *_device, _framesInFlight, *_vmaAllocator);
 
         _drawSpritePipeline = std::make_unique<DrawSpritePipeline>(
-            *this, *_spriteManager, *_debug, *_device, _framesInFlight, *_vmaAllocator, _graphicsQueue,
-            _queueIndicies.graphics);
+            *this, *_spriteManager, *_debug, *_device, _framesInFlight, *_vmaAllocator);
 
-        _linePipeline = std::make_unique<LinePipeline>(
-            *this, *_debug, *_device, _framesInFlight, *_vmaAllocator, _graphicsQueue, _queueIndicies.graphics);
+        _linePipeline = std::make_unique<LinePipeline>(*this, *_debug, *_device, _framesInFlight, *_vmaAllocator);
 
         std::vector<vk::ImageView> paletteImageViews;
         for (auto& imageView : _intermediatePaletteImageViews)
@@ -519,8 +516,7 @@ namespace OpenRCT2::Ui::Vulkan
         }
 
         _colourizePipeline = std::make_unique<ColourizePipeline>(
-            *this, *_spriteManager, *_device, _framesInFlight, *_vmaAllocator, _graphicsQueue, _queueIndicies.graphics, paletteImageViews,
-            depthImageViews);
+            *this, *_spriteManager, *_device, _framesInFlight, *_vmaAllocator, paletteImageViews, depthImageViews);
     }
 
     void VulkanDrawingEngine::CreateCommandPool()
@@ -741,15 +737,17 @@ namespace OpenRCT2::Ui::Vulkan
 
         _primaryCommandBuffers[_currentFrame]->reset(vk::CommandBufferResetFlags{});
 
+        vk::CommandBufferBeginInfo beginInfoPrimary{};
+        _primaryCommandBuffers[_currentFrame]->begin(beginInfoPrimary);
+
         _spriteManager->BeginDraw(_currentFrame);
+
+        _colourizePipeline->BeginDraw(*_primaryCommandBuffers[_currentFrame]);
     }
 
     void VulkanDrawingEngine::EndDraw()
     {
         auto& currentFramePrimaryCommandBuffer = _primaryCommandBuffers[_currentFrame];
-
-        vk::CommandBufferBeginInfo beginInfoPrimary{};
-        currentFramePrimaryCommandBuffer->begin(beginInfoPrimary);
 
         _spriteManager->ExecuteUpload(*currentFramePrimaryCommandBuffer);
 

@@ -205,15 +205,12 @@ namespace OpenRCT2::Ui::Vulkan
 
     DrawSpritePipeline::DrawSpritePipeline(
         OpenRCT2::Drawing::IDrawingEngine& engine, SpriteManager& spriteManager, const IVulkanDebug& vulkanDebug,
-        const vk::Device device, size_t framesInFlight, VulkanMemoryAllocator& vma, vk::Queue graphicsQueue,
-        uint32_t graphicsQueueIndex)
+        const vk::Device device, size_t framesInFlight, VulkanMemoryAllocator& vma)
         : _engine(engine)
         , _spriteManager(spriteManager)
         , _vulkanDebug(vulkanDebug)
         , _device(device)
         , _framesInFlight(framesInFlight)
-        , _graphicsQueue(graphicsQueue)
-        , _graphicsQueueIndex(graphicsQueueIndex)
         , _alloc(vma)
         , _descriptorSetLayout(CreateDescriptorSetLayout(device))
         , _descriptorIndexSetLayout(CreateDescriptorIndexSetLayout(device))
@@ -226,7 +223,6 @@ namespace OpenRCT2::Ui::Vulkan
         CreateInstanceBuffers();
         CreateVertexBuffer();
         CreateIndexBuffer();
-        CreateCommandPool();
         CreateIndexDescriptors();
     }
 
@@ -777,13 +773,6 @@ namespace OpenRCT2::Ui::Vulkan
             DrawType::Placeholder, ImageId(), ImageId(), uint8_t{}, colour_t{});
 
         return position;
-    }
-
-    void DrawSpritePipeline::CreateCommandPool()
-    {
-        vk::CommandPoolCreateInfo commandPoolCreate(vk::CommandPoolCreateFlagBits::eResetCommandBuffer, _graphicsQueueIndex);
-
-        _commandPool = _device.createCommandPoolUnique(commandPoolCreate);
     }
 
     void DrawSpritePipeline::CreateIndexDescriptors()

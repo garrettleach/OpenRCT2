@@ -10,9 +10,7 @@ namespace OpenRCT2::Ui::Vulkan
     vk::Result CreateStagingBuffer(
         VmaAllocator allocator, const void* data, vk::DeviceSize size, vk::Buffer& buffer, VmaAllocation& vmaAllocation);
 
-    vk::Result CreateImage(
-        VmaAllocator allocator, vk::Extent2D extent, vk::Image& image, VmaAllocation& vmaAllocation,
-        uint32_t graphicsQueueFamilyIndex);
+    vk::Result CreateImage(VmaAllocator allocator, vk::Extent2D extent, vk::Image& image, VmaAllocation& vmaAllocation);
 
     void TransitionImageToTransferDst(vk::CommandBuffer& commandBuffer, vk::Image& image);
 
@@ -21,9 +19,8 @@ namespace OpenRCT2::Ui::Vulkan
     void TransitionImageToFragmentReadOpt(vk::CommandBuffer& commandBuffer, vk::Image& image);
 
     vk::ImageView AddUpload(
-        VmaAllocator allocator, const vk::Device& device, vk::CommandBuffer& commandBuffer, uint32_t graphicsQueueFamilyIndex,
-        uint8_t* data, vk::Extent2D extent, vk::Image& image, VmaAllocation& imageAllocation, vk::Buffer& stagingBuffer,
-        VmaAllocation& stagingAllocation);
+        VmaAllocator allocator, const vk::Device& device, vk::CommandBuffer& commandBuffer, uint8_t* data, vk::Extent2D extent,
+        vk::Image& image, VmaAllocation& imageAllocation, vk::Buffer& stagingBuffer, VmaAllocation& stagingAllocation);
 
     glm::ivec4 CalcClip(const RenderTarget& rt, const RenderTarget& mainRT);
 

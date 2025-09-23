@@ -118,18 +118,13 @@ namespace
 } // namespace
 
 OpenRCT2::Ui::Vulkan::SpriteManager::SpriteManager(
-    IVulkanDebug& debug, vk::Device device, uint32_t framesInFlight, VulkanMemoryAllocator& vma, vk::Queue graphicsQueue,
-    uint32_t graphicsQueueFamilyIndex)
+    IVulkanDebug& debug, vk::Device device, uint32_t framesInFlight, VulkanMemoryAllocator& vma)
     : _debug(debug)
     , _device(device)
     , _framesInFlight(framesInFlight)
     , _allocator(vma)
-    , _graphicsQueue(graphicsQueue)
-    , _graphicsQueueFamilyIndex(graphicsQueueFamilyIndex)
     , _queuedImageInvalidation(framesInFlight, std::vector<UploadedSpriteInfo>())
 {
-    vk::CommandPoolCreateInfo commandPoolCreate({}, graphicsQueueFamilyIndex);
-    _commandPool = _device.createCommandPoolUnique(commandPoolCreate);
     CreateFilterPaletteImage();
 }
 
@@ -241,8 +236,8 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::ExecuteUpload(vk::CommandBuffer comman
             VmaAllocation stagingAllocation;
 
             auto imageView = AddUpload(
-                _allocator, _device, commandBuffer, _graphicsQueueFamilyIndex, spriteToUpload.second.data.get(),
-                spriteToUpload.second.size, image, imageAllocation, stagingBuffer, stagingAllocation);
+                _allocator, _device, commandBuffer, spriteToUpload.second.data.get(), spriteToUpload.second.size, image,
+                imageAllocation, stagingBuffer, stagingAllocation);
 
             _uploadedSprites.insert(
                 std::make_pair(
@@ -268,8 +263,8 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::ExecuteUpload(vk::CommandBuffer comman
             VmaAllocation stagingAllocation;
 
             auto imageView = AddUpload(
-                _allocator, _device, commandBuffer, _graphicsQueueFamilyIndex, glyphToUpload.second.data.get(),
-                glyphToUpload.second.size, image, imageAllocation, stagingBuffer, stagingAllocation);
+                _allocator, _device, commandBuffer, glyphToUpload.second.data.get(), glyphToUpload.second.size, image,
+                imageAllocation, stagingBuffer, stagingAllocation);
 
             _uploadedGlyphs.insert(
                 std::make_pair(
@@ -370,8 +365,8 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::CreateFilterPaletteImage()
     vk::ImageCreateInfo filterImageCreateInfo(
         vk::ImageCreateFlags{}, vk::ImageType::e2D, vk::Format::eR8Uint, vk::Extent3D(filterImageExtent, 1), 1, 1,
         vk::SampleCountFlagBits::e1, vk::ImageTiling::eOptimal,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst, vk::SharingMode::eExclusive,
-        { _graphicsQueueFamilyIndex }, vk::ImageLayout::eUndefined);
+        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst, vk::SharingMode::eExclusive, {},
+        vk::ImageLayout::eUndefined);
 
     VmaAllocationCreateInfo allocImageCreateInfo{};
     allocImageCreateInfo.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO;

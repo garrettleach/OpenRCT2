@@ -48,7 +48,7 @@ namespace OpenRCT2::Ui::Vulkan
     public:
         LinePipeline(
             OpenRCT2::Drawing::IDrawingEngine& engine, const IVulkanDebug& vulkanDebug, vk::Device device,
-            size_t framesInFlight, VulkanMemoryAllocator& vma, vk::Queue graphicsQueue, uint32_t graphicsQueueIndex);
+            size_t framesInFlight, VulkanMemoryAllocator& vma);
 
         LinePipeline& operator=(const LinePipeline&) = delete;
         LinePipeline(const LinePipeline&) = delete;

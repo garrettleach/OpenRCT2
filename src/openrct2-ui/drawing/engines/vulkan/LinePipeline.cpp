@@ -19,14 +19,12 @@ std::vector<vk::VertexInputAttributeDescription> OpenRCT2::Ui::Vulkan::LinePipel
 
 OpenRCT2::Ui::Vulkan::LinePipeline::LinePipeline(
     OpenRCT2::Drawing::IDrawingEngine& engine, const IVulkanDebug& vulkanDebug, vk::Device device, size_t framesInFlight,
-    VulkanMemoryAllocator& vma, vk::Queue graphicsQueue, uint32_t graphicsQueueIndex)
+    VulkanMemoryAllocator& vma)
     : _engine(engine)
     , _vulkanDebug(vulkanDebug)
     , _device(device)
     , _framesInFlight(framesInFlight)
     , _alloc(vma)
-    , _graphicsQueue(graphicsQueue)
-    , _graphicsQueueIndex(graphicsQueueIndex)
     , _descriptorSetLayout(CreateDescriptorSetLayout(device))
     , _pipelineLayout(CreatePipelineLayout(_device, *_descriptorSetLayout))
     , _pipeline(CreatePipeline(_device, *_descriptorSetLayout, *_pipelineLayout))

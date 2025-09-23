@@ -23,8 +23,6 @@ namespace OpenRCT2::Ui::Vulkan
         const vk::Device& _device;
         size_t _framesInFlight;
         VulkanMemoryAllocator& _vma;
-        vk::Queue _graphicsQueue;
-        uint32_t _graphicsQueueIndex;
 
         vk::Buffer _vertexBuffer;
         VmaAllocation _vertexAllocation;
@@ -40,9 +38,13 @@ namespace OpenRCT2::Ui::Vulkan
 
         vk::Image _filterPaletteImage;
         VmaAllocation _filterPaletteImageAllocation;
+        vk::Buffer _filterPaletteStagingBuffer;
+        VmaAllocation _filterPaletteStagingAllocation;
 
         vk::Image _blendPaletteImage;
         VmaAllocation _blendPaletteImageAllocation;
+        vk::Buffer _blendPaletteStagingBuffer;
+        VmaAllocation _blendPaletteStagingAllocation;
 
         vk::UniquePipeline _pipeline;
         vk::UniquePipelineLayout _pipelineLayout;
@@ -66,9 +68,11 @@ namespace OpenRCT2::Ui::Vulkan
     public:
         ColourizePipeline(
             OpenRCT2::Drawing::IDrawingEngine& engine, SpriteManager& spriteManager, const vk::Device& device,
-            size_t framesInFlight, VulkanMemoryAllocator& vma, vk::Queue graphicsQueue, uint32_t graphicsQueueIndex,
-            const std::vector<vk::ImageView>& paletteInputViews, const std::vector<vk::ImageView>& depthInputViews);
+            size_t framesInFlight, VulkanMemoryAllocator& vma, const std::vector<vk::ImageView>& paletteInputViews,
+            const std::vector<vk::ImageView>& depthInputViews);
         ~ColourizePipeline();
+
+        void BeginDraw(const vk::CommandBuffer& commandBuffer);
 
         void Draw(const vk::CommandBuffer& commandBuffer, RenderTarget& renderTarget, uint32_t currentFrame);
 
@@ -88,8 +92,8 @@ namespace OpenRCT2::Ui::Vulkan
         void CreateImageViews();
         void CreateDescriptorPool();
         void CreateDescriptorSets();
-        void CreateFilterPaletteImage();
-        void CreateBlendPaletteImage();
+        void CreateFilterPaletteImage(vk::CommandBuffer commandBuffer);
+        void CreateBlendPaletteImage(vk::CommandBuffer commandBuffer);
         void UpdateInputViews(
             const std::vector<vk::ImageView>& paletteInputViews, const std::vector<vk::ImageView>& depthInputViews);
     };

@@ -26,15 +26,12 @@ vk::Result OpenRCT2::Ui::Vulkan::CreateStagingBuffer(
 }
 
 vk::Result OpenRCT2::Ui::Vulkan::CreateImage(
-    VmaAllocator allocator, vk::Extent2D extent, vk::Image& image, VmaAllocation& vmaAllocation,
-    uint32_t graphicsQueueFamilyIndex)
+    VmaAllocator allocator, vk::Extent2D extent, vk::Image& image, VmaAllocation& vmaAllocation)
 {
-    std::vector<uint32_t> queueIndicies{ graphicsQueueFamilyIndex };
-
     vk::ImageCreateInfo imageCreateInfo(
         vk::ImageCreateFlags{}, vk::ImageType::e2D, vk::Format::eR8Uint, vk::Extent3D{ extent, 1 }, 1u, 1u,
         vk::SampleCountFlagBits::e1, vk::ImageTiling::eOptimal,
-        vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled, vk::SharingMode::eExclusive, queueIndicies,
+        vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled, vk::SharingMode::eExclusive, {},
         vk::ImageLayout::eUndefined);
 
     VmaAllocationCreateInfo allocCreateInfo{};
@@ -83,11 +80,10 @@ void OpenRCT2::Ui::Vulkan::TransitionImageToFragmentReadOpt(vk::CommandBuffer& c
 }
 
 vk::ImageView OpenRCT2::Ui::Vulkan::AddUpload(
-    VmaAllocator allocator, const vk::Device& device, vk::CommandBuffer& commandBuffer, uint32_t graphicsQueueFamilyIndex,
-    uint8_t* data, vk::Extent2D extent, vk::Image& image, VmaAllocation& imageAllocation, vk::Buffer& stagingBuffer,
-    VmaAllocation& stagingAllocation)
+    VmaAllocator allocator, const vk::Device& device, vk::CommandBuffer& commandBuffer, uint8_t* data, vk::Extent2D extent,
+    vk::Image& image, VmaAllocation& imageAllocation, vk::Buffer& stagingBuffer, VmaAllocation& stagingAllocation)
 {
-    auto imageResult = OpenRCT2::Ui::Vulkan::CreateImage(allocator, extent, image, imageAllocation, graphicsQueueFamilyIndex);
+    auto imageResult = OpenRCT2::Ui::Vulkan::CreateImage(allocator, extent, image, imageAllocation);
     if (imageResult != vk::Result::eSuccess)
     {
         throw std::runtime_error("Could not create image");

@@ -54,9 +54,6 @@ namespace OpenRCT2::Ui::Vulkan
         vk::Device _device;
         uint32_t _framesInFlight;
         VmaAllocator _allocator;
-        vk::Queue _graphicsQueue;
-        uint32_t _graphicsQueueFamilyIndex;
-        vk::UniqueCommandPool _commandPool;
 
         std::unordered_map<ImageId, SpriteUpload, ImageIdHasher> _spritesToUpload;
         std::unordered_map<GlyphIdentifier, SpriteUpload, GlyphIdentifierHash> _glyphsToUpload;
@@ -77,9 +74,7 @@ namespace OpenRCT2::Ui::Vulkan
         VmaAllocation _filterPaletteStagingBufferAllocation;
 
     public:
-        SpriteManager(
-            IVulkanDebug& debug, vk::Device device, uint32_t framesInFlight, VulkanMemoryAllocator& vma,
-            vk::Queue graphicsQueue, uint32_t graphicsQueueFamilyIndex);
+        SpriteManager(IVulkanDebug& debug, vk::Device device, uint32_t framesInFlight, VulkanMemoryAllocator& vma);
         ~SpriteManager();
 
         void QueueUpload(ImageId imageId);
