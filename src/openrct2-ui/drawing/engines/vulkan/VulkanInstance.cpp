@@ -288,10 +288,6 @@ namespace OpenRCT2::Ui::Vulkan
         _instance = vk::createInstanceUnique(createInfo.get());
     }
 
-    VulkanInstance::VulkanInstance()
-        : _instance()
-    {
-    }
     std::vector<const char*> VulkanInstance::GetDeviceLayers()
     {
         std::vector<const char*> layers;

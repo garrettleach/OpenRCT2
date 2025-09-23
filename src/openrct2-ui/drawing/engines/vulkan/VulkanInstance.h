@@ -15,7 +15,6 @@ namespace OpenRCT2::Ui::Vulkan
 
     public:
         VulkanInstance(SDL_Window* window, uint32_t authoredVulkanApiVersion);
-        explicit VulkanInstance();
         ~VulkanInstance() = default;
 
         VulkanInstance(const VulkanInstance& instance) = delete;
