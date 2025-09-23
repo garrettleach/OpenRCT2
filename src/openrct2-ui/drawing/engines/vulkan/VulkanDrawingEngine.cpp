@@ -491,7 +491,7 @@ namespace OpenRCT2::Ui::Vulkan
     void VulkanDrawingEngine::CreateGraphicsPipelines()
     {
         _spriteManager = std::make_unique<SpriteManager>(
-            _physicalDevice, *_device, _framesInFlight, *_vmaAllocator, _graphicsQueue, _queueIndicies.graphics);
+            *_debug, _physicalDevice, *_device, _framesInFlight, *_vmaAllocator, _graphicsQueue, _queueIndicies.graphics);
 
         _drawSpritePipeline = std::make_unique<DrawSpritePipeline>(
             *this, *_spriteManager, *_debug, _physicalDevice, *_device, _framesInFlight, *_vmaAllocator, _graphicsQueue,

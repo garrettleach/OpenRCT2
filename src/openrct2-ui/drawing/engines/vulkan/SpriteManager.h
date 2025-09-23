@@ -1,4 +1,5 @@
 #pragma once
+#include "VulkanDebug.h"
 #include "VulkanMemoryAllocator.h"
 #include "vulkan/vulkan.hpp"
 
@@ -49,6 +50,7 @@ namespace OpenRCT2::Ui::Vulkan
             vk::ImageView imageView; // This is what is passed to the shader
         };
 
+        IVulkanDebug& _debug;
         vk::PhysicalDevice _physicalDevice;
         vk::Device _device;
         uint32_t _framesInFlight;
@@ -77,8 +79,8 @@ namespace OpenRCT2::Ui::Vulkan
 
     public:
         SpriteManager(
-            const vk::PhysicalDevice physicalDevice, vk::Device device, uint32_t framesInFlight, VulkanMemoryAllocator& vma,
-            vk::Queue graphicsQueue, uint32_t graphicsQueueFamilyIndex);
+            IVulkanDebug& debug, const vk::PhysicalDevice physicalDevice, vk::Device device, uint32_t framesInFlight,
+            VulkanMemoryAllocator& vma, vk::Queue graphicsQueue, uint32_t graphicsQueueFamilyIndex);
         ~SpriteManager();
 
         void QueueUpload(ImageId imageId);
