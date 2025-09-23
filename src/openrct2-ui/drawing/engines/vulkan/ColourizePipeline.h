@@ -36,16 +36,6 @@ namespace OpenRCT2::Ui::Vulkan
         std::vector<void*> _storageBufferPointer;
         std::vector<size_t> _storageBufferSize;
 
-        vk::Image _filterPaletteImage;
-        VmaAllocation _filterPaletteImageAllocation;
-        vk::Buffer _filterPaletteStagingBuffer;
-        VmaAllocation _filterPaletteStagingAllocation;
-
-        vk::Image _blendPaletteImage;
-        VmaAllocation _blendPaletteImageAllocation;
-        vk::Buffer _blendPaletteStagingBuffer;
-        VmaAllocation _blendPaletteStagingAllocation;
-
         vk::UniquePipeline _pipeline;
         vk::UniquePipelineLayout _pipelineLayout;
 
@@ -56,12 +46,10 @@ namespace OpenRCT2::Ui::Vulkan
         std::vector<vk::DescriptorSet> _dynamicDescriptorSets;
 
         vk::UniqueSampler _sampler;
-        vk::UniqueImageView _filterPaletteImageView;
-        vk::UniqueImageView _blendPaletteImageView;
+        vk::ImageView _filterPaletteImageView;
+        vk::ImageView _blendPaletteImageView;
 
         OpenRCT2::Drawing::GamePalette _palette;
-
-        std::once_flag _initializedPaletteData;
 
         std::vector<FilterRectCommand> _inProgressFilterRects;
 
@@ -71,8 +59,6 @@ namespace OpenRCT2::Ui::Vulkan
             size_t framesInFlight, VulkanMemoryAllocator& vma, const std::vector<vk::ImageView>& paletteInputViews,
             const std::vector<vk::ImageView>& depthInputViews);
         ~ColourizePipeline();
-
-        void BeginDraw(const vk::CommandBuffer& commandBuffer);
 
         void Draw(const vk::CommandBuffer& commandBuffer, RenderTarget& renderTarget, uint32_t currentFrame);
 
@@ -88,12 +74,9 @@ namespace OpenRCT2::Ui::Vulkan
         void CreateGraphicsPipeline();
         void CreateSampler();
         void CreateBuffers();
-        void CreateImages();
-        void CreateImageViews();
+        void GetImageViews();
         void CreateDescriptorPool();
         void CreateDescriptorSets();
-        void CreateFilterPaletteImage(vk::CommandBuffer commandBuffer);
-        void CreateBlendPaletteImage(vk::CommandBuffer commandBuffer);
         void UpdateInputViews(
             const std::vector<vk::ImageView>& paletteInputViews, const std::vector<vk::ImageView>& depthInputViews);
     };

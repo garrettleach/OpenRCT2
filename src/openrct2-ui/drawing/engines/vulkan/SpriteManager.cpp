@@ -125,12 +125,18 @@ OpenRCT2::Ui::Vulkan::SpriteManager::SpriteManager(
     , _allocator(vma)
     , _queuedImageInvalidation(framesInFlight, std::vector<UploadedSpriteInfo>())
 {
-    CreateFilterPaletteImage();
+    CreateEmptyPaletteImages();
 }
 
 OpenRCT2::Ui::Vulkan::SpriteManager::~SpriteManager()
 {
+    _blendPaletteImageView.reset();
     _filterPaletteImageView.reset();
+
+    if (_blendPaletteImage)
+    {
+        vmaDestroyImage(_allocator, _blendPaletteImage, _blendPaletteImageAllocation);
+    }
 
     if (_filterPaletteImage)
     {
@@ -140,6 +146,11 @@ OpenRCT2::Ui::Vulkan::SpriteManager::~SpriteManager()
     if (_filterPaletteStagingBuffer)
     {
         vmaDestroyBuffer(_allocator, _filterPaletteStagingBuffer, _filterPaletteStagingBufferAllocation);
+    }
+
+    if (_blendPaletteStagingBuffer)
+    {
+        vmaDestroyBuffer(_allocator, _blendPaletteStagingBuffer, _blendPaletteStagingBufferAllocation);
     }
 
     for (auto& currentSprite : _currentFrameQueuedImageInvalidation)
@@ -218,7 +229,10 @@ vk::ImageView OpenRCT2::Ui::Vulkan::SpriteManager::GetImageView(GlyphIdentifier 
 
 void OpenRCT2::Ui::Vulkan::SpriteManager::ExecuteUpload(vk::CommandBuffer commandBuffer)
 {
-    std::call_once(_initializedFilterPaletteData, [this, commandBuffer]() { UploadFilterPaletteImage(commandBuffer); });
+    std::call_once(_initializedPaletteData, [this, commandBuffer]() {
+        UploadFilterPaletteImage(commandBuffer);
+        UploadBlendPaletteImage(commandBuffer);
+    });
 
     for (auto& spriteToUpload : _spritesToUpload)
     {
@@ -289,6 +303,11 @@ vk::ImageView OpenRCT2::Ui::Vulkan::SpriteManager::GetPaletteImageView()
     return *_filterPaletteImageView;
 }
 
+vk::ImageView OpenRCT2::Ui::Vulkan::SpriteManager::GetBlendImageView()
+{
+    return *_blendPaletteImageView;
+}
+
 void OpenRCT2::Ui::Vulkan::SpriteManager::GetSpritePipelineDescriptors(
     std::vector<vk::DescriptorImageInfo>& descriptors,
     std::unordered_map<ImageId, uint32_t, ImageIdHasher>& descriptorMapImages,
@@ -335,6 +354,26 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::UploadFilterPaletteImage(vk::CommandBu
     TransitionImageToFragmentReadOpt(commandBuffer, _filterPaletteImage);
 }
 
+void OpenRCT2::Ui::Vulkan::SpriteManager::UploadBlendPaletteImage(vk::CommandBuffer commandBuffer)
+{
+    auto extent = vk::Extent2D(kPaletteCount, kPaletteCount);
+    BlendColourMapType* data = GetBlendColourMap();
+
+    auto stagingResult = CreateStagingBuffer(
+        _allocator, data, extent.width * extent.height, _blendPaletteStagingBuffer,
+        _blendPaletteStagingBufferAllocation);
+    if (vk::Result::eSuccess != stagingResult)
+    {
+        throw std::runtime_error("Vulkan memory error while creating staging buffer");
+    }
+
+    TransitionImageToTransferDst(commandBuffer, _blendPaletteImage);
+
+    CopyBufferToImage(commandBuffer, _blendPaletteStagingBuffer, _blendPaletteImage, extent);
+
+    TransitionImageToFragmentReadOpt(commandBuffer, _blendPaletteImage);
+}
+
 void OpenRCT2::Ui::Vulkan::SpriteManager::ReleaseUploadedSprites(std::vector<UploadedSpriteInfo>& sprites)
 {
     for (auto& invalidateImage : sprites)
@@ -360,7 +399,7 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::InvalidateImage(uint32_t image)
     }
 }
 
-void OpenRCT2::Ui::Vulkan::SpriteManager::CreateFilterPaletteImage()
+void OpenRCT2::Ui::Vulkan::SpriteManager::CreateEmptyPaletteImages()
 {
     vk::ImageCreateInfo filterImageCreateInfo(
         vk::ImageCreateFlags{}, vk::ImageType::e2D, vk::Format::eR8Uint, vk::Extent3D(filterImageExtent, 1), 1, 1,
@@ -374,20 +413,46 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::CreateFilterPaletteImage()
     vk::Image filterPaletteImage;
     VmaAllocation filterPaletteImageAllocation;
 
-    auto imageResult = vmaCreateImage(
+    auto filterImageResult = vmaCreateImage(
         _allocator, filterImageCreateInfo, &allocImageCreateInfo, filterPaletteImage, filterPaletteImageAllocation, nullptr);
 
-    if (vk::Result::eSuccess != imageResult)
+    if (vk::Result::eSuccess != filterImageResult)
     {
-        throw std::runtime_error("Vulkan memory error while creating image");
+        throw std::runtime_error("Vulkan memory error while creating filter image");
     }
 
     _filterPaletteImage = filterPaletteImage;
     _filterPaletteImageAllocation = filterPaletteImageAllocation;
 
-    vk::ImageViewCreateInfo imageViewCreate(
+    vk::ImageViewCreateInfo filterImageViewCreate(
         vk::ImageViewCreateFlags{}, _filterPaletteImage, vk::ImageViewType::e2D, vk::Format::eR8Uint, {},
         vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
-    _filterPaletteImageView = _device.createImageViewUnique(imageViewCreate);
+    _filterPaletteImageView = _device.createImageViewUnique(filterImageViewCreate);
+
+    vk::ImageCreateInfo blendImageCreateInfo(
+        vk::ImageCreateFlags{}, vk::ImageType::e2D, vk::Format::eR8Uint, vk::Extent3D(kPaletteCount, kPaletteCount, 1), 1, 1,
+        vk::SampleCountFlagBits::e1, vk::ImageTiling::eOptimal,
+        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst, vk::SharingMode::eExclusive, {},
+        vk::ImageLayout::eUndefined);
+
+    vk::Image blendPaletteImage;
+    VmaAllocation blendPaletteImageAllocation;
+
+    auto blendImageResult = vmaCreateImage(
+        _allocator, blendImageCreateInfo, &allocImageCreateInfo, blendPaletteImage, blendPaletteImageAllocation, nullptr);
+
+    if (vk::Result::eSuccess != blendImageResult)
+    {
+        throw std::runtime_error("Vulkan memory error while creating blend image");
+    }
+
+    _blendPaletteImage = blendPaletteImage;
+    _blendPaletteImageAllocation = blendPaletteImageAllocation;
+
+    vk::ImageViewCreateInfo blendImageViewCreate(
+        vk::ImageViewCreateFlags{}, _blendPaletteImage, vk::ImageViewType::e2D, vk::Format::eR8Uint, {},
+        vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
+
+    _blendPaletteImageView = _device.createImageViewUnique(blendImageViewCreate);
 }

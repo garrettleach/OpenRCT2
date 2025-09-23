@@ -65,13 +65,20 @@ namespace OpenRCT2::Ui::Vulkan
         std::vector<UploadedSpriteInfo> _currentFrameQueuedImageInvalidation;
         std::vector<std::vector<UploadedSpriteInfo>> _queuedImageInvalidation;
 
+        std::once_flag _initializedPaletteData;
+
         // Filter Palette
-        std::once_flag _initializedFilterPaletteData;
         vk::Image _filterPaletteImage{};
         VmaAllocation _filterPaletteImageAllocation{};
         vk::UniqueImageView _filterPaletteImageView{};
         vk::Buffer _filterPaletteStagingBuffer;
         VmaAllocation _filterPaletteStagingBufferAllocation;
+
+        vk::Image _blendPaletteImage{};
+        VmaAllocation _blendPaletteImageAllocation{};
+        vk::UniqueImageView _blendPaletteImageView{};
+        vk::Buffer _blendPaletteStagingBuffer;
+        VmaAllocation _blendPaletteStagingBufferAllocation;
 
     public:
         SpriteManager(IVulkanDebug& debug, vk::Device device, uint32_t framesInFlight, VulkanMemoryAllocator& vma);
@@ -91,6 +98,7 @@ namespace OpenRCT2::Ui::Vulkan
         void InvalidateImage(uint32_t image);
 
         vk::ImageView GetPaletteImageView();
+        vk::ImageView GetBlendImageView();
 
         void GetSpritePipelineDescriptors(
             std::vector<vk::DescriptorImageInfo>& descriptors,
@@ -98,9 +106,10 @@ namespace OpenRCT2::Ui::Vulkan
             std::unordered_map<GlyphIdentifier, uint32_t, GlyphIdentifierHash>& descriptorMapGlyphs);
 
     private:
+        void CreateEmptyPaletteImages();
         void ReleaseUploadedSprites(std::vector<UploadedSpriteInfo>& sprites);
-        void CreateFilterPaletteImage();
 
         void UploadFilterPaletteImage(vk::CommandBuffer commandBuffer);
+        void UploadBlendPaletteImage(vk::CommandBuffer commandBuffer);
     };
 } // namespace OpenRCT2::Ui::Vulkan

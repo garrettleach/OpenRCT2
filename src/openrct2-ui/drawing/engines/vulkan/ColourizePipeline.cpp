@@ -1,6 +1,7 @@
 #include "ColourizePipeline.h"
 
 #include "SpirV.h"
+#include "SpriteManager.h"
 #include "VulkanUtils.h"
 
 #include <array>
@@ -60,8 +61,7 @@ OpenRCT2::Ui::Vulkan::ColourizePipeline::ColourizePipeline(
     CreateGraphicsPipeline();
     CreateSampler();
     CreateBuffers();
-    CreateImages();
-    CreateImageViews();
+    GetImageViews();
     CreateDescriptorPool();
     CreateDescriptorSets();
     UpdateInputViews(paletteInputViews, depthInputViews);
@@ -69,19 +69,6 @@ OpenRCT2::Ui::Vulkan::ColourizePipeline::ColourizePipeline(
 
 OpenRCT2::Ui::Vulkan::ColourizePipeline::~ColourizePipeline()
 {
-    // TODO: delete these after they are not needed (also maybe move them to sprite manager?)
-    if (_blendPaletteStagingBuffer)
-    {
-        vmaDestroyBuffer(_vma, _blendPaletteStagingBuffer, _blendPaletteStagingAllocation);
-    }
-    if (_filterPaletteStagingBuffer)
-    {
-        vmaDestroyBuffer(_vma, _filterPaletteStagingBuffer, _filterPaletteStagingAllocation);
-    }
-
-    vmaDestroyImage(_vma, _blendPaletteImage, _blendPaletteImageAllocation);
-    vmaDestroyImage(_vma, _filterPaletteImage, _filterPaletteImageAllocation);
-
     for (int i = 0; i < _storageBuffer.size(); i++)
     {
         vmaDestroyBuffer(_vma, _storageBuffer[i], _storageAllocation[i]);
@@ -330,63 +317,10 @@ std::unique_ptr<uint8_t[]> CreateFilterMap(vk::Extent2D& extent)
     return data;
 }
 
-void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateImages()
+void OpenRCT2::Ui::Vulkan::ColourizePipeline::GetImageViews()
 {
-    vk::ImageCreateInfo filterImageCreateInfo(
-        vk::ImageCreateFlags{}, vk::ImageType::e2D, vk::Format::eR8Uint, vk::Extent3D(filterImageExtent, 1), 1, 1,
-        vk::SampleCountFlagBits::e1, vk::ImageTiling::eOptimal,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst, vk::SharingMode::eExclusive, {},
-        vk::ImageLayout::eUndefined);
-
-    VmaAllocationCreateInfo allocImageCreateInfo{};
-    allocImageCreateInfo.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO;
-
-    vk::Image filterPaletteImage;
-    VmaAllocation filterPaletteImageAllocation;
-
-    auto filterImageResult = vmaCreateImage(
-        _vma, filterImageCreateInfo, &allocImageCreateInfo, filterPaletteImage, filterPaletteImageAllocation, nullptr);
-
-    if (vk::Result::eSuccess != filterImageResult)
-    {
-        throw std::runtime_error("Vulkan memory error while creating image");
-    }
-
-    _filterPaletteImage = filterPaletteImage;
-    _filterPaletteImageAllocation = filterPaletteImageAllocation;
-
-    vk::ImageCreateInfo blendImageCreateInfo(
-        vk::ImageCreateFlags{}, vk::ImageType::e2D, vk::Format::eR8Uint, vk::Extent3D(kPaletteCount, kPaletteCount, 1), 1, 1,
-        vk::SampleCountFlagBits::e1, vk::ImageTiling::eOptimal,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst, vk::SharingMode::eExclusive, {},
-        vk::ImageLayout::eUndefined);
-
-    vk::Image blendPaletteImage;
-    VmaAllocation blendPaletteImageAllocation;
-
-    auto blendImageResult = vmaCreateImage(
-        _vma, blendImageCreateInfo, &allocImageCreateInfo, blendPaletteImage, blendPaletteImageAllocation, nullptr);
-
-    if (vk::Result::eSuccess != blendImageResult)
-    {
-        throw std::runtime_error("Vulkan memory error while creating image");
-    }
-
-    _blendPaletteImage = blendPaletteImage;
-    _blendPaletteImageAllocation = blendPaletteImageAllocation;
-}
-
-void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateImageViews()
-{
-    vk::ImageViewCreateInfo filterImageViewCreateInfo(
-        vk::ImageViewCreateFlags(), _filterPaletteImage, vk::ImageViewType::e2D, vk::Format::eR8Uint, {},
-        vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
-    vk::ImageViewCreateInfo blendImageViewCreateInfo(
-        vk::ImageViewCreateFlags(), _blendPaletteImage, vk::ImageViewType::e2D, vk::Format::eR8Uint, {},
-        vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
-
-    _filterPaletteImageView = _device.createImageViewUnique(filterImageViewCreateInfo);
-    _blendPaletteImageView = _device.createImageViewUnique(blendImageViewCreateInfo);
+    _filterPaletteImageView = _spriteManager.GetPaletteImageView();
+    _blendPaletteImageView = _spriteManager.GetBlendImageView();
 }
 
 void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateDescriptorPool()
@@ -421,10 +355,9 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateDescriptorSets()
     // TODO: Can we convert this to an imutable sampler
     vk::DescriptorImageInfo samplerImageDescCreate(*_sampler, nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
 
-    vk::DescriptorImageInfo filterPaletteImageCreate(
-        nullptr, *_filterPaletteImageView, vk::ImageLayout::eShaderReadOnlyOptimal);
+    vk::DescriptorImageInfo filterPaletteImageCreate(nullptr, _filterPaletteImageView, vk::ImageLayout::eShaderReadOnlyOptimal);
 
-    vk::DescriptorImageInfo blendPaletteImageCreate(nullptr, *_blendPaletteImageView, vk::ImageLayout::eShaderReadOnlyOptimal);
+    vk::DescriptorImageInfo blendPaletteImageCreate(nullptr, _blendPaletteImageView, vk::ImageLayout::eShaderReadOnlyOptimal);
 
     for (size_t i = 0; i < _framesInFlight; i++)
     {
@@ -450,117 +383,6 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateDescriptorSets()
     }
 }
 
-void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateFilterPaletteImage(vk::CommandBuffer commandBuffer)
-{
-    vk::Extent2D extent;
-    auto imageData = CreateFilterMap(extent);
-
-    vk::BufferCreateInfo bufferCreateInfo(
-        vk::BufferCreateFlags(), filterImageExtent.width * filterImageExtent.width, vk::BufferUsageFlagBits::eTransferSrc,
-        vk::SharingMode::eExclusive, {});
-
-    VmaAllocationCreateInfo allocStagingCreateInfo{};
-    allocStagingCreateInfo.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO;
-    allocStagingCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
-
-    vk::Buffer stagingBuffer;
-    VmaAllocation stagingBufferAllocation;
-    VmaAllocationInfo stagingBufferAllocInfo;
-
-    auto stagingResult = vmaCreateBuffer(
-        _vma, bufferCreateInfo, &allocStagingCreateInfo, stagingBuffer, stagingBufferAllocation, &stagingBufferAllocInfo);
-    if (vk::Result::eSuccess != stagingResult)
-    {
-        throw std::runtime_error("Vulkan memory error while creating staging buffer");
-    }
-
-    std::memcpy(stagingBufferAllocInfo.pMappedData, imageData.get(), extent.width * extent.height);
-
-    vk::ImageMemoryBarrier2 preCopyBarrier(
-        vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone, vk::PipelineStageFlagBits2::eTransfer,
-        vk::AccessFlagBits2::eTransferWrite, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal,
-        vk::QueueFamilyIgnored, vk::QueueFamilyIgnored, _filterPaletteImage,
-        vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-
-    vk::DependencyInfo preCopyDep(vk::DependencyFlags(), {}, {}, { preCopyBarrier });
-
-    commandBuffer.pipelineBarrier2(preCopyDep);
-
-    vk::BufferImageCopy region(
-        0, 0, 0, { vk::ImageAspectFlagBits::eColor, 0, 0, 1 }, { 0, 0, 0 }, vk::Extent3D{ filterImageExtent, 1 });
-
-    commandBuffer.copyBufferToImage(
-        vk::Buffer(stagingBuffer), _filterPaletteImage, vk::ImageLayout::eTransferDstOptimal, { region });
-
-    vk::ImageMemoryBarrier2 postCopyBarrier(
-        vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite, vk::PipelineStageFlagBits2::eFragmentShader,
-        vk::AccessFlagBits2::eShaderRead, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal,
-        vk::QueueFamilyIgnored, vk::QueueFamilyIgnored, _filterPaletteImage,
-        vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-
-    vk::DependencyInfo postCopyDep(vk::DependencyFlags(), {}, {}, { postCopyBarrier });
-
-    commandBuffer.pipelineBarrier2(postCopyDep);
-
-    _filterPaletteStagingBuffer = stagingBuffer;
-    _filterPaletteStagingAllocation = stagingBufferAllocation;
-}
-
-void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateBlendPaletteImage(vk::CommandBuffer commandBuffer)
-{
-    auto extent = vk::Extent2D(kPaletteCount, kPaletteCount);
-    BlendColourMapType* data = GetBlendColourMap();
-
-    vk::BufferCreateInfo bufferCreateInfo(
-        vk::BufferCreateFlags(), extent.width * extent.width, vk::BufferUsageFlagBits::eTransferSrc,
-        vk::SharingMode::eExclusive, {});
-
-    VmaAllocationCreateInfo allocStagingCreateInfo{};
-    allocStagingCreateInfo.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO;
-    allocStagingCreateInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
-
-    vk::Buffer stagingBuffer;
-    VmaAllocation stagingBufferAllocation;
-    VmaAllocationInfo stagingBufferAllocInfo;
-
-    auto stagingResult = vmaCreateBuffer(
-        _vma, bufferCreateInfo, &allocStagingCreateInfo, stagingBuffer, stagingBufferAllocation, &stagingBufferAllocInfo);
-    if (vk::Result::eSuccess != stagingResult)
-    {
-        throw std::runtime_error("Vulkan memory error while creating staging buffer");
-    }
-
-    std::memcpy(stagingBufferAllocInfo.pMappedData, *data, extent.width * extent.height);
-
-    vk::ImageMemoryBarrier2 preCopyBarrier(
-        vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone, vk::PipelineStageFlagBits2::eTransfer,
-        vk::AccessFlagBits2::eTransferWrite, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal,
-        vk::QueueFamilyIgnored, vk::QueueFamilyIgnored, _blendPaletteImage,
-        vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-
-    vk::DependencyInfo preCopyDep(vk::DependencyFlags(), {}, {}, { preCopyBarrier });
-
-    commandBuffer.pipelineBarrier2(preCopyDep);
-
-    vk::BufferImageCopy region(0, 0, 0, { vk::ImageAspectFlagBits::eColor, 0, 0, 1 }, { 0, 0, 0 }, vk::Extent3D{ extent, 1 });
-
-    commandBuffer.copyBufferToImage(
-        vk::Buffer(stagingBuffer), _blendPaletteImage, vk::ImageLayout::eTransferDstOptimal, { region });
-
-    vk::ImageMemoryBarrier2 postCopyBarrier(
-        vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite, vk::PipelineStageFlagBits2::eFragmentShader,
-        vk::AccessFlagBits2::eShaderRead, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal,
-        vk::QueueFamilyIgnored, vk::QueueFamilyIgnored, _blendPaletteImage,
-        vk::ImageSubresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 });
-
-    vk::DependencyInfo postCopyDep(vk::DependencyFlags(), {}, {}, { postCopyBarrier });
-
-    commandBuffer.pipelineBarrier2(postCopyDep);
-
-    _blendPaletteStagingBuffer = stagingBuffer;
-    _blendPaletteStagingAllocation = stagingBufferAllocation;
-}
-
 void OpenRCT2::Ui::Vulkan::ColourizePipeline::UpdateInputViews(
     const std::vector<vk::ImageView>& paletteInputViews, const std::vector<vk::ImageView>& depthInputViews)
 {
@@ -578,14 +400,6 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::UpdateInputViews(
 
         _device.updateDescriptorSets(writeDescSet, {});
     }
-}
-
-void OpenRCT2::Ui::Vulkan::ColourizePipeline::BeginDraw(const vk::CommandBuffer& commandBuffer)
-{
-    std::call_once(_initializedPaletteData, [this, &commandBuffer]() {
-        CreateFilterPaletteImage(commandBuffer);
-        CreateBlendPaletteImage(commandBuffer);
-    });
 }
 
 void OpenRCT2::Ui::Vulkan::ColourizePipeline::Draw(

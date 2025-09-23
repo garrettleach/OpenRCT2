@@ -741,8 +741,6 @@ namespace OpenRCT2::Ui::Vulkan
         _primaryCommandBuffers[_currentFrame]->begin(beginInfoPrimary);
 
         _spriteManager->BeginDraw(_currentFrame);
-
-        _colourizePipeline->BeginDraw(*_primaryCommandBuffers[_currentFrame]);
     }
 
     void VulkanDrawingEngine::EndDraw()
