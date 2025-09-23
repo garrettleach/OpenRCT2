@@ -491,15 +491,14 @@ namespace OpenRCT2::Ui::Vulkan
     void VulkanDrawingEngine::CreateGraphicsPipelines()
     {
         _spriteManager = std::make_unique<SpriteManager>(
-            *_debug, _physicalDevice, *_device, _framesInFlight, *_vmaAllocator, _graphicsQueue, _queueIndicies.graphics);
+            *_debug, *_device, _framesInFlight, *_vmaAllocator, _graphicsQueue, _queueIndicies.graphics);
 
         _drawSpritePipeline = std::make_unique<DrawSpritePipeline>(
-            *this, *_spriteManager, *_debug, _physicalDevice, *_device, _framesInFlight, *_vmaAllocator, _graphicsQueue,
+            *this, *_spriteManager, *_debug, *_device, _framesInFlight, *_vmaAllocator, _graphicsQueue,
             _queueIndicies.graphics);
 
         _linePipeline = std::make_unique<LinePipeline>(
-            *this, *_debug, _physicalDevice, *_device, _framesInFlight, *_vmaAllocator, _graphicsQueue,
-            _queueIndicies.graphics);
+            *this, *_debug, *_device, _framesInFlight, *_vmaAllocator, _graphicsQueue, _queueIndicies.graphics);
 
         std::vector<vk::ImageView> paletteImageViews;
         for (auto& imageView : _intermediatePaletteImageViews)

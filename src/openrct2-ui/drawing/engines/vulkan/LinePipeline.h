@@ -27,7 +27,6 @@ namespace OpenRCT2::Ui::Vulkan
 
         OpenRCT2::Drawing::IDrawingEngine& _engine;
         const IVulkanDebug& _vulkanDebug;
-        vk::PhysicalDevice _physicalDevice;
         vk::Device _device;
         size_t _framesInFlight;
         VmaAllocator _alloc;
@@ -48,9 +47,8 @@ namespace OpenRCT2::Ui::Vulkan
 
     public:
         LinePipeline(
-            OpenRCT2::Drawing::IDrawingEngine& engine, const IVulkanDebug& vulkanDebug, const vk::PhysicalDevice physicalDevice,
-            vk::Device device, size_t framesInFlight, VulkanMemoryAllocator& vma, vk::Queue graphicsQueue,
-            uint32_t graphicsQueueIndex);
+            OpenRCT2::Drawing::IDrawingEngine& engine, const IVulkanDebug& vulkanDebug, vk::Device device,
+            size_t framesInFlight, VulkanMemoryAllocator& vma, vk::Queue graphicsQueue, uint32_t graphicsQueueIndex);
 
         LinePipeline& operator=(const LinePipeline&) = delete;
         LinePipeline(const LinePipeline&) = delete;

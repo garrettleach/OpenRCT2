@@ -205,12 +205,11 @@ namespace OpenRCT2::Ui::Vulkan
 
     DrawSpritePipeline::DrawSpritePipeline(
         OpenRCT2::Drawing::IDrawingEngine& engine, SpriteManager& spriteManager, const IVulkanDebug& vulkanDebug,
-        const vk::PhysicalDevice physicalDevice, const vk::Device device, size_t framesInFlight, VulkanMemoryAllocator& vma,
-        vk::Queue graphicsQueue, uint32_t graphicsQueueIndex)
+        const vk::Device device, size_t framesInFlight, VulkanMemoryAllocator& vma, vk::Queue graphicsQueue,
+        uint32_t graphicsQueueIndex)
         : _engine(engine)
         , _spriteManager(spriteManager)
         , _vulkanDebug(vulkanDebug)
-        , _physicalDevice(physicalDevice)
         , _device(device)
         , _framesInFlight(framesInFlight)
         , _graphicsQueue(graphicsQueue)

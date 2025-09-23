@@ -51,7 +51,6 @@ namespace OpenRCT2::Ui::Vulkan
         };
 
         IVulkanDebug& _debug;
-        vk::PhysicalDevice _physicalDevice;
         vk::Device _device;
         uint32_t _framesInFlight;
         VmaAllocator _allocator;
@@ -79,8 +78,8 @@ namespace OpenRCT2::Ui::Vulkan
 
     public:
         SpriteManager(
-            IVulkanDebug& debug, const vk::PhysicalDevice physicalDevice, vk::Device device, uint32_t framesInFlight,
-            VulkanMemoryAllocator& vma, vk::Queue graphicsQueue, uint32_t graphicsQueueFamilyIndex);
+            IVulkanDebug& debug, vk::Device device, uint32_t framesInFlight, VulkanMemoryAllocator& vma,
+            vk::Queue graphicsQueue, uint32_t graphicsQueueFamilyIndex);
         ~SpriteManager();
 
         void QueueUpload(ImageId imageId);

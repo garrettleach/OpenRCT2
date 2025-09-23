@@ -118,10 +118,9 @@ namespace
 } // namespace
 
 OpenRCT2::Ui::Vulkan::SpriteManager::SpriteManager(
-    IVulkanDebug& debug, const vk::PhysicalDevice physicalDevice, vk::Device device, uint32_t framesInFlight,
-    VulkanMemoryAllocator& vma, vk::Queue graphicsQueue, uint32_t graphicsQueueFamilyIndex)
+    IVulkanDebug& debug, vk::Device device, uint32_t framesInFlight, VulkanMemoryAllocator& vma, vk::Queue graphicsQueue,
+    uint32_t graphicsQueueFamilyIndex)
     : _debug(debug)
-    , _physicalDevice(physicalDevice)
     , _device(device)
     , _framesInFlight(framesInFlight)
     , _allocator(vma)
