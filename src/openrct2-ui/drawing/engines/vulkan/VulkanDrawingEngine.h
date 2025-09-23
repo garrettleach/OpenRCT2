@@ -1,8 +1,5 @@
 #pragma once
 
-#include "ColourizePipeline.h"
-#include "DrawSpritePipeline.h"
-#include "LinePipeline.h"
 #include "SwapchainSync.h"
 #include "VulkanDebug.h"
 #include "VulkanInstance.h"
@@ -20,6 +17,11 @@
 namespace OpenRCT2::Ui::Vulkan
 {
     class VulkanDrawingContext;
+
+    class SpriteManager;
+    class DrawSpritePipeline;
+    class LinePipeline;
+    class ColourizePipeline;
 
     namespace detail
     {

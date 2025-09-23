@@ -204,7 +204,7 @@ namespace OpenRCT2::Ui::Vulkan
     }
 
     DrawSpritePipeline::DrawSpritePipeline(
-        OpenRCT2::Drawing::IDrawingEngine& engine, SpriteManager& spriteManager, const IVulkanDebug& vulkanDebug,
+        VulkanDrawingEngine& engine, SpriteManager& spriteManager, const IVulkanDebug& vulkanDebug,
         const vk::Device device, size_t framesInFlight, VulkanMemoryAllocator& vma)
         : _engine(engine)
         , _spriteManager(spriteManager)

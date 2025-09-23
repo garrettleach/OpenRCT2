@@ -49,7 +49,7 @@ namespace
 } // namespace
 
 OpenRCT2::Ui::Vulkan::ColourizePipeline::ColourizePipeline(
-    OpenRCT2::Drawing::IDrawingEngine& engine, SpriteManager& spriteManager, const vk::Device& device, size_t framesInFlight,
+    VulkanDrawingEngine& engine, SpriteManager& spriteManager, const vk::Device& device, size_t framesInFlight,
     VulkanMemoryAllocator& vma, const std::vector<vk::ImageView>& paletteInputViews,
     const std::vector<vk::ImageView>& depthInputViews)
     : _engine(engine)

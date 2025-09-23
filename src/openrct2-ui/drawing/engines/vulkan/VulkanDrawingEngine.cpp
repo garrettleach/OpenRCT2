@@ -2,6 +2,9 @@
 
     #include "VulkanDrawingEngine.h"
 
+    #include "ColourizePipeline.h"
+    #include "DrawSpritePipeline.h"
+    #include "LinePipeline.h"
     #include "MemoryType.h"
     #include "SpirV.h"
     #include "VulkanDrawingContext.h"

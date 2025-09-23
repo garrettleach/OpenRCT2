@@ -1,6 +1,7 @@
 #pragma once
 #include "SpriteManager.h"
 #include "VulkanDebug.h"
+#include "VulkanDrawingEngine.h"
 #include "VulkanMemoryAllocator.h"
 
 #include <glm/glm.hpp>
@@ -67,7 +68,7 @@ namespace OpenRCT2::Ui::Vulkan
         };
 
     private:
-        OpenRCT2::Drawing::IDrawingEngine& _engine;
+        VulkanDrawingEngine& _engine;
         SpriteManager& _spriteManager;
         const IVulkanDebug& _vulkanDebug;
         const vk::Device _device;
@@ -118,8 +119,8 @@ namespace OpenRCT2::Ui::Vulkan
 
     public:
         DrawSpritePipeline(
-            OpenRCT2::Drawing::IDrawingEngine& engine, SpriteManager& spriteManager, const IVulkanDebug& vulkanDebug,
-            vk::Device device, size_t framesInFlight, VulkanMemoryAllocator& vma);
+            VulkanDrawingEngine& engine, SpriteManager& spriteManager, const IVulkanDebug& vulkanDebug, vk::Device device,
+            size_t framesInFlight, VulkanMemoryAllocator& vma);
 
         DrawSpritePipeline& operator=(const DrawSpritePipeline&) = delete;
         DrawSpritePipeline(const DrawSpritePipeline&) = delete;

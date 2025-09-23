@@ -1,6 +1,9 @@
 #ifndef DISABLE_VULKAN
     #include "VulkanDrawingContext.h"
 
+    #include "ColourizePipeline.h"
+    #include "DrawSpritePipeline.h"
+    #include "LinePipeline.h"
     #include "VulkanDrawingEngine.h"
 
 using namespace std;
