@@ -71,6 +71,8 @@ namespace OpenRCT2::Ui::Vulkan
             uint32_t index, RenderTarget& rt, FilterPaletteID palette, int32_t left, int32_t top, int32_t right,
             int32_t bottom);
 
+        void QueueBlendedSprite(uint32_t index, RenderTarget& rt, ImageId imageId, int32_t x, int32_t y);
+
     private:
         void CreateGraphicsPipeline();
         void CreateSampler();

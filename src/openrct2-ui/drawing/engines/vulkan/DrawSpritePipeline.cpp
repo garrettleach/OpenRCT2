@@ -1,6 +1,7 @@
 #ifndef DISABLE_VULKAN
     #include "DrawSpritePipeline.h"
 
+    #include "ColourizePipeline.h"
     #include "MemoryType.h"
     #include "SpirV.h"
     #include "VulkanUtils.h"
@@ -632,15 +633,15 @@ namespace OpenRCT2::Ui::Vulkan
                 palettes[2] = PaletteToY(static_cast<FilterPaletteID>(imageId.GetTertiary()));
             }
         }
-        else if (imageId.IsRemap() || imageId.IsBlended())
+        else if (imageId.IsRemap())
         {
             paletteCount = 1;
             FilterPaletteID palette = static_cast<FilterPaletteID>(imageId.GetRemap());
             palettes[0] = PaletteToY(palette);
-            if (palette == FilterPaletteID::PaletteWater)
-            {
-                palettes[0] -= 1;
-            }
+        }
+        else if (imageId.IsBlended())
+        {
+            _engine.GetColourizePipeline().QueueBlendedSprite(QueuePlaceholder(), rt, imageId, x, y);
         }
 
         _inProgressSprites.emplace_back(

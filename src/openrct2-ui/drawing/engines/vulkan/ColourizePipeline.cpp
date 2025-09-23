@@ -498,3 +498,9 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::QueueFilterRect(
 
     _inProgressFilterRects.emplace_back(bounds, clip, paletteIndex, index);
 }
+
+void OpenRCT2::Ui::Vulkan::ColourizePipeline::QueueBlendedSprite(
+    uint32_t index, RenderTarget& rt, ImageId imageId, int32_t x, int32_t y)
+{
+    // TODO: Queue sprite
+}
