@@ -1,4 +1,5 @@
 #pragma once
+#include "SpriteManager.h"
 #include "VulkanMemoryAllocator.h"
 
 #include <glm/glm.hpp>
@@ -18,6 +19,7 @@ namespace OpenRCT2::Ui::Vulkan
         };
 
         OpenRCT2::Drawing::IDrawingEngine& _engine;
+        SpriteManager& _spriteManager;
         const vk::Device& _device;
         size_t _framesInFlight;
         VulkanMemoryAllocator& _vma;
@@ -63,8 +65,8 @@ namespace OpenRCT2::Ui::Vulkan
 
     public:
         ColourizePipeline(
-            OpenRCT2::Drawing::IDrawingEngine& engine, const vk::Device& device, size_t framesInFlight,
-            VulkanMemoryAllocator& vma, vk::Queue graphicsQueue, uint32_t graphicsQueueIndex,
+            OpenRCT2::Drawing::IDrawingEngine& engine, SpriteManager& spriteManager, const vk::Device& device,
+            size_t framesInFlight, VulkanMemoryAllocator& vma, vk::Queue graphicsQueue, uint32_t graphicsQueueIndex,
             const std::vector<vk::ImageView>& paletteInputViews, const std::vector<vk::ImageView>& depthInputViews);
         ~ColourizePipeline();
 
