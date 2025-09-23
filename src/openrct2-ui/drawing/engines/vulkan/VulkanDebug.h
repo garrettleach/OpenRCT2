@@ -20,13 +20,21 @@ namespace OpenRCT2::Ui::Vulkan
         virtual void insertDebugUtilsLabel(vk::CommandBuffer& commandBuffer, const char* labelName, std::array<float, 4> = {})
             = 0;
 
-        virtual void setObjectName(vk::Device& device, const vk::DebugUtilsObjectNameInfoEXT& nameInfo) = 0;
-        virtual void setObjectTag(vk::Device& device, const vk::DebugUtilsObjectTagInfoEXT& tagInfo) = 0;
+        virtual void setObjectName(const vk::Device& device, const vk::DebugUtilsObjectNameInfoEXT& nameInfo) = 0;
 
         virtual void submitDebugMessage(
             vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::DebugUtilsMessageTypeFlagsEXT flags,
             const vk::DebugUtilsMessengerCallbackDataEXT& callbackData)
             = 0;
+
+        template<typename T>
+        void setCppObjectName(const vk::Device& device, const T& object, const std::string& name)
+        {
+            vk::DebugUtilsObjectNameInfoEXT objNameInfo(
+                T::objectType, reinterpret_cast<uint64_t>(static_cast<typename T::NativeType>(object)), name.c_str());
+
+            setObjectName(device, objNameInfo);
+        }
     };
 
     class DummyDebug : public IVulkanDebug
@@ -42,8 +50,7 @@ namespace OpenRCT2::Ui::Vulkan
         void insertDebugUtilsLabel(
             vk::CommandBuffer& commandBuffer, const char* labelName, std::array<float, 4> = {}) override {};
 
-        void setObjectName(vk::Device& device, const vk::DebugUtilsObjectNameInfoEXT& nameInfo) override {};
-        void setObjectTag(vk::Device& device, const vk::DebugUtilsObjectTagInfoEXT& tagInfo) override {};
+        void setObjectName(const vk::Device& device, const vk::DebugUtilsObjectNameInfoEXT& nameInfo) override {};
 
         void submitDebugMessage(
             vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::DebugUtilsMessageTypeFlagsEXT flags,
@@ -79,8 +86,7 @@ namespace OpenRCT2::Ui::Vulkan
         void insertDebugUtilsLabel(
             vk::CommandBuffer& commandBuffer, const char* labelName, std::array<float, 4> colour = {}) override;
 
-        void setObjectName(vk::Device& device, const vk::DebugUtilsObjectNameInfoEXT& nameInfo) override;
-        void setObjectTag(vk::Device& device, const vk::DebugUtilsObjectTagInfoEXT& tagInfo) override;
+        void setObjectName(const vk::Device& device, const vk::DebugUtilsObjectNameInfoEXT& nameInfo) override;
 
         void submitDebugMessage(
             vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::DebugUtilsMessageTypeFlagsEXT flags,

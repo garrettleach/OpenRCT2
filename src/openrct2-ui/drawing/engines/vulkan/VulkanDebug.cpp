@@ -61,13 +61,9 @@ namespace OpenRCT2::Ui::Vulkan
         commandBuffer.insertDebugUtilsLabelEXT({ labelName, colour }, _vulkanDynamicDispatch);
     }
 
-    void VulkanDebug::setObjectName(vk::Device& device, const vk::DebugUtilsObjectNameInfoEXT& nameInfo)
+    void VulkanDebug::setObjectName(const vk::Device& device, const vk::DebugUtilsObjectNameInfoEXT& nameInfo)
     {
         device.setDebugUtilsObjectNameEXT(nameInfo, _vulkanDynamicDispatch);
-    }
-    void VulkanDebug::setObjectTag(vk::Device& device, const vk::DebugUtilsObjectTagInfoEXT& tagInfo)
-    {
-        device.setDebugUtilsObjectTagEXT(tagInfo, _vulkanDynamicDispatch);
     }
 
     void VulkanDebug::submitDebugMessage(
