@@ -31,12 +31,19 @@ namespace OpenRCT2::Ui::Vulkan
         }
     };
 
+    enum class SpritePool
+    {
+        DrawSpritePipeline,
+        ColourizePipeline
+    };
+
     class SpriteManager
     {
         struct SpriteUpload
         {
             std::unique_ptr<uint8_t[]> data;
             vk::Extent2D size;
+            SpritePool pool;
         };
 
         struct UploadedSpriteInfo
@@ -55,10 +62,12 @@ namespace OpenRCT2::Ui::Vulkan
         uint32_t _framesInFlight;
         VmaAllocator _allocator;
 
-        std::unordered_map<ImageId, SpriteUpload, ImageIdHasher> _spritesToUpload;
+        std::unordered_map<ImageId, SpriteUpload, ImageIdHasher> _drawSpriteSpritesToUpload;
+        std::unordered_map<ImageId, SpriteUpload, ImageIdHasher> _colourizeSpritesToUpload;
         std::unordered_map<GlyphIdentifier, SpriteUpload, GlyphIdentifierHash> _glyphsToUpload;
 
-        std::unordered_map<ImageId, UploadedSpriteInfo, ImageIdHasher> _uploadedSprites;
+        std::unordered_map<ImageId, UploadedSpriteInfo, ImageIdHasher> _drawSpriteUploadedSprites;
+        std::unordered_map<ImageId, UploadedSpriteInfo, ImageIdHasher> _colourizeUploadedSprites;
         std::unordered_map<GlyphIdentifier, UploadedSpriteInfo, GlyphIdentifierHash> _uploadedGlyphs;
 
         // when an image is no longer needed we have to wait until the first frame it is not used comes back around
@@ -84,8 +93,8 @@ namespace OpenRCT2::Ui::Vulkan
         SpriteManager(IVulkanDebug& debug, vk::Device device, uint32_t framesInFlight, VulkanMemoryAllocator& vma);
         ~SpriteManager();
 
-        void QueueUpload(ImageId imageId);
-        void QueueUpload(ImageId imageId, ImageId image);
+        void QueueUpload(ImageId imageId, SpritePool spritePool);
+        void QueueUpload(ImageId imageId, ImageId image, SpritePool spritePool);
         void QueueUpload(GlyphIdentifier glyphId, const ImageId image, const PaletteMap& palette);
 
         vk::ImageView GetImageView(ImageId imageId);
@@ -104,6 +113,9 @@ namespace OpenRCT2::Ui::Vulkan
             std::vector<vk::DescriptorImageInfo>& descriptors,
             std::unordered_map<ImageId, uint32_t, ImageIdHasher>& descriptorMapImages,
             std::unordered_map<GlyphIdentifier, uint32_t, GlyphIdentifierHash>& descriptorMapGlyphs);
+        void GetColourizePipelineDescriptors(
+            std::vector<vk::DescriptorImageInfo>& descriptors,
+            std::unordered_map<ImageId, uint32_t, ImageIdHasher>& descriptorMapImages);
 
     private:
         void CreateEmptyPaletteImages();

@@ -613,9 +613,9 @@ namespace OpenRCT2::Ui::Vulkan
         int32_t right = left + g1Element->width;
         int32_t bottom = top + g1Element->height;
 
-        ImageId baseImage = ImageId(imageId.GetIndex());
+        glm::ivec4 bounds{ left, top, right, bottom };
 
-        _spriteManager.QueueUpload(baseImage);
+        ImageId baseImage = ImageId(imageId.GetIndex());
 
         uint8_t paletteCount = 0;
         uint8_t palettes[3]{};
@@ -641,11 +641,14 @@ namespace OpenRCT2::Ui::Vulkan
         }
         else if (imageId.IsBlended())
         {
-            _engine.GetColourizePipeline().QueueBlendedSprite(QueuePlaceholder(), rt, imageId, x, y);
+            _engine.GetColourizePipeline().QueueBlendedSprite(QueuePlaceholder(), bounds, clip, imageId);
+            return;
         }
 
+        _spriteManager.QueueUpload(baseImage, SpritePool::DrawSpritePipeline);
+
         _inProgressSprites.emplace_back(
-            glm::ivec4{ left, top, right, bottom }, clip, DrawType::DrawSprite, baseImage, ImageId{},
+            bounds, clip, DrawType::DrawSprite, baseImage, ImageId{},
             ((uint32_t)paletteCount << 24) | ((uint32_t)palettes[2] << 16) | ((uint32_t)palettes[1] << 8)
                 | (uint32_t)(palettes[0]));
     }
@@ -669,11 +672,11 @@ namespace OpenRCT2::Ui::Vulkan
 
         ImageId baseMaskImage = ImageId(maskImage.GetIndex());
 
-        _spriteManager.QueueUpload(baseMaskImage, maskImage);
+        _spriteManager.QueueUpload(baseMaskImage, maskImage, SpritePool::DrawSpritePipeline);
 
         ImageId baseColourImage = ImageId(colourImage.GetIndex());
 
-        _spriteManager.QueueUpload(baseColourImage, colourImage);
+        _spriteManager.QueueUpload(baseColourImage, colourImage, SpritePool::DrawSpritePipeline);
 
         _inProgressSprites.emplace_back(
             glm::ivec4{ left, top, right, bottom }, clip, DrawType::DrawSpriteRawMasked, baseColourImage, baseMaskImage);
@@ -697,7 +700,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         ImageId baseMaskImage = ImageId(image.GetIndex());
 
-        _spriteManager.QueueUpload(baseMaskImage, image);
+        _spriteManager.QueueUpload(baseMaskImage, image, SpritePool::DrawSpritePipeline);
 
         _inProgressSprites.emplace_back(
             glm::ivec4{ left, top, right, bottom }, clip, DrawType::DrawSpriteSolid, ImageId(0), baseMaskImage, 0, colour);

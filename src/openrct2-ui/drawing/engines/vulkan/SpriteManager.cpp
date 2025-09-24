@@ -170,7 +170,14 @@ OpenRCT2::Ui::Vulkan::SpriteManager::~SpriteManager()
         }
     }
 
-    for (auto& uploadedSprite : _uploadedSprites)
+    for (auto& uploadedSprite : _colourizeUploadedSprites)
+    {
+        _device.destroyImageView(uploadedSprite.second.imageView);
+        vmaDestroyImage(_allocator, uploadedSprite.second.image, uploadedSprite.second.imageAllocation);
+        vmaDestroyBuffer(_allocator, uploadedSprite.second.buffer, uploadedSprite.second.bufferAllocation);
+    }
+
+    for (auto& uploadedSprite : _drawSpriteUploadedSprites)
     {
         _device.destroyImageView(uploadedSprite.second.imageView);
         vmaDestroyImage(_allocator, uploadedSprite.second.image, uploadedSprite.second.imageAllocation);
@@ -184,25 +191,30 @@ OpenRCT2::Ui::Vulkan::SpriteManager::~SpriteManager()
         vmaDestroyBuffer(_allocator, uploadedGlyph.second.buffer, uploadedGlyph.second.bufferAllocation);
     }
 
-    _spritesToUpload.clear();
+    _colourizeSpritesToUpload.clear();
+    _drawSpriteSpritesToUpload.clear();
     _glyphsToUpload.clear();
 }
 
-void OpenRCT2::Ui::Vulkan::SpriteManager::QueueUpload(ImageId imageId)
+void OpenRCT2::Ui::Vulkan::SpriteManager::QueueUpload(ImageId imageId, SpritePool spritepool)
 {
-    QueueUpload(imageId, imageId);
+    QueueUpload(imageId, imageId, spritepool);
 }
 
-void OpenRCT2::Ui::Vulkan::SpriteManager::QueueUpload(ImageId imageId, ImageId image)
+void OpenRCT2::Ui::Vulkan::SpriteManager::QueueUpload(ImageId imageId, ImageId image, SpritePool spritepool)
 {
     auto baseImage = ImageId(imageId.GetIndex());
 
-    if (!_uploadedSprites.contains(baseImage) && !_spritesToUpload.contains(baseImage))
+    if (!_colourizeUploadedSprites.contains(baseImage) && !_drawSpriteUploadedSprites.contains(baseImage)
+        && !_colourizeSpritesToUpload.contains(baseImage) && !_drawSpriteSpritesToUpload.contains(baseImage))
     {
         vk::Extent2D extent;
         auto imgData = ImageIdToData(image, extent);
 
-        _spritesToUpload.insert(std::make_pair(baseImage, SpriteUpload(std::move(imgData), extent)));
+        auto& uploadQueue = spritepool == SpritePool::DrawSpritePipeline ? _drawSpriteSpritesToUpload
+                                                                         : _colourizeSpritesToUpload;
+
+        uploadQueue.insert(std::make_pair(baseImage, SpriteUpload(std::move(imgData), extent, spritepool)));
     }
 }
 
@@ -217,16 +229,6 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::QueueUpload(GlyphIdentifier glyphId, c
     }
 }
 
-vk::ImageView OpenRCT2::Ui::Vulkan::SpriteManager::GetImageView(ImageId imageId)
-{
-    return _uploadedSprites[imageId].imageView;
-}
-
-vk::ImageView OpenRCT2::Ui::Vulkan::SpriteManager::GetImageView(GlyphIdentifier imageId)
-{
-    return _uploadedGlyphs[imageId].imageView;
-}
-
 void OpenRCT2::Ui::Vulkan::SpriteManager::ExecuteUpload(vk::CommandBuffer commandBuffer)
 {
     std::call_once(_initializedPaletteData, [this, commandBuffer]() {
@@ -234,14 +236,14 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::ExecuteUpload(vk::CommandBuffer comman
         UploadBlendPaletteImage(commandBuffer);
     });
 
-    for (auto& spriteToUpload : _spritesToUpload)
+    for (auto& spriteToUpload : _drawSpriteSpritesToUpload)
     {
         if (spriteToUpload.second.size.width == 0 || spriteToUpload.second.size.height == 0)
         {
             continue;
         }
 
-        if (!_uploadedSprites.contains(spriteToUpload.first))
+        if (!_drawSpriteUploadedSprites.contains(spriteToUpload.first))
         {
             vk::Image image;
             VmaAllocation imageAllocation;
@@ -253,13 +255,40 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::ExecuteUpload(vk::CommandBuffer comman
                 _allocator, _device, commandBuffer, spriteToUpload.second.data.get(), spriteToUpload.second.size, image,
                 imageAllocation, stagingBuffer, stagingAllocation);
 
-            _uploadedSprites.insert(
+            _drawSpriteUploadedSprites.insert(
                 std::make_pair(
                     spriteToUpload.first,
                     UploadedSpriteInfo(stagingBuffer, stagingAllocation, image, imageAllocation, imageView)));
         }
     }
-    _spritesToUpload.clear();
+    _drawSpriteSpritesToUpload.clear();
+
+    for (auto& spriteToUpload : _colourizeSpritesToUpload)
+    {
+        if (spriteToUpload.second.size.width == 0 || spriteToUpload.second.size.height == 0)
+        {
+            continue;
+        }
+
+        if (!_colourizeUploadedSprites.contains(spriteToUpload.first))
+        {
+            vk::Image image;
+            VmaAllocation imageAllocation;
+
+            vk::Buffer stagingBuffer;
+            VmaAllocation stagingAllocation;
+
+            auto imageView = AddUpload(
+                _allocator, _device, commandBuffer, spriteToUpload.second.data.get(), spriteToUpload.second.size, image,
+                imageAllocation, stagingBuffer, stagingAllocation);
+
+            _colourizeUploadedSprites.insert(
+                std::make_pair(
+                    spriteToUpload.first,
+                    UploadedSpriteInfo(stagingBuffer, stagingAllocation, image, imageAllocation, imageView)));
+        }
+    }
+    _colourizeSpritesToUpload.clear();
 
     for (auto& glyphToUpload : _glyphsToUpload)
     {
@@ -326,7 +355,24 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::GetSpritePipelineDescriptors(
         descriptors.emplace_back(vk::Sampler{}, uploadedGlyph.second.imageView, vk::ImageLayout::eShaderReadOnlyOptimal);
     }
 
-    for (auto& uploadedSprite : _uploadedSprites)
+    for (auto& uploadedSprite : _drawSpriteUploadedSprites)
+    {
+        descriptorMapImages[uploadedSprite.first] = static_cast<uint32_t>(descriptorIndex++);
+
+        descriptors.emplace_back(vk::Sampler{}, uploadedSprite.second.imageView, vk::ImageLayout::eShaderReadOnlyOptimal);
+    }
+}
+
+void OpenRCT2::Ui::Vulkan::SpriteManager::GetColourizePipelineDescriptors(
+    std::vector<vk::DescriptorImageInfo>& descriptors,
+    std::unordered_map<ImageId, uint32_t, ImageIdHasher>& descriptorMapImages)
+{
+    descriptors.clear();
+    descriptorMapImages.clear();
+
+    size_t descriptorIndex = 0;
+
+    for (auto& uploadedSprite : _colourizeUploadedSprites)
     {
         descriptorMapImages[uploadedSprite.first] = static_cast<uint32_t>(descriptorIndex++);
 
@@ -388,9 +434,19 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::InvalidateImage(uint32_t image)
 {
     ImageId imageId(image); // TODO: We probably have to do something different here or in the uploaded sprites
 
-    if (_uploadedSprites.contains(imageId))
+    if (_colourizeUploadedSprites.contains(imageId))
     {
-        auto sprite = _uploadedSprites.extract(imageId);
+        auto sprite = _colourizeUploadedSprites.extract(imageId);
+
+        auto key = sprite.key();
+        auto value = std::move(sprite.mapped());
+
+        _currentFrameQueuedImageInvalidation.push_back(std::move(value));
+    }
+
+    if (_drawSpriteUploadedSprites.contains(imageId))
+    {
+        auto sprite = _drawSpriteUploadedSprites.extract(imageId);
 
         auto key = sprite.key();
         auto value = std::move(sprite.mapped());

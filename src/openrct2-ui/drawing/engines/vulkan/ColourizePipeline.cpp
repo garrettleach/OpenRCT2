@@ -37,6 +37,8 @@ namespace
     constexpr vk::VertexInputBindingDescription bindingDesc{ 0, sizeof(Vertex), vk::VertexInputRate::eVertex };
 
     constexpr vk::Extent2D filterImageExtent(256, kPaletteTotalOffsets);
+
+    constexpr uint32_t initialTextureDescriptors = 100;
 } // namespace
 
 OpenRCT2::Ui::Vulkan::ColourizePipeline::ColourizePipeline(
@@ -129,28 +131,42 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateGraphicsPipeline()
 
     vk::PipelineDynamicStateCreateInfo dynamicStateCreate(vk::PipelineDynamicStateCreateFlags{}, dynamicStates);
 
-    std::vector<vk::DescriptorSetLayoutBinding> staticDescSetLayoutBindings{
+    std::vector<vk::DescriptorSetLayoutBinding> constantDescSetLayoutBindings{
         { 0, vk::DescriptorType::eSampler, 1, vk::ShaderStageFlagBits::eFragment },
         { 1, vk::DescriptorType::eSampledImage, 1, vk::ShaderStageFlagBits::eFragment },
         { 2, vk::DescriptorType::eSampledImage, 1, vk::ShaderStageFlagBits::eFragment }
     };
 
-    std::vector<vk::DescriptorSetLayoutBinding> dynamicDescSetLayoutBindings{
+    std::vector<vk::DescriptorSetLayoutBinding> frameDescSetLayoutBindings{
         { 0, vk::DescriptorType::eInputAttachment, 1, vk::ShaderStageFlagBits::eFragment },
         { 1, vk::DescriptorType::eInputAttachment, 1, vk::ShaderStageFlagBits::eFragment },
         { 2, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eFragment },
         { 3, vk::DescriptorType::eStorageBuffer, 1, vk::ShaderStageFlagBits::eFragment },
     };
 
-    vk::DescriptorSetLayoutCreateInfo staticDescriptorSetLayoutCreate(
-        vk::DescriptorSetLayoutCreateFlags{}, staticDescSetLayoutBindings);
-    vk::DescriptorSetLayoutCreateInfo dynamicDescriptorSetLayoutCreate(
-        vk::DescriptorSetLayoutCreateFlags{}, dynamicDescSetLayoutBindings);
+    std::vector<vk::DescriptorSetLayoutBinding> textureDescSetLayoutBindings{
+        { 0, vk::DescriptorType::eSampledImage, initialTextureDescriptors, vk::ShaderStageFlagBits::eFragment }
+    };
 
-    _staticDescriptorSetLayout = _device.createDescriptorSetLayoutUnique(staticDescriptorSetLayoutCreate);
-    _dynamicDescriptorSetLayout = _device.createDescriptorSetLayoutUnique(dynamicDescriptorSetLayoutCreate);
+    auto textureBindingFlags = vk::DescriptorBindingFlagBits::eVariableDescriptorCount
+        | vk::DescriptorBindingFlagBits::ePartiallyBound | vk::DescriptorBindingFlagBits::eUpdateAfterBind
+        | vk::DescriptorBindingFlagBits::eUpdateUnusedWhilePending;
 
-    std::vector<vk::DescriptorSetLayout> descriptorSetLayouts{ *_staticDescriptorSetLayout, *_dynamicDescriptorSetLayout };
+    vk::DescriptorSetLayoutCreateInfo constantDescriptorSetLayoutCreate(
+        vk::DescriptorSetLayoutCreateFlags{}, constantDescSetLayoutBindings);
+    vk::DescriptorSetLayoutCreateInfo frameDescriptorSetLayoutCreate(
+        vk::DescriptorSetLayoutCreateFlags{}, frameDescSetLayoutBindings);
+    vk::StructureChain<vk::DescriptorSetLayoutCreateInfo, vk::DescriptorSetLayoutBindingFlagsCreateInfo>
+        textureDescriptorSetLayoutCreate(
+            { vk::DescriptorSetLayoutCreateFlagBits::eUpdateAfterBindPool, textureDescSetLayoutBindings },
+            { textureBindingFlags });
+
+    _constantDescriptorSetLayout = _device.createDescriptorSetLayoutUnique(constantDescriptorSetLayoutCreate);
+    _frameDescriptorSetLayout = _device.createDescriptorSetLayoutUnique(frameDescriptorSetLayoutCreate);
+    _textureDescriptorSetLayout = _device.createDescriptorSetLayoutUnique(textureDescriptorSetLayoutCreate.get());
+
+    std::vector<vk::DescriptorSetLayout> descriptorSetLayouts{ *_constantDescriptorSetLayout, *_frameDescriptorSetLayout,
+                                                               *_textureDescriptorSetLayout };
 
     std::vector<vk::PushConstantRange> pushConstantRanges{ { vk::ShaderStageFlagBits::eFragment, 0,
                                                              static_cast<uint32_t>(sizeof(PushConstants)) } };
@@ -332,18 +348,38 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateDescriptorPool()
         vk::DescriptorPoolCreateFlags(), static_cast<uint32_t>(_framesInFlight * 2), poolSizes);
 
     _descriptorPool = _device.createDescriptorPoolUnique(poolInfo);
+
+    vk::DescriptorPoolSize poolSizeTextures(vk::DescriptorType::eSampledImage, initialTextureDescriptors);
+
+    std::vector<vk::DescriptorPoolSize> texturePoolSizes{ poolSizeTextures };
+
+    vk::DescriptorPoolCreateInfo texturePoolInfo(vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind, 1, texturePoolSizes);
+
+    for (int i = 0; i < _framesInFlight; i++)
+    {
+        _textureDescriptorPools.push_back(_device.createDescriptorPoolUnique(texturePoolInfo));
+    }
 }
 
 void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateDescriptorSets()
 {
-    std::vector<vk::DescriptorSetLayout> staticLayouts(_framesInFlight, *_staticDescriptorSetLayout);
-    std::vector<vk::DescriptorSetLayout> dynamicLayouts(_framesInFlight, *_dynamicDescriptorSetLayout);
+    std::vector<vk::DescriptorSetLayout> constantLayouts(_framesInFlight, *_constantDescriptorSetLayout);
+    std::vector<vk::DescriptorSetLayout> frameLayouts(_framesInFlight, *_frameDescriptorSetLayout);
+    std::vector<vk::DescriptorSetLayout> textureLayouts(_framesInFlight, *_textureDescriptorSetLayout);
 
-    vk::DescriptorSetAllocateInfo staticAllocInfo(*_descriptorPool, staticLayouts);
-    vk::DescriptorSetAllocateInfo dynamicAllocInfo(*_descriptorPool, dynamicLayouts);
+    vk::DescriptorSetAllocateInfo constantAllocInfo(*_descriptorPool, constantLayouts);
+    vk::DescriptorSetAllocateInfo frameAllocInfo(*_descriptorPool, frameLayouts);
+    for (int i = 0; i < _framesInFlight; i++)
+    {
+        std::vector<uint32_t> counts{ initialTextureDescriptors };
 
-    _staticDescriptorSets = _device.allocateDescriptorSets(staticAllocInfo);
-    _dynamicDescriptorSets = _device.allocateDescriptorSets(dynamicAllocInfo);
+        vk::StructureChain<vk::DescriptorSetAllocateInfo, vk::DescriptorSetVariableDescriptorCountAllocateInfo>
+            textureAllocInfo{ { *_textureDescriptorPools[i], textureLayouts[i] }, { counts } };
+        _textureDescriptorSets.push_back(_device.allocateDescriptorSets(textureAllocInfo.get())[0]);
+    }
+
+    _constantDescriptorSets = _device.allocateDescriptorSets(constantAllocInfo);
+    _frameDescriptorSets = _device.allocateDescriptorSets(frameAllocInfo);
 
     // TODO: Can we convert this to an imutable sampler
     vk::DescriptorImageInfo samplerImageDescCreate(*_sampler, nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
@@ -357,20 +393,20 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateDescriptorSets()
         vk::DescriptorBufferInfo uniformCreate(_uniformBuffer[i], vk::DeviceSize(0), vk::DeviceSize(sizeof(UniformValues)));
         vk::DescriptorBufferInfo storageCreate(_storageBuffer[i], vk::DeviceSize(0), vk::DeviceSize(_storageBufferSize[i]));
 
-        vk::WriteDescriptorSet writeStaticSampler(
-            _staticDescriptorSets[i], 0, 0, vk::DescriptorType::eSampler, { samplerImageDescCreate });
+        vk::WriteDescriptorSet writeConstantSampler(
+            _constantDescriptorSets[i], 0, 0, vk::DescriptorType::eSampler, { samplerImageDescCreate });
         vk::WriteDescriptorSet writeFilterPaletteImage(
-            _staticDescriptorSets[i], 1, 0, vk::DescriptorType::eSampledImage, { filterPaletteImageCreate });
+            _constantDescriptorSets[i], 1, 0, vk::DescriptorType::eSampledImage, { filterPaletteImageCreate });
         vk::WriteDescriptorSet writeBlendPaletteImage(
-            _staticDescriptorSets[i], 2, 0, vk::DescriptorType::eSampledImage, { blendPaletteImageCreate });
+            _constantDescriptorSets[i], 2, 0, vk::DescriptorType::eSampledImage, { blendPaletteImageCreate });
 
-        vk::WriteDescriptorSet writeDynamicUniform(
-            _dynamicDescriptorSets[i], 2, 0, vk::DescriptorType::eUniformBuffer, {}, { uniformCreate });
-        vk::WriteDescriptorSet writeDynamicStorage(
-            _dynamicDescriptorSets[i], 3, 0, vk::DescriptorType::eStorageBuffer, {}, { storageCreate });
+        vk::WriteDescriptorSet writeFrameUniform(
+            _frameDescriptorSets[i], 2, 0, vk::DescriptorType::eUniformBuffer, {}, { uniformCreate });
+        vk::WriteDescriptorSet writeFrameStorage(
+            _frameDescriptorSets[i], 3, 0, vk::DescriptorType::eStorageBuffer, {}, { storageCreate });
 
-        std::vector<vk::WriteDescriptorSet> writeDescSet{ writeStaticSampler, writeFilterPaletteImage, writeBlendPaletteImage,
-                                                          writeDynamicUniform, writeDynamicStorage };
+        std::vector<vk::WriteDescriptorSet> writeDescSet{ writeConstantSampler, writeFilterPaletteImage, writeBlendPaletteImage,
+                                                          writeFrameUniform, writeFrameStorage };
 
         _device.updateDescriptorSets(writeDescSet, {});
     }
@@ -384,12 +420,12 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::UpdateInputViews(
         vk::DescriptorImageInfo paletteInputAttachment(*_sampler, paletteInputViews[i], vk::ImageLayout::eRenderingLocalRead);
         vk::DescriptorImageInfo depthInputAttachment(*_sampler, depthInputViews[i], vk::ImageLayout::eRenderingLocalRead);
 
-        vk::WriteDescriptorSet writeDynamicPaletteInput(
-            _dynamicDescriptorSets[i], 0, 0, vk::DescriptorType::eInputAttachment, { paletteInputAttachment });
-        vk::WriteDescriptorSet writeDynamicDepthInput(
-            _dynamicDescriptorSets[i], 1, 0, vk::DescriptorType::eInputAttachment, { depthInputAttachment });
+        vk::WriteDescriptorSet writeFramePaletteInput(
+            _frameDescriptorSets[i], 0, 0, vk::DescriptorType::eInputAttachment, { paletteInputAttachment });
+        vk::WriteDescriptorSet writeFrameDepthInput(
+            _frameDescriptorSets[i], 1, 0, vk::DescriptorType::eInputAttachment, { depthInputAttachment });
 
-        std::vector<vk::WriteDescriptorSet> writeDescSet{ writeDynamicPaletteInput, writeDynamicDepthInput };
+        std::vector<vk::WriteDescriptorSet> writeDescSet{ writeFramePaletteInput, writeFrameDepthInput };
 
         _device.updateDescriptorSets(writeDescSet, {});
     }
@@ -442,11 +478,26 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::Draw(
         vk::DescriptorBufferInfo storageCreate(
             _storageBuffer[currentFrame], vk::DeviceSize(0), vk::DeviceSize(_storageBufferSize[currentFrame]));
         std::vector<vk::WriteDescriptorSet> writeDescSet{
-            { _dynamicDescriptorSets[currentFrame], 3, 0, vk::DescriptorType::eStorageBuffer, {}, { storageCreate } }
+            { _frameDescriptorSets[currentFrame], 3, 0, vk::DescriptorType::eStorageBuffer, {}, { storageCreate } }
         };
 
         _device.updateDescriptorSets(writeDescSet, {});
     }
+
+    std::vector<vk::DescriptorImageInfo> textureDescriptors;
+    std::unordered_map<ImageId, uint32_t, ImageIdHasher> textureDescriptorMap;
+
+    _spriteManager.GetColourizePipelineDescriptors(textureDescriptors, textureDescriptorMap);
+
+    if (textureDescriptors.size() > 0)
+    {
+        vk::WriteDescriptorSet writeTextureDescriptors(
+            _textureDescriptorSets[currentFrame], 0, 0, vk::DescriptorType::eSampledImage, textureDescriptors);
+
+        _device.updateDescriptorSets(writeTextureDescriptors, {});
+    }
+
+    // set the texture index in the commands
 
     std::memcpy(_storageBufferPointer[currentFrame], _inProgressCommands.data(), bufferSizeNeeded);
     _inProgressCommands.clear();
@@ -463,7 +514,8 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::Draw(
 
     commandBuffer.bindDescriptorSets(
         vk::PipelineBindPoint::eGraphics, *_pipelineLayout, 0,
-        { _staticDescriptorSets[currentFrame], _dynamicDescriptorSets[currentFrame] }, {});
+        { _constantDescriptorSets[currentFrame], _frameDescriptorSets[currentFrame], _textureDescriptorSets[currentFrame] },
+        {});
 
     commandBuffer.draw(static_cast<uint32_t>(quad.size()), 1, 0, 0);
 }
@@ -493,7 +545,19 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::QueueFilterRect(
 }
 
 void OpenRCT2::Ui::Vulkan::ColourizePipeline::QueueBlendedSprite(
-    uint32_t index, RenderTarget& rt, ImageId imageId, int32_t x, int32_t y)
+    uint32_t index, glm::ivec4 bounds, glm::ivec4 clip, ImageId imageId)
 {
-    // TODO: Queue sprite
+    FilterPaletteID palette = static_cast<FilterPaletteID>(imageId.GetRemap());
+    int32_t paletteY = PaletteToY(palette);
+    if (palette == FilterPaletteID::PaletteWater)
+    {
+        paletteY -= 1;
+    }
+
+    _spriteManager.QueueUpload(ImageId(imageId.GetIndex()), SpritePool::ColourizePipeline);
+
+    // TODO: Fill in image index correctly
+    _inProgressCommands.emplace_back(
+        bounds, clip, (uint32_t)ColourizeCommandFlags::ActionBlendSprite, (uint32_t)palette, index,
+        (uint32_t)imageId.GetIndex());
 }

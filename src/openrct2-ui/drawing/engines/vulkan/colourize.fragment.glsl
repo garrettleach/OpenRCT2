@@ -42,6 +42,8 @@ layout (set = 1, binding = 3, std430) readonly buffer FilterRects {
     ColourizeCommand[] commands;
 };
 
+layout (set = 2, binding = 0) uniform utexture2D textures[];
+
 layout (location = 1) out vec3 outColour;
 
 void main() {

@@ -51,10 +51,14 @@ namespace OpenRCT2::Ui::Vulkan
         vk::UniquePipelineLayout _pipelineLayout;
 
         vk::UniqueDescriptorPool _descriptorPool;
-        vk::UniqueDescriptorSetLayout _staticDescriptorSetLayout;
-        vk::UniqueDescriptorSetLayout _dynamicDescriptorSetLayout;
-        std::vector<vk::DescriptorSet> _staticDescriptorSets;
-        std::vector<vk::DescriptorSet> _dynamicDescriptorSets;
+        vk::UniqueDescriptorSetLayout _constantDescriptorSetLayout;
+        vk::UniqueDescriptorSetLayout _frameDescriptorSetLayout;
+        std::vector<vk::DescriptorSet> _constantDescriptorSets;
+        std::vector<vk::DescriptorSet> _frameDescriptorSets;
+
+        std::vector<vk::UniqueDescriptorPool> _textureDescriptorPools;
+        vk::UniqueDescriptorSetLayout _textureDescriptorSetLayout;
+        std::vector<vk::DescriptorSet> _textureDescriptorSets;
 
         vk::UniqueSampler _sampler;
         vk::ImageView _filterPaletteImageView;
@@ -81,7 +85,7 @@ namespace OpenRCT2::Ui::Vulkan
             uint32_t index, RenderTarget& rt, FilterPaletteID palette, int32_t left, int32_t top, int32_t right,
             int32_t bottom);
 
-        void QueueBlendedSprite(uint32_t index, RenderTarget& rt, ImageId imageId, int32_t x, int32_t y);
+        void QueueBlendedSprite(uint32_t index, glm::ivec4 bounds, glm::ivec4 clip, ImageId imageId);
 
     private:
         void CreateGraphicsPipeline();
