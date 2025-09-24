@@ -12,13 +12,6 @@
 
 namespace
 {
-    struct FilterRect
-    {
-        glm::ivec4 bounds;
-        uint32_t depth;
-        uint32_t filterId;
-    };
-
     struct PushConstants
     {
         uint32_t rectCount;
@@ -42,8 +35,6 @@ namespace
     constexpr vk::VertexInputAttributeDescription attrDesc{ 0, 0, vk::Format::eR32G32Sfloat, 0 };
 
     constexpr vk::VertexInputBindingDescription bindingDesc{ 0, sizeof(Vertex), vk::VertexInputRate::eVertex };
-
-    constexpr size_t initialStorageBufferSize = sizeof(FilterRect) * 100;
 
     constexpr vk::Extent2D filterImageExtent(256, kPaletteTotalOffsets);
 } // namespace
@@ -230,6 +221,8 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateBuffers()
     _vertexAllocation = vertexAllocation;
 
     std::memcpy(vertexAllocationInfo.pMappedData, quad.data(), quadsBufferSize);
+
+    size_t initialStorageBufferSize = sizeof(OpenRCT2::Ui::Vulkan::ColourizePipeline::ColourizeCommand) * 100;
 
     for (size_t i = 0; i < _framesInFlight; i++)
     {
