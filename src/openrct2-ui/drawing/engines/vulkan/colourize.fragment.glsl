@@ -28,17 +28,18 @@ const uint FLAGS_ACTION_MASK = 0x1;
 const uint FLAGS_ACTION_FILTERRECT = 0x0;
 const uint FLAGS_ACTION_BLEND = 0x1;
 
-struct FilterRect
+struct ColourizeCommand
 {
     ivec4 bounds;
     ivec4 clip;
 	uint flags;
-    uint filterId; //filter number to use for filterPalette
+    uint filterId; //filter number to use for filterPalette and dstColor in blend
     uint depth;
+	uint textureIndex;
 };
 
 layout (set = 1, binding = 3, std430) readonly buffer FilterRects {
-    FilterRect[] rects;
+    ColourizeCommand[] commands;
 };
 
 layout (location = 1) out vec3 outColour;
@@ -50,18 +51,18 @@ void main() {
 
     for(uint i = 0; i < push.rectCount; i++)
     {
-        if(depth < (rects[i].depth * DEPTH_INCREMENT))
+        if(depth < (commands[i].depth * DEPTH_INCREMENT))
         {
             if(
-                coords.x > rects[i].bounds.x &&
-                coords.y > rects[i].bounds.y &&
-                coords.x < rects[i].bounds.z &&
-                coords.y < rects[i].bounds.w)
+                coords.x > commands[i].bounds.x &&
+                coords.y > commands[i].bounds.y &&
+                coords.x < commands[i].bounds.z &&
+                coords.y < commands[i].bounds.w)
             {
-				if((rects[i].flags & FLAGS_ACTION_MASK) == FLAGS_ACTION_FILTERRECT)
+				if((commands[i].flags & FLAGS_ACTION_MASK) == FLAGS_ACTION_FILTERRECT)
 				{
-					//vec4 clipRect = rects[i].clip * push.scaleFactor;
-					ivec2 uv = ivec2(colour, rects[i].filterId);
+					//vec4 clipRect = commands[i].clip * push.scaleFactor;
+					ivec2 uv = ivec2(colour, commands[i].filterId);
 					uint thisColour = texelFetch(usampler2D(filterPalette, singleSampler), uv, 0).x;
 					if(thisColour != 0)
 					{
