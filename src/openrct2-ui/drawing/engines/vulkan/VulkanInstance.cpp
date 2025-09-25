@@ -130,104 +130,109 @@ namespace OpenRCT2::Ui::Vulkan
     {
         std::vector<vk::LayerSettingEXT> settings;
 
-        if constexpr (!enableValidationLayer || !setValidationLayerSettings)
-        {
-            return settings;
-        }
-
-        settings.emplace_back(
-            khronosValidationLayerName, "validate_core", vk::LayerSettingTypeEXT::eBool32, 1, &validate_core_value);
-        if (validate_core_value)
+        if constexpr (enableValidationLayer && setValidationLayerSettings)
         {
             settings.emplace_back(
-                khronosValidationLayerName, "check_image_layout", vk::LayerSettingTypeEXT::eBool32, 1,
-                &validate_core_imagelayout_value);
-            settings.emplace_back(
-                khronosValidationLayerName, "check_command_buffer", vk::LayerSettingTypeEXT::eBool32, 1,
-                &validate_core_commandbuffer_value);
-            settings.emplace_back(
-                khronosValidationLayerName, "check_object_in_use", vk::LayerSettingTypeEXT::eBool32, 1,
-                &validate_core_objectinuse_value);
-            settings.emplace_back(
-                khronosValidationLayerName, "check_query", vk::LayerSettingTypeEXT::eBool32, 1, &validate_core_query_value);
-            settings.emplace_back(
-                khronosValidationLayerName, "check_shaders", vk::LayerSettingTypeEXT::eBool32, 1, &validate_core_shaders_value);
-            if (validate_core_shaders_value)
+                khronosValidationLayerName, "validate_core", vk::LayerSettingTypeEXT::eBool32, 1, &validate_core_value);
+            if (validate_core_value)
             {
                 settings.emplace_back(
-                    khronosValidationLayerName, "check_shaders_caching", vk::LayerSettingTypeEXT::eBool32, 1,
-                    &validate_core_shaders_checkcaching_value);
+                    khronosValidationLayerName, "check_image_layout", vk::LayerSettingTypeEXT::eBool32, 1,
+                    &validate_core_imagelayout_value);
+                settings.emplace_back(
+                    khronosValidationLayerName, "check_command_buffer", vk::LayerSettingTypeEXT::eBool32, 1,
+                    &validate_core_commandbuffer_value);
+                settings.emplace_back(
+                    khronosValidationLayerName, "check_object_in_use", vk::LayerSettingTypeEXT::eBool32, 1,
+                    &validate_core_objectinuse_value);
+                settings.emplace_back(
+                    khronosValidationLayerName, "check_query", vk::LayerSettingTypeEXT::eBool32, 1, &validate_core_query_value);
+                settings.emplace_back(
+                    khronosValidationLayerName, "check_shaders", vk::LayerSettingTypeEXT::eBool32, 1,
+                    &validate_core_shaders_value);
+                if (validate_core_shaders_value)
+                {
+                    settings.emplace_back(
+                        khronosValidationLayerName, "check_shaders_caching", vk::LayerSettingTypeEXT::eBool32, 1,
+                        &validate_core_shaders_checkcaching_value);
+                }
             }
+
+            settings.emplace_back(
+                khronosValidationLayerName, "unique_handles", vk::LayerSettingTypeEXT::eBool32, 1, &validate_handles_value);
+
+            settings.emplace_back(
+                khronosValidationLayerName, "object_lifetime", vk::LayerSettingTypeEXT::eBool32, 1,
+                &validate_objlifetime_value);
+
+            settings.emplace_back(
+                khronosValidationLayerName, "stateless_param", vk::LayerSettingTypeEXT::eBool32, 1,
+                &validate_statelessparam_value);
+
+            settings.emplace_back(
+                khronosValidationLayerName, "thread_safety", vk::LayerSettingTypeEXT::eBool32, 1, &validate_threadsafety_value);
+
+            settings.emplace_back(
+                khronosValidationLayerName, "validate_sync", vk::LayerSettingTypeEXT::eBool32, 1, &validate_sync_value);
+            if (validate_sync_value)
+            {
+                settings.emplace_back(
+                    khronosValidationLayerName, "syncval_submit_time_validation", vk::LayerSettingTypeEXT::eBool32, 1,
+                    &validate_sync_submittime_value);
+                settings.emplace_back(
+                    khronosValidationLayerName, "syncval_shader_accesses_heuristic", vk::LayerSettingTypeEXT::eBool32, 1,
+                    &validate_sync_shaderaccess_value);
+                settings.emplace_back(
+                    khronosValidationLayerName, "syncval_reporting", vk::LayerSettingTypeEXT::eBool32, 1,
+                    &validate_sync_reporting_extraproperties_value);
+            }
+
+            settings.emplace_back(
+                khronosValidationLayerName, "printf_enable", vk::LayerSettingTypeEXT::eBool32, 1, &prinft_value);
+            if (prinft_value)
+            {
+                _enabledGpuDebugPrintf = true;
+                settings.emplace_back(
+                    khronosValidationLayerName, "printf_to_stdout", vk::LayerSettingTypeEXT::eBool32, 1, &prinft_stdout_value);
+                settings.emplace_back(
+                    khronosValidationLayerName, "printf_verbose", vk::LayerSettingTypeEXT::eBool32, 1, &printf_verbose_value);
+                settings.emplace_back(
+                    khronosValidationLayerName, "printf_buffer_size", vk::LayerSettingTypeEXT::eInt32, 1,
+                    &printf_buffersize_value);
+            }
+
+            settings.emplace_back(
+                khronosValidationLayerName, "gpuav_enable", vk::LayerSettingTypeEXT::eBool32, 1, &gpuvalidation_value);
+            if (gpuvalidation_value)
+            {
+                settings.emplace_back(
+                    khronosValidationLayerName, "gpuav_safe_mode", vk::LayerSettingTypeEXT::eBool32, 1,
+                    &gpuvalidation_safemode_value);
+                settings.emplace_back(
+                    khronosValidationLayerName, "gpuav_force_on_robustness", vk::LayerSettingTypeEXT::eBool32, 1,
+                    &gpuvalidation_forcerobustness_value);
+                settings.emplace_back(
+                    khronosValidationLayerName, "gpuav_shader_instrumentation", vk::LayerSettingTypeEXT::eBool32, 1,
+                    &gpuvalidation_shaderinstrumentation_value);
+            }
+
+            settings.emplace_back(
+                khronosValidationLayerName, "enable_message_limit", vk::LayerSettingTypeEXT::eBool32, 1,
+                &limitduplicates_value);
+            if (limitduplicates_value)
+            {
+                settings.emplace_back(
+                    khronosValidationLayerName, "duplicate_message_limit", vk::LayerSettingTypeEXT::eInt32, 1,
+                    &limitduplicates_limit_value);
+            }
+
+            settings.emplace_back(
+                khronosValidationLayerName, "message_format_json", vk::LayerSettingTypeEXT::eBool32, 1,
+                &messageformat_json_value);
+            settings.emplace_back(
+                khronosValidationLayerName, "message_format_display_application_name", vk::LayerSettingTypeEXT::eBool32, 1,
+                &messageformat_displayappname_value);
         }
-
-        settings.emplace_back(
-            khronosValidationLayerName, "unique_handles", vk::LayerSettingTypeEXT::eBool32, 1, &validate_handles_value);
-
-        settings.emplace_back(
-            khronosValidationLayerName, "object_lifetime", vk::LayerSettingTypeEXT::eBool32, 1, &validate_objlifetime_value);
-
-        settings.emplace_back(
-            khronosValidationLayerName, "stateless_param", vk::LayerSettingTypeEXT::eBool32, 1, &validate_statelessparam_value);
-
-        settings.emplace_back(
-            khronosValidationLayerName, "thread_safety", vk::LayerSettingTypeEXT::eBool32, 1, &validate_threadsafety_value);
-
-        settings.emplace_back(
-            khronosValidationLayerName, "validate_sync", vk::LayerSettingTypeEXT::eBool32, 1, &validate_sync_value);
-        if (validate_sync_value)
-        {
-            settings.emplace_back(
-                khronosValidationLayerName, "syncval_submit_time_validation", vk::LayerSettingTypeEXT::eBool32, 1,
-                &validate_sync_submittime_value);
-            settings.emplace_back(
-                khronosValidationLayerName, "syncval_shader_accesses_heuristic", vk::LayerSettingTypeEXT::eBool32, 1,
-                &validate_sync_shaderaccess_value);
-            settings.emplace_back(
-                khronosValidationLayerName, "syncval_reporting", vk::LayerSettingTypeEXT::eBool32, 1,
-                &validate_sync_reporting_extraproperties_value);
-        }
-
-        settings.emplace_back(khronosValidationLayerName, "printf_enable", vk::LayerSettingTypeEXT::eBool32, 1, &prinft_value);
-        if (prinft_value)
-        {
-            _enabledGpuDebugPrintf = true;
-            settings.emplace_back(
-                khronosValidationLayerName, "printf_to_stdout", vk::LayerSettingTypeEXT::eBool32, 1, &prinft_stdout_value);
-            settings.emplace_back(
-                khronosValidationLayerName, "printf_verbose", vk::LayerSettingTypeEXT::eBool32, 1, &printf_verbose_value);
-            settings.emplace_back(
-                khronosValidationLayerName, "printf_buffer_size", vk::LayerSettingTypeEXT::eInt32, 1, &printf_buffersize_value);
-        }
-
-        settings.emplace_back(
-            khronosValidationLayerName, "gpuav_enable", vk::LayerSettingTypeEXT::eBool32, 1, &gpuvalidation_value);
-        if (gpuvalidation_value)
-        {
-            settings.emplace_back(
-                khronosValidationLayerName, "gpuav_safe_mode", vk::LayerSettingTypeEXT::eBool32, 1,
-                &gpuvalidation_safemode_value);
-            settings.emplace_back(
-                khronosValidationLayerName, "gpuav_force_on_robustness", vk::LayerSettingTypeEXT::eBool32, 1,
-                &gpuvalidation_forcerobustness_value);
-            settings.emplace_back(
-                khronosValidationLayerName, "gpuav_shader_instrumentation", vk::LayerSettingTypeEXT::eBool32, 1,
-                &gpuvalidation_shaderinstrumentation_value);
-        }
-
-        settings.emplace_back(
-            khronosValidationLayerName, "enable_message_limit", vk::LayerSettingTypeEXT::eBool32, 1, &limitduplicates_value);
-        if (limitduplicates_value)
-        {
-            settings.emplace_back(
-                khronosValidationLayerName, "duplicate_message_limit", vk::LayerSettingTypeEXT::eInt32, 1,
-                &limitduplicates_limit_value);
-        }
-
-        settings.emplace_back(
-            khronosValidationLayerName, "message_format_json", vk::LayerSettingTypeEXT::eBool32, 1, &messageformat_json_value);
-        settings.emplace_back(
-            khronosValidationLayerName, "message_format_display_application_name", vk::LayerSettingTypeEXT::eBool32, 1,
-            &messageformat_displayappname_value);
 
         return settings;
     }
