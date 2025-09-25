@@ -118,8 +118,9 @@ namespace OpenRCT2::Ui::Vulkan
             std::unordered_map<ImageId, uint32_t, ImageIdHasher>& descriptorMapImages);
 
     private:
-        void CreateEmptyPaletteImages();
         void ReleaseUploadedSprites(std::vector<UploadedSpriteInfo>& sprites);
+
+        void CreateEmptyImageWithView(vk::Extent2D extent, vk::Image& image, VmaAllocation& imageAllocation, vk::UniqueImageView& imageView);
 
         void UploadFilterPaletteImage(vk::CommandBuffer commandBuffer);
         void UploadBlendPaletteImage(vk::CommandBuffer commandBuffer);

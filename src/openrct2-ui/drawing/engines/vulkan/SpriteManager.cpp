@@ -125,7 +125,9 @@ OpenRCT2::Ui::Vulkan::SpriteManager::SpriteManager(
     , _allocator(vma)
     , _queuedImageInvalidation(framesInFlight, std::vector<UploadedSpriteInfo>())
 {
-    CreateEmptyPaletteImages();
+    CreateEmptyImageWithView(filterImageExtent, _filterPaletteImage, _filterPaletteImageAllocation, _filterPaletteImageView);
+    CreateEmptyImageWithView(
+        vk::Extent2D(kPaletteCount, kPaletteCount), _blendPaletteImage, _blendPaletteImageAllocation, _blendPaletteImageView);
 }
 
 OpenRCT2::Ui::Vulkan::SpriteManager::~SpriteManager()
@@ -380,6 +382,38 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::GetColourizePipelineDescriptors(
     }
 }
 
+void OpenRCT2::Ui::Vulkan::SpriteManager::CreateEmptyImageWithView(
+    vk::Extent2D extent, vk::Image& image, VmaAllocation& imageAllocation, vk::UniqueImageView& imageView)
+{
+    vk::ImageCreateInfo imageCreateInfo(
+        vk::ImageCreateFlags{}, vk::ImageType::e2D, vk::Format::eR8Uint, vk::Extent3D(extent, 1), 1, 1,
+        vk::SampleCountFlagBits::e1, vk::ImageTiling::eOptimal,
+        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst, vk::SharingMode::eExclusive, {},
+        vk::ImageLayout::eUndefined);
+
+    VmaAllocationCreateInfo allocImageCreateInfo{};
+    allocImageCreateInfo.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO;
+
+    vk::Image tempImage;
+    VmaAllocation tempImageAllocation;
+
+    auto imageResult = vmaCreateImage(
+        _allocator, imageCreateInfo, &allocImageCreateInfo, tempImage, tempImageAllocation, nullptr);
+
+    if (vk::Result::eSuccess != imageResult)
+    {
+        throw std::runtime_error("Vulkan memory error while creating empty image");
+    }
+
+    vk::ImageViewCreateInfo imageViewCreate(
+        vk::ImageViewCreateFlags{}, tempImage, vk::ImageViewType::e2D, vk::Format::eR8Uint, {},
+        vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
+
+    imageView = _device.createImageViewUnique(imageViewCreate);
+    image = tempImage;
+    imageAllocation = tempImageAllocation;
+}
+
 void OpenRCT2::Ui::Vulkan::SpriteManager::UploadFilterPaletteImage(vk::CommandBuffer commandBuffer)
 {
     vk::Extent2D extent;
@@ -453,62 +487,4 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::InvalidateImage(uint32_t image)
 
         _currentFrameQueuedImageInvalidation.push_back(std::move(value));
     }
-}
-
-void OpenRCT2::Ui::Vulkan::SpriteManager::CreateEmptyPaletteImages()
-{
-    vk::ImageCreateInfo filterImageCreateInfo(
-        vk::ImageCreateFlags{}, vk::ImageType::e2D, vk::Format::eR8Uint, vk::Extent3D(filterImageExtent, 1), 1, 1,
-        vk::SampleCountFlagBits::e1, vk::ImageTiling::eOptimal,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst, vk::SharingMode::eExclusive, {},
-        vk::ImageLayout::eUndefined);
-
-    VmaAllocationCreateInfo allocImageCreateInfo{};
-    allocImageCreateInfo.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO;
-
-    vk::Image filterPaletteImage;
-    VmaAllocation filterPaletteImageAllocation;
-
-    auto filterImageResult = vmaCreateImage(
-        _allocator, filterImageCreateInfo, &allocImageCreateInfo, filterPaletteImage, filterPaletteImageAllocation, nullptr);
-
-    if (vk::Result::eSuccess != filterImageResult)
-    {
-        throw std::runtime_error("Vulkan memory error while creating filter image");
-    }
-
-    _filterPaletteImage = filterPaletteImage;
-    _filterPaletteImageAllocation = filterPaletteImageAllocation;
-
-    vk::ImageViewCreateInfo filterImageViewCreate(
-        vk::ImageViewCreateFlags{}, _filterPaletteImage, vk::ImageViewType::e2D, vk::Format::eR8Uint, {},
-        vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
-
-    _filterPaletteImageView = _device.createImageViewUnique(filterImageViewCreate);
-
-    vk::ImageCreateInfo blendImageCreateInfo(
-        vk::ImageCreateFlags{}, vk::ImageType::e2D, vk::Format::eR8Uint, vk::Extent3D(kPaletteCount, kPaletteCount, 1), 1, 1,
-        vk::SampleCountFlagBits::e1, vk::ImageTiling::eOptimal,
-        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst, vk::SharingMode::eExclusive, {},
-        vk::ImageLayout::eUndefined);
-
-    vk::Image blendPaletteImage;
-    VmaAllocation blendPaletteImageAllocation;
-
-    auto blendImageResult = vmaCreateImage(
-        _allocator, blendImageCreateInfo, &allocImageCreateInfo, blendPaletteImage, blendPaletteImageAllocation, nullptr);
-
-    if (vk::Result::eSuccess != blendImageResult)
-    {
-        throw std::runtime_error("Vulkan memory error while creating blend image");
-    }
-
-    _blendPaletteImage = blendPaletteImage;
-    _blendPaletteImageAllocation = blendPaletteImageAllocation;
-
-    vk::ImageViewCreateInfo blendImageViewCreate(
-        vk::ImageViewCreateFlags{}, _blendPaletteImage, vk::ImageViewType::e2D, vk::Format::eR8Uint, {},
-        vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
-
-    _blendPaletteImageView = _device.createImageViewUnique(blendImageViewCreate);
 }
