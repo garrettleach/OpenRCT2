@@ -21,8 +21,8 @@ const uint kPaletteExclusiveEndRemapTertiary = kPaletteOffsetRemapTertiary+ kPal
 const uint kPaletteAddRemapSecondary = kPaletteOffsetRemapPrimary - kPaletteOffsetRemapSecondary;
 const uint kPaletteAddRemapTertiary = kPaletteOffsetRemapPrimary - kPaletteOffsetRemapTertiary;
 
-layout(set = 0, binding = 1) uniform sampler singleSampler;
-layout(set = 0, binding = 2) uniform utexture2D filterPalette;
+layout(set = 0, binding = 0) uniform sampler singleSampler;
+layout(set = 0, binding = 1) uniform utexture2D filterPalette;
 
 layout(set = 1, binding = 0) uniform utexture2D textures[];
 

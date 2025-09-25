@@ -76,14 +76,12 @@ namespace OpenRCT2::Ui::Vulkan
 
     vk::UniqueDescriptorSetLayout DrawSpritePipeline::CreateDescriptorSetLayout(const vk::Device& device)
     {
-        vk::DescriptorSetLayoutBinding uboLayoutBinding(
-            0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex);
         vk::DescriptorSetLayoutBinding samplerLayoutBinding(
-            1, vk::DescriptorType::eSampler, 1, vk::ShaderStageFlagBits::eFragment);
+            0, vk::DescriptorType::eSampler, 1, vk::ShaderStageFlagBits::eFragment);
         vk::DescriptorSetLayoutBinding filterPaletteLayoutBinding(
-            2, vk::DescriptorType::eSampledImage, 1, vk::ShaderStageFlagBits::eFragment);
+            1, vk::DescriptorType::eSampledImage, 1, vk::ShaderStageFlagBits::eFragment);
 
-        std::vector<vk::DescriptorSetLayoutBinding> bindings{ uboLayoutBinding, samplerLayoutBinding,
+        std::vector<vk::DescriptorSetLayoutBinding> bindings{ samplerLayoutBinding,
                                                               filterPaletteLayoutBinding };
 
         vk::DescriptorSetLayoutCreateInfo layoutInfo(vk::DescriptorSetLayoutCreateFlags(), bindings);
@@ -110,7 +108,9 @@ namespace OpenRCT2::Ui::Vulkan
     vk::UniquePipelineLayout DrawSpritePipeline::CreatePipelineLayout(
         const vk::Device& device, const std::vector<vk::DescriptorSetLayout>& descriptorSetLayouts)
     {
-        vk::PipelineLayoutCreateInfo pipelineLayoutInfo(vk::PipelineLayoutCreateFlags(), descriptorSetLayouts);
+        vk::PushConstantRange pushConst(vk::ShaderStageFlagBits::eVertex, 0, static_cast<uint32_t>(sizeof(glm::uvec2)));
+
+        vk::PipelineLayoutCreateInfo pipelineLayoutInfo(vk::PipelineLayoutCreateFlags(), descriptorSetLayouts, pushConst);
 
         return device.createPipelineLayoutUnique(pipelineLayoutInfo);
     }
@@ -246,11 +246,6 @@ namespace OpenRCT2::Ui::Vulkan
             vmaDestroyBuffer(_alloc, _instanceBuffers[i], _instanceDeviceMemory[i]);
         }
 
-        for (size_t i = 0; i < _uniformBufferObjectMemory.size(); i++)
-        {
-            vmaDestroyBuffer(_alloc, _uniformBufferObjectBuffer[i], _uniformBufferObjectMemory[i]);
-        }
-
         _inProgressSprites.clear();
     }
 
@@ -289,65 +284,19 @@ namespace OpenRCT2::Ui::Vulkan
 
         for (size_t i = 0; i < _uniformBufferDescriptorSets.size(); i++)
         {
-            vk::DescriptorBufferInfo uniformBufferInfo(
-                _uniformBufferObjectBuffer[i], 0, sizeof(DrawSpritePipeline::UniformBufferObject));
-
-            vk::WriteDescriptorSet uniformDescriptorWrite(
-                _uniformBufferDescriptorSets[i], 0, 0, vk::DescriptorType::eUniformBuffer, {}, { uniformBufferInfo }, {});
-
             // TODO: Can we convert this to an immutable sampler?
             vk::DescriptorImageInfo samplerImageInfo(_sampler, nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
 
             vk::WriteDescriptorSet samplerDescriptorWrite(
-                _uniformBufferDescriptorSets[i], 1, 0, vk::DescriptorType::eSampler, { samplerImageInfo }, {}, {});
+                _uniformBufferDescriptorSets[i], 0, 0, vk::DescriptorType::eSampler, { samplerImageInfo }, {}, {});
 
             vk::DescriptorImageInfo filterPaletteImageInfo(
                 nullptr, _spriteManager.GetPaletteImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
 
             vk::WriteDescriptorSet filterPaletteDescriptorWrite(
-                _uniformBufferDescriptorSets[i], 2, 0, vk::DescriptorType::eSampledImage, { filterPaletteImageInfo }, {}, {});
+                _uniformBufferDescriptorSets[i], 1, 0, vk::DescriptorType::eSampledImage, { filterPaletteImageInfo }, {}, {});
 
-            _device.updateDescriptorSets({ uniformDescriptorWrite, samplerDescriptorWrite, filterPaletteDescriptorWrite }, {});
-        }
-    }
-
-    void DrawSpritePipeline::CreateBuffers()
-    {
-        vk::DeviceSize uniformBufferSize = sizeof(UniformBufferObject);
-
-        for (size_t i = 0; i < _framesInFlight; i++)
-        {
-            vk::BufferCreateInfo uniformBufferInfo(
-                vk::BufferCreateFlags{}, uniformBufferSize, vk::BufferUsageFlagBits::eUniformBuffer,
-                vk::SharingMode::eExclusive, {});
-            vk::BufferCreateInfo paletteBufferInfo(
-                vk::BufferCreateFlags{}, vk::DeviceSize(shaderPaletteSizeInBytes), vk::BufferUsageFlagBits::eUniformBuffer,
-                vk::SharingMode::eExclusive, {});
-
-            VmaAllocationCreateInfo allocInfo = {};
-            allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
-            allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
-            allocInfo.requiredFlags = (VkMemoryPropertyFlags)vk::MemoryPropertyFlagBits::eHostVisible;
-            allocInfo.preferredFlags = (VkMemoryPropertyFlags)(vk::MemoryPropertyFlagBits::eHostCoherent
-                                                               | vk::MemoryPropertyFlagBits::eHostCached);
-
-            vk::Buffer uniformBuffer;
-            VmaAllocation uniformAllocation;
-            VmaAllocationInfo uniformAllocationInfo;
-
-            if (vk::Result::eSuccess
-                == vmaCreateBuffer(
-                    _alloc, uniformBufferInfo, &allocInfo, uniformBuffer, uniformAllocation, &uniformAllocationInfo))
-            {
-                // testing: using a host buffer
-                _uniformBufferObjectBuffer.push_back(uniformBuffer);
-                _uniformBufferObjectMemory.push_back(uniformAllocation);
-                _uniformBufferObjectMappedMemory.push_back(uniformAllocationInfo.pMappedData);
-            }
-            else
-            {
-                throw std::runtime_error("Vulkan memory error while creating uniform buffer");
-            }
+            _device.updateDescriptorSets({ samplerDescriptorWrite, filterPaletteDescriptorWrite }, {});
         }
     }
 
@@ -472,9 +421,10 @@ namespace OpenRCT2::Ui::Vulkan
 
         std::memcpy(_instanceMappedMemory[currentFrame], _inProgressSprites.data(), neededInstanceMem);
 
-        DrawSpritePipeline::UniformBufferObject ubo{ .renderTargetSize = { renderTarget.width, renderTarget.height } };
+        glm::uvec2 renderTargetSize{ renderTarget.width, renderTarget.height };
 
-        std::memcpy(_uniformBufferObjectMappedMemory[currentFrame], &ubo, sizeof(ubo));
+        commandBuffer.pushConstants(
+            *_pipelineLayout, vk::ShaderStageFlagBits::eVertex, 0, sizeof(renderTargetSize), &renderTargetSize);
 
         vk::Viewport viewport(0.0f, 0.0f, renderTarget.width, renderTarget.height, 0.0f, 1.0f);
 

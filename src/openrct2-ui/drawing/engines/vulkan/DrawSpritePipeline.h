@@ -17,11 +17,6 @@ namespace OpenRCT2::Ui::Vulkan
     class DrawSpritePipeline
     {
     public:
-        struct UniformBufferObject
-        {
-            alignas(8) glm::uvec2 renderTargetSize;
-        };
-
         enum class RectFlags : uint32_t
         {
             None = 0,
@@ -62,9 +57,6 @@ namespace OpenRCT2::Ui::Vulkan
         vk::UniquePipelineLayout _pipelineLayout;
         vk::UniquePipeline _pipeline;
 
-        std::vector<VmaAllocation> _uniformBufferObjectMemory;
-        std::vector<vk::Buffer> _uniformBufferObjectBuffer;
-        std::vector<void*> _uniformBufferObjectMappedMemory;
         vk::UniqueDescriptorPool _uniformBufferDescriptorPool;
         std::vector<vk::DescriptorSet> _uniformBufferDescriptorSets;
 
@@ -120,7 +112,6 @@ namespace OpenRCT2::Ui::Vulkan
             const vk::Device& device, const vk::DescriptorSetLayout& descriptorSetLayout,
             const vk::PipelineLayout& pipelineLayout);
 
-        void CreateBuffers();
         void CreateDescriptorPool();
         void CreateDescriptorSets();
 
