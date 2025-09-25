@@ -16,28 +16,6 @@ namespace OpenRCT2::Ui::Vulkan
 {
     class DrawSpritePipeline
     {
-        enum class DrawType : uint8_t
-        {
-            FillRect, // ignore the image id, use color
-            DrawSprite,
-            DrawSpriteRawMasked,
-            DrawSpriteSolid,
-            DrawGlyph,
-            Placeholder,
-            FillRectCrossHatch,
-        };
-
-        struct DrawCommand
-        {
-            glm::ivec4 bounds;
-            glm::ivec4 clip = { INT_MIN, INT_MIN, INT_MAX, INT_MAX };
-            DrawType drawType;
-            TextureIndex imageIndex;   // ignored for fillrect
-            TextureIndex maskImageIndex; // used for SpriteRawMasked
-            uint64_t paletteMap; // for DrawGlyph or DrawSprite (high is count, next palette1, next 2, next 3)
-            colour_t colour;     // for fillrect
-        };
-
     public:
         struct UniformBufferObject
         {
@@ -106,14 +84,9 @@ namespace OpenRCT2::Ui::Vulkan
         std::vector<vk::DescriptorPool> _descriptorIndexPools;
         std::vector<vk::DescriptorSet> _descriptorIndexSets;
 
-        std::vector<DrawCommand> _inProgressSprites;
+        std::vector<Rect> _inProgressSprites;
 
         std::vector<std::vector<vk::DescriptorImageInfo>> _tmpDescriptors;
-
-        // used to keep an appropriately sized vector ready between frames
-        std::vector<Rect> _workingInstances;
-
-        vk::UniqueCommandPool _commandPool;
 
     public:
         DrawSpritePipeline(
@@ -155,8 +128,6 @@ namespace OpenRCT2::Ui::Vulkan
         void CreateInstanceBuffers();
         void CreateVertexBuffer();
         void CreateIndexBuffer();
-
-        void CreateCommandPool();
 
         void CreateIndexDescriptors();
     };

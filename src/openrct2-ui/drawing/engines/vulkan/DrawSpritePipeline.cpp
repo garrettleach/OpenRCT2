@@ -451,8 +451,6 @@ namespace OpenRCT2::Ui::Vulkan
     void DrawSpritePipeline::Draw(
         const vk::CommandBuffer& commandBuffer, const RenderTarget& renderTarget, uint32_t currentFrame)
     {
-        _workingInstances.clear();
-
         _spriteManager.GetSpritePipelineDescriptors(_tmpDescriptors[currentFrame]);
 
         if (_tmpDescriptors.size() != 0)
@@ -464,59 +462,15 @@ namespace OpenRCT2::Ui::Vulkan
             _device.updateDescriptorSets({ writeAllImageDesc }, nullptr);
         }
 
-        for (auto& data : _inProgressSprites)
-        {
-            TextureIndex imageIndex = data.imageIndex;
-            std::optional<uint32_t> colour = nullopt;
-            TextureIndex maskIndex = data.maskImageIndex;
-            RectFlags flags = RectFlags::None;
-            uint32_t paletteRemap = static_cast<uint32_t>(data.paletteMap);
-
-            if (data.drawType == DrawType::DrawSprite)
-            {
-                flags = RectFlags::Mask;
-            }
-            else if (data.drawType == DrawType::DrawSpriteRawMasked)
-            {
-                flags = RectFlags::Mask;
-            }
-            else if (data.drawType == DrawType::DrawSpriteSolid)
-            {
-                colour = data.colour;
-                flags = (RectFlags)((uint32_t)RectFlags::Mask | (uint32_t)RectFlags::ColourOnly);
-            }
-            else if (data.drawType == DrawType::DrawGlyph)
-            {
-                flags = RectFlags::Mask; // double check this
-            }
-            else if (data.drawType == DrawType::FillRect || data.drawType == DrawType::FillRectCrossHatch)
-            {
-                flags = RectFlags::ColourOnly;
-                colour = data.colour;
-                if (data.drawType == DrawType::FillRectCrossHatch)
-                {
-                    flags = flags | RectFlags::CrossHatch;
-                }
-            }
-            else if (data.drawType == DrawType::Placeholder)
-            {
-                // the bounds are already intentionally out of view
-            }
-
-            _workingInstances.emplace_back(
-                data.bounds, data.clip, flags, colour.value_or(static_cast<uint32_t>(imageIndex)), maskIndex, paletteRemap);
-        }
-        _inProgressSprites.clear();
-
         uint32_t neededInstanceMem = static_cast<uint32_t>(
-            _workingInstances.size() * sizeof(std::remove_reference_t<decltype(_workingInstances)>::value_type));
+            _inProgressSprites.size() * sizeof(std::remove_reference_t<decltype(_inProgressSprites)>::value_type));
 
         ResizeBufferIfNeeded(
             neededInstanceMem, _alloc, _instanceBuffers[currentFrame], _instanceDeviceMemory[currentFrame],
             _instanceDeviceMemorySize[currentFrame], _instanceMappedMemory[currentFrame],
             vk::BufferUsageFlagBits::eVertexBuffer, hostMappedAllocInfo);
 
-        std::memcpy(_instanceMappedMemory[currentFrame], _workingInstances.data(), neededInstanceMem);
+        std::memcpy(_instanceMappedMemory[currentFrame], _inProgressSprites.data(), neededInstanceMem);
 
         DrawSpritePipeline::UniformBufferObject ubo{ .renderTargetSize = { renderTarget.width, renderTarget.height } };
 
@@ -541,9 +495,9 @@ namespace OpenRCT2::Ui::Vulkan
             { _uniformBufferDescriptorSets[currentFrame], _descriptorIndexSets[currentFrame] }, {});
 
         commandBuffer.drawIndexed(
-            static_cast<uint32_t>(rectIndicies.size()), static_cast<uint32_t>(_workingInstances.size()), 0, 0, 0);
+            static_cast<uint32_t>(rectIndicies.size()), static_cast<uint32_t>(_inProgressSprites.size()), 0, 0, 0);
 
-        _workingInstances.clear();
+        _inProgressSprites.clear();
     }
 
     void DrawSpritePipeline::QueueDraw(RenderTarget& rt, ImageId imageId, int32_t x, int32_t y)
@@ -620,7 +574,7 @@ namespace OpenRCT2::Ui::Vulkan
         {
             uint32_t paletteValue = ((uint32_t)paletteCount << 24) | ((uint32_t)palettes[2] << 16)
                 | ((uint32_t)palettes[1] << 8) | (uint32_t)(palettes[0]);
-            _inProgressSprites.emplace_back(bounds, clip, DrawType::DrawSprite, textureIndex, textureIndex, paletteValue);
+            _inProgressSprites.emplace_back(bounds, clip, RectFlags::Mask, static_cast<uint32_t>(textureIndex), textureIndex, paletteValue);
         }
     }
 
@@ -652,7 +606,7 @@ namespace OpenRCT2::Ui::Vulkan
         if (maskTextureIndex != TextureIndex::InvalidIndex && colourTextureIndex != TextureIndex::InvalidIndex)
         {
             glm::ivec4 bounds{ left, top, right, bottom };
-            _inProgressSprites.emplace_back(bounds, clip, DrawType::DrawSpriteRawMasked, colourTextureIndex, maskTextureIndex);
+            _inProgressSprites.emplace_back(bounds, clip, RectFlags::Mask, static_cast<uint32_t>(colourTextureIndex), maskTextureIndex);
         }
     }
 
@@ -679,8 +633,8 @@ namespace OpenRCT2::Ui::Vulkan
         if (maskTextureIndex != TextureIndex::InvalidIndex)
         {
             _inProgressSprites.emplace_back(
-                glm::ivec4{ left, top, right, bottom }, clip, DrawType::DrawSpriteSolid, TextureIndex::InvalidIndex,
-                maskTextureIndex, 0, colour);
+                glm::ivec4{ left, top, right, bottom }, clip, RectFlags::Mask | RectFlags::ColourOnly, colour,
+                maskTextureIndex);
         }
     }
 
@@ -724,8 +678,8 @@ namespace OpenRCT2::Ui::Vulkan
         {
             glm::ivec4 bounds{ left, top, right, bottom };
             _inProgressSprites.emplace_back(
-                bounds, clip, DrawType::DrawGlyph, textureIndex, textureIndex,
-                glyphId.palette, colour_t{});
+                bounds, clip, RectFlags::Mask, static_cast<uint32_t>(textureIndex), textureIndex,
+                glyphId.palette);
         }
     }
 
@@ -739,17 +693,19 @@ namespace OpenRCT2::Ui::Vulkan
         int32_t right2 = right + clip.x - rt.x;
         int32_t bottom2 = bottom + clip.y - rt.y;
 
+        RectFlags flags = RectFlags::ColourOnly;
+
         bool crossHatch = false;
         if (colour & 0x1000000)
         {
             colour = colour & (~0x1000000); // cross hatch
             crossHatch = true;
+            flags = flags | RectFlags::CrossHatch;
         }
 
-        _inProgressSprites.emplace_back(
-            glm::ivec4{ left2, top2, right2 + 1, bottom2 + 1 }, clip,
-            crossHatch ? DrawType::FillRectCrossHatch : DrawType::FillRect, TextureIndex::InvalidIndex,
-            TextureIndex::InvalidIndex, uint64_t{}, colour);
+        glm::ivec4 bounds{ left2, top2, right2 + 1, bottom2 + 1 };
+
+        _inProgressSprites.emplace_back(bounds, clip, flags, colour, TextureIndex::InvalidIndex);
     }
 
     uint32_t DrawSpritePipeline::QueuePlaceholder()
@@ -757,8 +713,8 @@ namespace OpenRCT2::Ui::Vulkan
         auto position = static_cast<uint32_t>(_inProgressSprites.size());
 
         _inProgressSprites.emplace_back(
-            glm::ivec4{ INT_MIN, INT_MIN, INT_MIN, INT_MIN }, glm::ivec4{ INT_MIN, INT_MIN, INT_MIN, INT_MIN },
-            DrawType::Placeholder, TextureIndex::InvalidIndex, TextureIndex::InvalidIndex, uint64_t{}, colour_t{});
+            glm::ivec4{ INT_MIN, INT_MIN, INT_MIN, INT_MIN }, glm::ivec4{ INT_MIN, INT_MIN, INT_MIN, INT_MIN }, RectFlags::None,
+            static_cast<uint32_t>(TextureIndex::InvalidIndex), TextureIndex::InvalidIndex);
 
         return position;
     }
