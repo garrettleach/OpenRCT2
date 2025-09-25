@@ -13,7 +13,7 @@ namespace
 
     int32_t PaletteToY(FilterPaletteID palette)
     {
-        return palette > FilterPaletteID::PaletteWater ? EnumValue(palette) + 5 : EnumValue(palette) + 1;
+        return palette > FilterPaletteID::paletteWater ? EnumValue(palette) + 5 : EnumValue(palette) + 1;
     }
 
     std::unique_ptr<uint8_t[]> CreateFilterPaletteMapData(vk::Extent2D& extent)

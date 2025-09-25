@@ -284,7 +284,7 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateBuffers()
 
 static int32_t PaletteToY(FilterPaletteID palette)
 {
-    return palette > FilterPaletteID::PaletteWater ? EnumValue(palette) + 5 : EnumValue(palette) + 1;
+    return palette > FilterPaletteID::paletteWater ? EnumValue(palette) + 5 : EnumValue(palette) + 1;
 }
 
 std::unique_ptr<uint8_t[]> CreateFilterMap(vk::Extent2D& extent)
@@ -548,7 +548,7 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::QueueBlendedSprite(
 {
     FilterPaletteID palette = static_cast<FilterPaletteID>(imageId.GetRemap());
     int32_t paletteY = PaletteToY(palette);
-    if (palette == FilterPaletteID::PaletteWater)
+    if (palette == FilterPaletteID::paletteWater)
     {
         paletteY -= 1;
     }
