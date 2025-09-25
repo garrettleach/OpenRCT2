@@ -44,6 +44,9 @@ namespace OpenRCT2::Ui::Vulkan
             std::unique_ptr<uint8_t[]> data;
             vk::Extent2D size;
             SpritePool pool;
+            vk::Image image;
+            VmaAllocation imageAllocation;
+            vk::ImageView imageView;
         };
 
         struct UploadedSpriteInfo

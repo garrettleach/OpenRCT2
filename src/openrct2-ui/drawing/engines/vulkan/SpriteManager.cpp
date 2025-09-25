@@ -213,10 +213,23 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::QueueUpload(ImageId imageId, ImageId i
         vk::Extent2D extent;
         auto imgData = ImageIdToData(image, extent);
 
+        if (extent.height == 0 && extent.width == 0)
+        {
+            return;
+        }
+
+        vk::Image tempImage;
+        VmaAllocation tempImageAllocation;
+        vk::UniqueImageView tempImageView;
+        CreateEmptyImageWithView(extent, tempImage, tempImageAllocation, tempImageView);
+
         auto& uploadQueue = spritepool == SpritePool::DrawSpritePipeline ? _drawSpriteSpritesToUpload
                                                                          : _colourizeSpritesToUpload;
 
-        uploadQueue.insert(std::make_pair(baseImage, SpriteUpload(std::move(imgData), extent, spritepool)));
+        uploadQueue.insert(
+            std::make_pair(
+                baseImage,
+                SpriteUpload(std::move(imgData), extent, spritepool, tempImage, tempImageAllocation, tempImageView.release())));
     }
 }
 
@@ -227,7 +240,17 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::QueueUpload(GlyphIdentifier glyphId, c
         vk::Extent2D extent;
         auto imgData = GlyphImageIdToData(image, extent, palette);
 
-        _glyphsToUpload.insert(std::make_pair(glyphId, SpriteUpload(std::move(imgData), extent)));
+        vk::Image tempImage;
+        VmaAllocation tempImageAllocation;
+        vk::UniqueImageView tempImageView;
+        CreateEmptyImageWithView(extent, tempImage, tempImageAllocation, tempImageView);
+
+        _glyphsToUpload.insert(
+            std::make_pair(
+                glyphId,
+                SpriteUpload(
+                    std::move(imgData), extent, SpritePool::ColourizePipeline, tempImage, tempImageAllocation,
+                    tempImageView.release())));
     }
 }
 
@@ -247,20 +270,16 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::ExecuteUpload(vk::CommandBuffer comman
 
         if (!_drawSpriteUploadedSprites.contains(spriteToUpload.first))
         {
-            vk::Image image;
-            VmaAllocation imageAllocation;
-
-            vk::Buffer stagingBuffer;
-            VmaAllocation stagingAllocation;
-
-            auto imageView = AddUpload(
-                _allocator, _device, commandBuffer, spriteToUpload.second.data.get(), spriteToUpload.second.size, image,
-                imageAllocation, stagingBuffer, stagingAllocation);
+            auto [stagingBuffer, stagingBufferAllocation] = UploadToEmptyImage(
+                _allocator, _device, commandBuffer, spriteToUpload.second.data.get(), spriteToUpload.second.size,
+                spriteToUpload.second.image);
 
             _drawSpriteUploadedSprites.insert(
                 std::make_pair(
                     spriteToUpload.first,
-                    UploadedSpriteInfo(stagingBuffer, stagingAllocation, image, imageAllocation, imageView)));
+                    UploadedSpriteInfo(
+                        stagingBuffer, stagingBufferAllocation, spriteToUpload.second.image,
+                        spriteToUpload.second.imageAllocation, spriteToUpload.second.imageView)));
         }
     }
     _drawSpriteSpritesToUpload.clear();
@@ -274,20 +293,16 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::ExecuteUpload(vk::CommandBuffer comman
 
         if (!_colourizeUploadedSprites.contains(spriteToUpload.first))
         {
-            vk::Image image;
-            VmaAllocation imageAllocation;
-
-            vk::Buffer stagingBuffer;
-            VmaAllocation stagingAllocation;
-
-            auto imageView = AddUpload(
-                _allocator, _device, commandBuffer, spriteToUpload.second.data.get(), spriteToUpload.second.size, image,
-                imageAllocation, stagingBuffer, stagingAllocation);
+            auto [stagingBuffer, stagingBufferAllocation] = UploadToEmptyImage(
+                _allocator, _device, commandBuffer, spriteToUpload.second.data.get(), spriteToUpload.second.size,
+                spriteToUpload.second.image);
 
             _colourizeUploadedSprites.insert(
                 std::make_pair(
                     spriteToUpload.first,
-                    UploadedSpriteInfo(stagingBuffer, stagingAllocation, image, imageAllocation, imageView)));
+                    UploadedSpriteInfo(
+                        stagingBuffer, stagingBufferAllocation, spriteToUpload.second.image,
+                        spriteToUpload.second.imageAllocation, spriteToUpload.second.imageView)));
         }
     }
     _colourizeSpritesToUpload.clear();
@@ -301,20 +316,17 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::ExecuteUpload(vk::CommandBuffer comman
 
         if (!_uploadedGlyphs.contains(glyphToUpload.first))
         {
-            vk::Image image;
-            VmaAllocation imageAllocation;
-
-            vk::Buffer stagingBuffer;
-            VmaAllocation stagingAllocation;
-
-            auto imageView = AddUpload(
-                _allocator, _device, commandBuffer, glyphToUpload.second.data.get(), glyphToUpload.second.size, image,
-                imageAllocation, stagingBuffer, stagingAllocation);
+            auto [stagingBuffer, stagingBufferAllocation] = UploadToEmptyImage(
+                _allocator, _device, commandBuffer, glyphToUpload.second.data.get(), glyphToUpload.second.size,
+                glyphToUpload.second.image);
 
             _uploadedGlyphs.insert(
                 std::make_pair(
                     glyphToUpload.first,
-                    UploadedSpriteInfo(stagingBuffer, stagingAllocation, image, imageAllocation, imageView)));
+                    UploadedSpriteInfo(
+                        stagingBuffer, stagingBufferAllocation, glyphToUpload.second.image,
+                        glyphToUpload.second.imageAllocation,
+                        glyphToUpload.second.imageView)));
         }
     }
     _glyphsToUpload.clear();

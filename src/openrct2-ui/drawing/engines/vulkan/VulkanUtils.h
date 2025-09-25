@@ -18,6 +18,10 @@ namespace OpenRCT2::Ui::Vulkan
 
     void TransitionImageToFragmentReadOpt(vk::CommandBuffer& commandBuffer, vk::Image& image);
 
+    std::tuple<vk::Buffer, VmaAllocation> UploadToEmptyImage(
+        VmaAllocator allocator, const vk::Device& device, vk::CommandBuffer& commandBuffer, uint8_t* data, vk::Extent2D extent,
+        vk::Image image);
+
     vk::ImageView AddUpload(
         VmaAllocator allocator, const vk::Device& device, vk::CommandBuffer& commandBuffer, uint8_t* data, vk::Extent2D extent,
         vk::Image& image, VmaAllocation& imageAllocation, vk::Buffer& stagingBuffer, VmaAllocation& stagingAllocation);

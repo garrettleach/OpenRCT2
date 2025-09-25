@@ -79,6 +79,29 @@ void OpenRCT2::Ui::Vulkan::TransitionImageToFragmentReadOpt(vk::CommandBuffer& c
         vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, nullptr, postCopyBarrier);
 }
 
+std::tuple<vk::Buffer, VmaAllocation> OpenRCT2::Ui::Vulkan::UploadToEmptyImage(
+    VmaAllocator allocator, const vk::Device& device, vk::CommandBuffer& commandBuffer, uint8_t* data, vk::Extent2D extent,
+    vk::Image image)
+{
+    vk::Buffer stagingBuffer;
+    VmaAllocation stagingAllocation;
+
+    auto stagingResult = OpenRCT2::Ui::Vulkan::CreateStagingBuffer(
+        allocator, data, vk::DeviceSize(extent.width * extent.height), stagingBuffer, stagingAllocation);
+    if (stagingResult != vk::Result::eSuccess)
+    {
+        throw std::runtime_error("Could not create staging buffer for image");
+    }
+
+    OpenRCT2::Ui::Vulkan::TransitionImageToTransferDst(commandBuffer, image);
+
+    OpenRCT2::Ui::Vulkan::CopyBufferToImage(commandBuffer, stagingBuffer, image, extent);
+
+    OpenRCT2::Ui::Vulkan::TransitionImageToFragmentReadOpt(commandBuffer, image);
+
+    return std::make_tuple(stagingBuffer, stagingAllocation);
+}
+
 vk::ImageView OpenRCT2::Ui::Vulkan::AddUpload(
     VmaAllocator allocator, const vk::Device& device, vk::CommandBuffer& commandBuffer, uint8_t* data, vk::Extent2D extent,
     vk::Image& image, VmaAllocation& imageAllocation, vk::Buffer& stagingBuffer, VmaAllocation& stagingAllocation)
