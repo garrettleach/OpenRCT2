@@ -485,9 +485,8 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::Draw(
     }
 
     std::vector<vk::DescriptorImageInfo> textureDescriptors;
-    std::unordered_map<ImageId, uint32_t, ImageIdHasher> textureDescriptorMap;
 
-    _spriteManager.GetColourizePipelineDescriptors(textureDescriptors, textureDescriptorMap);
+    _spriteManager.GetColourizePipelineDescriptors(textureDescriptors);
 
     if (textureDescriptors.size() > 0)
     {
@@ -554,10 +553,12 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::QueueBlendedSprite(
         paletteY -= 1;
     }
 
-    _spriteManager.QueueUpload(ImageId(imageId.GetIndex()), SpritePool::ColourizePipeline);
+    auto textureIndex = _spriteManager.QueueUpload(ImageId(imageId.GetIndex()), SpritePool::ColourizePipeline);
 
-    // TODO: Fill in image index correctly
-    _inProgressCommands.emplace_back(
-        bounds, clip, (uint32_t)ColourizeCommandFlags::ActionBlendSprite, (uint32_t)palette, index,
-        (uint32_t)imageId.GetIndex());
+    if (textureIndex != TextureIndex::InvalidIndex)
+    {
+        _inProgressCommands.emplace_back(
+            bounds, clip, (uint32_t)ColourizeCommandFlags::ActionBlendSprite, (uint32_t)palette, index,
+            textureIndex);
+    }
 }

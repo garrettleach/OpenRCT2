@@ -30,7 +30,8 @@ namespace OpenRCT2::Ui::Vulkan
                 vk::VertexInputAttributeDescription{ 1, 0, vk::Format::eR32G32B32A32Sint,
                                                      offsetof(DrawSpritePipeline::Rect, clip) },
                 vk::VertexInputAttributeDescription{ 2, 0, vk::Format::eR32Uint, offsetof(DrawSpritePipeline::Rect, flags) },
-                vk::VertexInputAttributeDescription{ 3, 0, vk::Format::eR32Uint, offsetof(DrawSpritePipeline::Rect, index) },
+                     vk::VertexInputAttributeDescription{ 3, 0, vk::Format::eR32Uint,
+                                                          offsetof(DrawSpritePipeline::Rect, paletteOrTextureIndex) },
                 vk::VertexInputAttributeDescription{ 4, 0, vk::Format::eR32Uint,
                                                      offsetof(DrawSpritePipeline::Rect, maskIndex) },
                 vk::VertexInputAttributeDescription{ 5, 0, vk::Format::eR32Uint,
@@ -217,6 +218,7 @@ namespace OpenRCT2::Ui::Vulkan
         , _descriptorIndexSetLayout(CreateDescriptorIndexSetLayout(device))
         , _pipelineLayout(CreatePipelineLayout(device, { *_descriptorSetLayout, *_descriptorIndexSetLayout }))
         , _pipeline(CreatePipeline(device, *_descriptorSetLayout, *_pipelineLayout))
+        , _tmpDescriptors(_framesInFlight,{})
     {
         CreateBuffers();
         CreateDescriptorPool();
@@ -451,80 +453,46 @@ namespace OpenRCT2::Ui::Vulkan
     {
         _workingInstances.clear();
 
-        _spriteManager.GetSpritePipelineDescriptors(_tmpDescriptors, _tmpImageDescriptorMap, _tmpGlyphDescriptorMap);
+        _spriteManager.GetSpritePipelineDescriptors(_tmpDescriptors[currentFrame]);
 
         if (_tmpDescriptors.size() != 0)
         {
             vk::WriteDescriptorSet writeAllImageDesc(
-                _descriptorIndexSets[currentFrame], 0, 0, vk::DescriptorType::eSampledImage, _tmpDescriptors, {}, {});
+                _descriptorIndexSets[currentFrame], 0, 0, vk::DescriptorType::eSampledImage, _tmpDescriptors[currentFrame], {},
+                {});
 
             _device.updateDescriptorSets({ writeAllImageDesc }, nullptr);
         }
 
         for (auto& data : _inProgressSprites)
         {
-            uint32_t imageIndex = 0;
-            uint32_t maskIndex = 0;
+            TextureIndex imageIndex = data.imageIndex;
+            std::optional<uint32_t> colour = nullopt;
+            TextureIndex maskIndex = data.maskImageIndex;
             RectFlags flags = RectFlags::None;
-            uint32_t paletteRemap = 0;
+            uint32_t paletteRemap = static_cast<uint32_t>(data.paletteMap);
 
             if (data.drawType == DrawType::DrawSprite)
             {
-                auto descriptorMapItem = _tmpImageDescriptorMap.find(data.imageId);
-
-                if (descriptorMapItem != _tmpImageDescriptorMap.end())
-                {
-                    imageIndex = descriptorMapItem->second;
-                }
-
-                paletteRemap = static_cast<uint32_t>(data.paletteMap);
-                maskIndex = imageIndex;
                 flags = RectFlags::Mask;
             }
             else if (data.drawType == DrawType::DrawSpriteRawMasked)
             {
-                auto descriptorMaskMapItem = _tmpImageDescriptorMap.find(data.maskImageId);
-                auto descriptorColourMapItem = _tmpImageDescriptorMap.find(data.imageId);
-
-                if (descriptorColourMapItem != _tmpImageDescriptorMap.end())
-                {
-                    imageIndex = descriptorColourMapItem->second;
-                }
-
-                if (descriptorMaskMapItem != _tmpImageDescriptorMap.end())
-                {
-                    maskIndex = descriptorMaskMapItem->second;
-                }
-
                 flags = RectFlags::Mask;
             }
             else if (data.drawType == DrawType::DrawSpriteSolid)
             {
-                auto descriptorMaskMapItem = _tmpImageDescriptorMap.find(data.maskImageId);
-
-                if (descriptorMaskMapItem != _tmpImageDescriptorMap.end())
-                {
-                    maskIndex = descriptorMaskMapItem->second;
-                }
-                imageIndex = data.colour;
+                colour = data.colour;
                 flags = (RectFlags)((uint32_t)RectFlags::Mask | (uint32_t)RectFlags::ColourOnly);
             }
             else if (data.drawType == DrawType::DrawGlyph)
             {
-                auto descriptorMapItem = _tmpGlyphDescriptorMap.find(GlyphIdentifier(data.imageId.GetIndex(), data.paletteMap));
-
-                if (descriptorMapItem != _tmpGlyphDescriptorMap.end())
-                {
-                    imageIndex = descriptorMapItem->second;
-                }
-
-                maskIndex = imageIndex;
                 flags = RectFlags::Mask; // double check this
             }
             else if (data.drawType == DrawType::FillRect || data.drawType == DrawType::FillRectCrossHatch)
             {
                 flags = RectFlags::ColourOnly;
-                imageIndex = data.colour;
+                colour = data.colour;
                 if (data.drawType == DrawType::FillRectCrossHatch)
                 {
                     flags = flags | RectFlags::CrossHatch;
@@ -535,7 +503,8 @@ namespace OpenRCT2::Ui::Vulkan
                 // the bounds are already intentionally out of view
             }
 
-            _workingInstances.emplace_back(data.bounds, data.clip, flags, imageIndex, maskIndex, paletteRemap);
+            _workingInstances.emplace_back(
+                data.bounds, data.clip, flags, colour.value_or(static_cast<uint32_t>(imageIndex)), maskIndex, paletteRemap);
         }
         _inProgressSprites.clear();
 
@@ -645,12 +614,14 @@ namespace OpenRCT2::Ui::Vulkan
             return;
         }
 
-        _spriteManager.QueueUpload(baseImage, SpritePool::DrawSpritePipeline);
+        auto textureIndex = _spriteManager.QueueUpload(baseImage, SpritePool::DrawSpritePipeline);
 
-        _inProgressSprites.emplace_back(
-            bounds, clip, DrawType::DrawSprite, baseImage, ImageId{},
-            ((uint32_t)paletteCount << 24) | ((uint32_t)palettes[2] << 16) | ((uint32_t)palettes[1] << 8)
-                | (uint32_t)(palettes[0]));
+        if (textureIndex != TextureIndex::InvalidIndex)
+        {
+            uint32_t paletteValue = ((uint32_t)paletteCount << 24) | ((uint32_t)palettes[2] << 16)
+                | ((uint32_t)palettes[1] << 8) | (uint32_t)(palettes[0]);
+            _inProgressSprites.emplace_back(bounds, clip, DrawType::DrawSprite, textureIndex, textureIndex, paletteValue);
+        }
     }
 
     void DrawSpritePipeline::QueueRawMasked(
@@ -672,14 +643,17 @@ namespace OpenRCT2::Ui::Vulkan
 
         ImageId baseMaskImage = ImageId(maskImage.GetIndex());
 
-        _spriteManager.QueueUpload(baseMaskImage, maskImage, SpritePool::DrawSpritePipeline);
+        auto maskTextureIndex = _spriteManager.QueueUpload(baseMaskImage, maskImage, SpritePool::DrawSpritePipeline);
 
         ImageId baseColourImage = ImageId(colourImage.GetIndex());
 
-        _spriteManager.QueueUpload(baseColourImage, colourImage, SpritePool::DrawSpritePipeline);
+        auto colourTextureIndex = _spriteManager.QueueUpload(baseColourImage, colourImage, SpritePool::DrawSpritePipeline);
 
-        _inProgressSprites.emplace_back(
-            glm::ivec4{ left, top, right, bottom }, clip, DrawType::DrawSpriteRawMasked, baseColourImage, baseMaskImage);
+        if (maskTextureIndex != TextureIndex::InvalidIndex && colourTextureIndex != TextureIndex::InvalidIndex)
+        {
+            glm::ivec4 bounds{ left, top, right, bottom };
+            _inProgressSprites.emplace_back(bounds, clip, DrawType::DrawSpriteRawMasked, colourTextureIndex, maskTextureIndex);
+        }
     }
 
     void DrawSpritePipeline::QueueSpriteSolid(RenderTarget& rt, const ImageId image, int32_t x, int32_t y, uint8_t colour)
@@ -700,10 +674,14 @@ namespace OpenRCT2::Ui::Vulkan
 
         ImageId baseMaskImage = ImageId(image.GetIndex());
 
-        _spriteManager.QueueUpload(baseMaskImage, image, SpritePool::DrawSpritePipeline);
+        auto maskTextureIndex = _spriteManager.QueueUpload(baseMaskImage, image, SpritePool::DrawSpritePipeline);
 
-        _inProgressSprites.emplace_back(
-            glm::ivec4{ left, top, right, bottom }, clip, DrawType::DrawSpriteSolid, ImageId(0), baseMaskImage, 0, colour);
+        if (maskTextureIndex != TextureIndex::InvalidIndex)
+        {
+            _inProgressSprites.emplace_back(
+                glm::ivec4{ left, top, right, bottom }, clip, DrawType::DrawSpriteSolid, TextureIndex::InvalidIndex,
+                maskTextureIndex, 0, colour);
+        }
     }
 
     void DrawSpritePipeline::QueueGlyph(RenderTarget& rt, const ImageId image, int32_t x, int32_t y, const PaletteMap& palette)
@@ -740,10 +718,15 @@ namespace OpenRCT2::Ui::Vulkan
         GlyphIdentifier glyphId{ image.GetIndex() };
         std::copy_n(paletteCopy, sizeof(glyphId.palette), reinterpret_cast<uint8_t*>(&glyphId.palette));
 
-        _spriteManager.QueueUpload(glyphId, image, palette);
+        auto textureIndex = _spriteManager.QueueUpload(glyphId, image, palette);
 
-        _inProgressSprites.emplace_back(
-            glm::ivec4{ left, top, right, bottom }, clip, DrawType::DrawGlyph, image, ImageId(), glyphId.palette, colour_t{});
+        if (textureIndex != TextureIndex::InvalidIndex)
+        {
+            glm::ivec4 bounds{ left, top, right, bottom };
+            _inProgressSprites.emplace_back(
+                bounds, clip, DrawType::DrawGlyph, textureIndex, textureIndex,
+                glyphId.palette, colour_t{});
+        }
     }
 
     void DrawSpritePipeline::QueueRect(
@@ -765,7 +748,8 @@ namespace OpenRCT2::Ui::Vulkan
 
         _inProgressSprites.emplace_back(
             glm::ivec4{ left2, top2, right2 + 1, bottom2 + 1 }, clip,
-            crossHatch ? DrawType::FillRectCrossHatch : DrawType::FillRect, ImageId(), ImageId(), uint8_t{}, colour);
+            crossHatch ? DrawType::FillRectCrossHatch : DrawType::FillRect, TextureIndex::InvalidIndex,
+            TextureIndex::InvalidIndex, uint64_t{}, colour);
     }
 
     uint32_t DrawSpritePipeline::QueuePlaceholder()
@@ -774,7 +758,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         _inProgressSprites.emplace_back(
             glm::ivec4{ INT_MIN, INT_MIN, INT_MIN, INT_MIN }, glm::ivec4{ INT_MIN, INT_MIN, INT_MIN, INT_MIN },
-            DrawType::Placeholder, ImageId(), ImageId(), uint8_t{}, colour_t{});
+            DrawType::Placeholder, TextureIndex::InvalidIndex, TextureIndex::InvalidIndex, uint64_t{}, colour_t{});
 
         return position;
     }

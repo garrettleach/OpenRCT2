@@ -37,6 +37,11 @@ namespace OpenRCT2::Ui::Vulkan
         ColourizePipeline
     };
 
+    enum class TextureIndex : uint32_t
+    {
+        InvalidIndex = 0xFFFFFFFF
+    };
+
     class SpriteManager
     {
         struct SpriteUpload
@@ -73,6 +78,13 @@ namespace OpenRCT2::Ui::Vulkan
         std::unordered_map<ImageId, UploadedSpriteInfo, ImageIdHasher> _colourizeUploadedSprites;
         std::unordered_map<GlyphIdentifier, UploadedSpriteInfo, GlyphIdentifierHash> _uploadedGlyphs;
 
+        std::vector<vk::DescriptorImageInfo> _currentFrameDrawSpriteDescriptors;
+        std::unordered_map<ImageId, TextureIndex, ImageIdHasher> _currentFrameDrawSpriteImageDescriptorMap;
+        std::unordered_map<GlyphIdentifier, TextureIndex, GlyphIdentifierHash> _currentFrameDrawSpriteGlyphDescriptorMap;
+
+        std::vector<vk::DescriptorImageInfo> _currentFrameColourizeDescriptors;
+        std::unordered_map<ImageId, TextureIndex, ImageIdHasher> _currentFrameColourizeDescriptorMap;
+
         // when an image is no longer needed we have to wait until the first frame it is not used comes back around
         std::vector<UploadedSpriteInfo> _currentFrameQueuedImageInvalidation;
         std::vector<std::vector<UploadedSpriteInfo>> _queuedImageInvalidation;
@@ -96,12 +108,9 @@ namespace OpenRCT2::Ui::Vulkan
         SpriteManager(IVulkanDebug& debug, vk::Device device, uint32_t framesInFlight, VulkanMemoryAllocator& vma);
         ~SpriteManager();
 
-        void QueueUpload(ImageId imageId, SpritePool spritePool);
-        void QueueUpload(ImageId imageId, ImageId image, SpritePool spritePool);
-        void QueueUpload(GlyphIdentifier glyphId, const ImageId image, const PaletteMap& palette);
-
-        vk::ImageView GetImageView(ImageId imageId);
-        vk::ImageView GetImageView(GlyphIdentifier imageId);
+        [[nodiscard]] TextureIndex QueueUpload(ImageId imageId, SpritePool spritePool);
+        [[nodiscard]] TextureIndex QueueUpload(ImageId imageId, ImageId image, SpritePool spritePool);
+        [[nodiscard]] TextureIndex QueueUpload(GlyphIdentifier glyphId, const ImageId image, const PaletteMap& palette);
 
         void ExecuteUpload(vk::CommandBuffer commandBuffer);
 
@@ -112,13 +121,8 @@ namespace OpenRCT2::Ui::Vulkan
         vk::ImageView GetPaletteImageView();
         vk::ImageView GetBlendImageView();
 
-        void GetSpritePipelineDescriptors(
-            std::vector<vk::DescriptorImageInfo>& descriptors,
-            std::unordered_map<ImageId, uint32_t, ImageIdHasher>& descriptorMapImages,
-            std::unordered_map<GlyphIdentifier, uint32_t, GlyphIdentifierHash>& descriptorMapGlyphs);
-        void GetColourizePipelineDescriptors(
-            std::vector<vk::DescriptorImageInfo>& descriptors,
-            std::unordered_map<ImageId, uint32_t, ImageIdHasher>& descriptorMapImages);
+        void GetSpritePipelineDescriptors(std::vector<vk::DescriptorImageInfo>& descriptors);
+        void GetColourizePipelineDescriptors(std::vector<vk::DescriptorImageInfo>& descriptors);
 
     private:
         void ReleaseUploadedSprites(std::vector<UploadedSpriteInfo>& sprites);

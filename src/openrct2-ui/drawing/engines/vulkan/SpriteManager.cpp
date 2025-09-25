@@ -198,24 +198,50 @@ OpenRCT2::Ui::Vulkan::SpriteManager::~SpriteManager()
     _glyphsToUpload.clear();
 }
 
-void OpenRCT2::Ui::Vulkan::SpriteManager::QueueUpload(ImageId imageId, SpritePool spritepool)
+OpenRCT2::Ui::Vulkan::TextureIndex OpenRCT2::Ui::Vulkan::SpriteManager::QueueUpload(ImageId imageId, SpritePool spritepool)
 {
-    QueueUpload(imageId, imageId, spritepool);
+    return QueueUpload(imageId, imageId, spritepool);
 }
 
-void OpenRCT2::Ui::Vulkan::SpriteManager::QueueUpload(ImageId imageId, ImageId image, SpritePool spritepool)
+OpenRCT2::Ui::Vulkan::TextureIndex OpenRCT2::Ui::Vulkan::SpriteManager::QueueUpload(
+    ImageId imageId, ImageId image, SpritePool spritepool)
 {
     auto baseImage = ImageId(imageId.GetIndex());
 
-    if (!_colourizeUploadedSprites.contains(baseImage) && !_drawSpriteUploadedSprites.contains(baseImage)
-        && !_colourizeSpritesToUpload.contains(baseImage) && !_drawSpriteSpritesToUpload.contains(baseImage))
+    auto& currentFrameImageDescriptorMap = (spritepool == SpritePool::DrawSpritePipeline) ? _currentFrameDrawSpriteImageDescriptorMap
+        : _currentFrameColourizeDescriptorMap;
+
+    if (currentFrameImageDescriptorMap.contains(baseImage))
+    {
+        return currentFrameImageDescriptorMap[baseImage];
+    }
+
+    auto& uploadedQueue = (spritepool == SpritePool::DrawSpritePipeline) ? _drawSpriteUploadedSprites
+                                                                         : _colourizeUploadedSprites;
+    auto& toUploadQueue = (spritepool == SpritePool::DrawSpritePipeline) ? _drawSpriteSpritesToUpload
+                                                                         : _colourizeSpritesToUpload;
+    auto& currentFrameDescriptorList = (spritepool == SpritePool::DrawSpritePipeline) ? _currentFrameDrawSpriteDescriptors
+                                                                                      : _currentFrameColourizeDescriptors;
+
+    auto newIndex = TextureIndex(currentFrameDescriptorList.size());
+    vk::ImageView imageView;
+    
+    if (uploadedQueue.contains(baseImage))
+    {
+        imageView = uploadedQueue[baseImage].imageView;
+    }
+    else if (toUploadQueue.contains(baseImage))
+    {
+        imageView = toUploadQueue[baseImage].imageView;
+    }
+    else
     {
         vk::Extent2D extent;
         auto imgData = ImageIdToData(image, extent);
 
         if (extent.height == 0 && extent.width == 0)
         {
-            return;
+            return TextureIndex::InvalidIndex;
         }
 
         vk::Image tempImage;
@@ -223,19 +249,41 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::QueueUpload(ImageId imageId, ImageId i
         vk::UniqueImageView tempImageView;
         CreateEmptyImageWithView(extent, tempImage, tempImageAllocation, tempImageView);
 
-        auto& uploadQueue = spritepool == SpritePool::DrawSpritePipeline ? _drawSpriteSpritesToUpload
-                                                                         : _colourizeSpritesToUpload;
+        imageView = tempImageView.get();
 
-        uploadQueue.insert(
+        toUploadQueue.insert(
             std::make_pair(
                 baseImage,
                 SpriteUpload(std::move(imgData), extent, spritepool, tempImage, tempImageAllocation, tempImageView.release())));
     }
+
+    currentFrameDescriptorList.emplace_back(vk::Sampler{}, imageView, vk::ImageLayout::eShaderReadOnlyOptimal);
+
+    currentFrameImageDescriptorMap[baseImage] = newIndex;
+
+    return newIndex;
 }
 
-void OpenRCT2::Ui::Vulkan::SpriteManager::QueueUpload(GlyphIdentifier glyphId, const ImageId image, const PaletteMap& palette)
+OpenRCT2::Ui::Vulkan::TextureIndex OpenRCT2::Ui::Vulkan::SpriteManager::QueueUpload(
+    GlyphIdentifier glyphId, const ImageId image, const PaletteMap& palette)
 {
-    if (!_uploadedGlyphs.contains(glyphId) && !_glyphsToUpload.contains(glyphId))
+    if (_currentFrameDrawSpriteGlyphDescriptorMap.contains(glyphId))
+    {
+        return _currentFrameDrawSpriteGlyphDescriptorMap[glyphId];
+    }
+
+    auto newIndex = TextureIndex(_currentFrameDrawSpriteDescriptors.size());
+    vk::ImageView imageView;
+
+    if (_uploadedGlyphs.contains(glyphId))
+    {
+        imageView = _uploadedGlyphs[glyphId].imageView;
+    }
+    else if (_glyphsToUpload.contains(glyphId))
+    {
+        imageView = _glyphsToUpload[glyphId].imageView;
+    }
+    else
     {
         vk::Extent2D extent;
         auto imgData = GlyphImageIdToData(image, extent, palette);
@@ -245,6 +293,8 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::QueueUpload(GlyphIdentifier glyphId, c
         vk::UniqueImageView tempImageView;
         CreateEmptyImageWithView(extent, tempImage, tempImageAllocation, tempImageView);
 
+        imageView = tempImageView.get();
+
         _glyphsToUpload.insert(
             std::make_pair(
                 glyphId,
@@ -252,6 +302,12 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::QueueUpload(GlyphIdentifier glyphId, c
                     std::move(imgData), extent, SpritePool::ColourizePipeline, tempImage, tempImageAllocation,
                     tempImageView.release())));
     }
+
+    _currentFrameDrawSpriteDescriptors.emplace_back(vk::Sampler{}, imageView, vk::ImageLayout::eShaderReadOnlyOptimal);
+
+    _currentFrameDrawSpriteGlyphDescriptorMap[glyphId] = newIndex;
+
+    return newIndex;
 }
 
 void OpenRCT2::Ui::Vulkan::SpriteManager::ExecuteUpload(vk::CommandBuffer commandBuffer)
@@ -351,45 +407,21 @@ vk::ImageView OpenRCT2::Ui::Vulkan::SpriteManager::GetBlendImageView()
     return *_blendPaletteImageView;
 }
 
-void OpenRCT2::Ui::Vulkan::SpriteManager::GetSpritePipelineDescriptors(
-    std::vector<vk::DescriptorImageInfo>& descriptors,
-    std::unordered_map<ImageId, uint32_t, ImageIdHasher>& descriptorMapImages,
-    std::unordered_map<GlyphIdentifier, uint32_t, GlyphIdentifierHash>& descriptorMapGlyphs)
+void OpenRCT2::Ui::Vulkan::SpriteManager::GetSpritePipelineDescriptors(std::vector<vk::DescriptorImageInfo>& descriptors)
 {
     descriptors.clear();
-    descriptorMapImages.clear();
-    descriptorMapGlyphs.clear();
 
-    size_t descriptorIndex = 0;
-
-    for (auto& uploadedGlyph : _uploadedGlyphs)
-    {
-        descriptorMapGlyphs[uploadedGlyph.first] = static_cast<uint32_t>(descriptorIndex++);
-
-        descriptors.emplace_back(vk::Sampler{}, uploadedGlyph.second.imageView, vk::ImageLayout::eShaderReadOnlyOptimal);
-    }
-
-    for (auto& uploadedSprite : _drawSpriteUploadedSprites)
-    {
-        descriptorMapImages[uploadedSprite.first] = static_cast<uint32_t>(descriptorIndex++);
-
-        descriptors.emplace_back(vk::Sampler{}, uploadedSprite.second.imageView, vk::ImageLayout::eShaderReadOnlyOptimal);
-    }
+    std::swap(_currentFrameDrawSpriteDescriptors, descriptors);
+    _currentFrameDrawSpriteImageDescriptorMap.clear();
+    _currentFrameDrawSpriteGlyphDescriptorMap.clear();
 }
 
-void OpenRCT2::Ui::Vulkan::SpriteManager::GetColourizePipelineDescriptors(
-    std::vector<vk::DescriptorImageInfo>& descriptors,
-    std::unordered_map<ImageId, uint32_t, ImageIdHasher>& descriptorMapImages)
+void OpenRCT2::Ui::Vulkan::SpriteManager::GetColourizePipelineDescriptors(std::vector<vk::DescriptorImageInfo>& descriptors)
 {
     descriptors.clear();
-    descriptorMapImages.clear();
-
-    size_t descriptorIndex = 0;
 
     for (auto& uploadedSprite : _colourizeUploadedSprites)
     {
-        descriptorMapImages[uploadedSprite.first] = static_cast<uint32_t>(descriptorIndex++);
-
         descriptors.emplace_back(vk::Sampler{}, uploadedSprite.second.imageView, vk::ImageLayout::eShaderReadOnlyOptimal);
     }
 }

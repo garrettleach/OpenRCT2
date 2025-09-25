@@ -32,8 +32,8 @@ namespace OpenRCT2::Ui::Vulkan
             glm::ivec4 bounds;
             glm::ivec4 clip = { INT_MIN, INT_MIN, INT_MAX, INT_MAX };
             DrawType drawType;
-            ImageId imageId;     // ignored for fillrect
-            ImageId maskImageId; // used for SpriteRawMasked
+            TextureIndex imageIndex;   // ignored for fillrect
+            TextureIndex maskImageIndex; // used for SpriteRawMasked
             uint64_t paletteMap; // for DrawGlyph or DrawSprite (high is count, next palette1, next 2, next 3)
             colour_t colour;     // for fillrect
         };
@@ -57,8 +57,8 @@ namespace OpenRCT2::Ui::Vulkan
             glm::ivec4 bounds;
             glm::ivec4 clip;
             RectFlags flags;
-            uint32_t index; // index is the palette colour when type is fillrect
-            uint32_t maskIndex;
+            uint32_t paletteOrTextureIndex; // palette when fillrect
+            TextureIndex maskIndex;
             uint32_t remapPalette;
         };
 
@@ -108,9 +108,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         std::vector<DrawCommand> _inProgressSprites;
 
-        std::unordered_map<ImageId, uint32_t, ImageIdHasher> _tmpImageDescriptorMap;
-        std::unordered_map<GlyphIdentifier, uint32_t, GlyphIdentifierHash> _tmpGlyphDescriptorMap;
-        std::vector<vk::DescriptorImageInfo> _tmpDescriptors;
+        std::vector<std::vector<vk::DescriptorImageInfo>> _tmpDescriptors;
 
         // used to keep an appropriately sized vector ready between frames
         std::vector<Rect> _workingInstances;

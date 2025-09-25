@@ -26,7 +26,7 @@ namespace OpenRCT2::Ui::Vulkan
             alignas(4) uint32_t flags;
             alignas(4) uint32_t paletteIndex;
             alignas(4) uint32_t drawIndex;
-            alignas(4) uint32_t textureIndex; // blend-only
+            alignas(4) TextureIndex textureIndex; // blend-only
         };
 
         VulkanDrawingEngine& _engine;
