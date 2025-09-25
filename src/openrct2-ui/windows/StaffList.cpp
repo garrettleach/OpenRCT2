@@ -117,9 +117,9 @@ namespace OpenRCT2::Ui::Windows
         uint32_t _tabAnimationIndex{};
 
     public:
-        void OnOpen() override
+        void onOpen() override
         {
-            SetWidgets(_staffListWidgets);
+            setWidgets(_staffListWidgets);
             WindowInitScrollWidgets(*this);
             WindowSetResize(*this, kWindowSize, { kMaximumWindowWidth, kMaximumWindowHeight });
 
@@ -128,17 +128,17 @@ namespace OpenRCT2::Ui::Windows
             RefreshList();
         }
 
-        void OnClose() override
+        void onClose() override
         {
             CancelTools();
         }
 
-        void OnMouseUp(WidgetIndex widgetIndex) override
+        void onMouseUp(WidgetIndex widgetIndex) override
         {
             switch (widgetIndex)
             {
                 case WIDX_STAFF_LIST_CLOSE:
-                    Close();
+                    close();
                     break;
                 case WIDX_STAFF_LIST_HIRE_BUTTON:
                 {
@@ -155,16 +155,16 @@ namespace OpenRCT2::Ui::Windows
                     }
                     break;
                 case WIDX_STAFF_LIST_MAP:
-                    ContextOpenWindow(WindowClass::Map);
+                    ContextOpenWindow(WindowClass::map);
                     break;
                 case WIDX_STAFF_LIST_QUICK_FIRE:
                     _quickFireMode = !_quickFireMode;
-                    Invalidate();
+                    invalidate();
                     break;
             }
         }
 
-        void OnUpdate() override
+        void onUpdate() override
         {
             auto animPeepType = AnimationPeepType(static_cast<uint8_t>(_selectedTab) + 1);
             auto* animObj = findPeepAnimationsObjectForType(animPeepType);
@@ -176,12 +176,12 @@ namespace OpenRCT2::Ui::Windows
                 if (_tabAnimationIndex >= anim.frame_offsets.size() * 4)
                     _tabAnimationIndex = 0;
 
-                InvalidateWidget(WIDX_STAFF_LIST_HANDYMEN_TAB + _selectedTab);
+                invalidateWidget(WIDX_STAFF_LIST_HANDYMEN_TAB + _selectedTab);
             }
 
             // Enable highlighting of these staff members in map window
             auto* windowMgr = GetWindowManager();
-            if (windowMgr->FindByClass(WindowClass::Map) != nullptr)
+            if (windowMgr->FindByClass(WindowClass::map) != nullptr)
             {
                 for (auto peep : EntityList<Staff>())
                 {
@@ -198,7 +198,7 @@ namespace OpenRCT2::Ui::Windows
             RefreshList();
         }
 
-        void OnMouseDown(WidgetIndex widgetIndex) override
+        void onMouseDown(WidgetIndex widgetIndex) override
         {
             switch (widgetIndex)
             {
@@ -212,7 +212,7 @@ namespace OpenRCT2::Ui::Windows
                     {
                         _selectedTab = static_cast<uint8_t>(newSelectedTab);
                         RefreshList();
-                        Invalidate();
+                        invalidate();
                         scrolls[0].contentOffsetY = 0;
                         CancelTools();
                     }
@@ -224,7 +224,7 @@ namespace OpenRCT2::Ui::Windows
             }
         }
 
-        void OnDropdown(WidgetIndex widgetIndex, int32_t dropdownIndex) override
+        void onDropdown(WidgetIndex widgetIndex, int32_t dropdownIndex) override
         {
             if (dropdownIndex == -1)
             {
@@ -238,14 +238,14 @@ namespace OpenRCT2::Ui::Windows
             }
         }
 
-        void OnPrepareDraw() override
+        void onPrepareDraw() override
         {
             // Set selected tab
-            SetWidgetPressed(WIDX_STAFF_LIST_HANDYMEN_TAB, false);
-            SetWidgetPressed(WIDX_STAFF_LIST_MECHANICS_TAB, false);
-            SetWidgetPressed(WIDX_STAFF_LIST_SECURITY_TAB, false);
-            SetWidgetPressed(WIDX_STAFF_LIST_ENTERTAINERS_TAB, false);
-            SetWidgetPressed(_selectedTab + WIDX_STAFF_LIST_HANDYMEN_TAB, true);
+            setWidgetPressed(WIDX_STAFF_LIST_HANDYMEN_TAB, false);
+            setWidgetPressed(WIDX_STAFF_LIST_MECHANICS_TAB, false);
+            setWidgetPressed(WIDX_STAFF_LIST_SECURITY_TAB, false);
+            setWidgetPressed(WIDX_STAFF_LIST_ENTERTAINERS_TAB, false);
+            setWidgetPressed(_selectedTab + WIDX_STAFF_LIST_HANDYMEN_TAB, true);
 
             widgets[WIDX_STAFF_LIST_HIRE_BUTTON].text = GetStaffNamingConvention(GetSelectedStaffType()).ActionHire;
             widgets[WIDX_STAFF_LIST_UNIFORM_COLOUR_PICKER].type = WidgetType::empty;
@@ -256,7 +256,7 @@ namespace OpenRCT2::Ui::Windows
                 widgets[WIDX_STAFF_LIST_UNIFORM_COLOUR_PICKER].image = getColourButtonImage(
                     StaffGetColour(GetSelectedStaffType()));
             }
-            SetWidgetPressed(WIDX_STAFF_LIST_QUICK_FIRE, _quickFireMode);
+            setWidgetPressed(WIDX_STAFF_LIST_QUICK_FIRE, _quickFireMode);
 
             widgets[WIDX_STAFF_LIST_LIST].right = width - 4;
             widgets[WIDX_STAFF_LIST_LIST].bottom = height - 15;
@@ -270,9 +270,9 @@ namespace OpenRCT2::Ui::Windows
             widgets[WIDX_STAFF_LIST_HIRE_BUTTON].right = width - 11;
         }
 
-        void OnDraw(RenderTarget& rt) override
+        void onDraw(RenderTarget& rt) override
         {
-            DrawWidgets(rt);
+            drawWidgets(rt);
             DrawTabImages(rt);
 
             if (!(getGameState().park.flags & PARK_FLAGS_NO_MONEY))
@@ -301,12 +301,12 @@ namespace OpenRCT2::Ui::Windows
                 rt, windowPos + ScreenCoordsXY{ 4, widgets[WIDX_STAFF_LIST_LIST].bottom + 2 }, STR_STAFF_LIST_COUNTER, ft);
         }
 
-        ScreenSize OnScrollGetSize(int32_t scrollIndex) override
+        ScreenSize onScrollGetSize(int32_t scrollIndex) override
         {
             if (_highlightedIndex)
             {
                 _highlightedIndex = {};
-                Invalidate();
+                invalidate();
             }
 
             auto scrollHeight = static_cast<int32_t>(_staffList.size()) * kScrollableRowHeight;
@@ -316,24 +316,24 @@ namespace OpenRCT2::Ui::Windows
             if (i < scrolls[0].contentOffsetY)
             {
                 scrolls[0].contentOffsetY = i;
-                Invalidate();
+                invalidate();
             }
 
             auto scrollWidth = widgets[WIDX_STAFF_LIST_LIST].width() - 15;
             return { scrollWidth, scrollHeight };
         }
 
-        void OnScrollMouseOver(int32_t scrollIndex, const ScreenCoordsXY& screenCoords) override
+        void onScrollMouseOver(int32_t scrollIndex, const ScreenCoordsXY& screenCoords) override
         {
             auto i = static_cast<size_t>(screenCoords.y / kScrollableRowHeight);
             if (i != _highlightedIndex)
             {
                 _highlightedIndex = static_cast<size_t>(i);
-                Invalidate();
+                invalidate();
             }
         }
 
-        void OnScrollMouseDown(int32_t scrollIndex, const ScreenCoordsXY& screenCoords) override
+        void onScrollMouseDown(int32_t scrollIndex, const ScreenCoordsXY& screenCoords) override
         {
             int32_t i = screenCoords.y / kScrollableRowHeight;
             auto& gameState = getGameState();
@@ -352,7 +352,7 @@ namespace OpenRCT2::Ui::Windows
                         auto peep = gameState.entities.GetEntity<Staff>(entry.Id);
                         if (peep != nullptr)
                         {
-                            auto intent = Intent(WindowClass::Peep);
+                            auto intent = Intent(WindowClass::peep);
                             intent.PutExtra(INTENT_EXTRA_PEEP, peep);
                             ContextOpenIntent(&intent);
                         }
@@ -364,7 +364,7 @@ namespace OpenRCT2::Ui::Windows
             }
         }
 
-        void OnScrollDraw(int32_t scrollIndex, RenderTarget& rt) override
+        void onScrollDraw(int32_t scrollIndex, RenderTarget& rt) override
         {
             auto rtCoords = ScreenCoordsXY{ rt.x, rt.y };
             GfxFillRect(
@@ -400,7 +400,7 @@ namespace OpenRCT2::Ui::Windows
 
                     if (i == _highlightedIndex)
                     {
-                        GfxFilterRect(rt, { 0, y, 800, y + (kScrollableRowHeight - 1) }, FilterPaletteID::PaletteDarken1);
+                        GfxFilterRect(rt, { 0, y, 800, y + (kScrollableRowHeight - 1) }, FilterPaletteID::paletteDarken1);
 
                         format = STR_WINDOW_COLOUR_2_STRINGID;
                         if (_quickFireMode)
@@ -450,7 +450,7 @@ namespace OpenRCT2::Ui::Windows
             }
         }
 
-        void OnToolDown(WidgetIndex widgetIndex, const ScreenCoordsXY& screenCoords) override
+        void onToolDown(WidgetIndex widgetIndex, const ScreenCoordsXY& screenCoords) override
         {
             if (widgetIndex == WIDX_STAFF_LIST_SHOW_PATROL_AREA_BUTTON)
             {
@@ -459,7 +459,7 @@ namespace OpenRCT2::Ui::Windows
                 {
                     ToolCancel();
                     auto* staffWindow = StaffOpen(closestStaffMember);
-                    staffWindow->OnDropdown(WC_PEEP__WIDX_PATROL, 0);
+                    staffWindow->onDropdown(WC_PEEP__WIDX_PATROL, 0);
                 }
                 else
                 {
@@ -470,7 +470,7 @@ namespace OpenRCT2::Ui::Windows
             }
         }
 
-        void OnToolAbort(WidgetIndex widgetIndex) override
+        void onToolAbort(WidgetIndex widgetIndex) override
         {
             if (widgetIndex == WIDX_STAFF_LIST_SHOW_PATROL_AREA_BUTTON)
             {
@@ -565,7 +565,7 @@ namespace OpenRCT2::Ui::Windows
                                 return;
 
                             auto* staff2 = getGameState().entities.GetEntity<Staff>(staffId);
-                            auto intent = Intent(WindowClass::Peep);
+                            auto intent = Intent(WindowClass::peep);
                             intent.PutExtra(INTENT_EXTRA_PEEP, staff2);
                             auto* wind = ContextOpenIntent(&intent);
                             if (wind != nullptr)
@@ -578,7 +578,7 @@ namespace OpenRCT2::Ui::Windows
                 else
                 {
                     // Open window for new staff.
-                    auto intent = Intent(WindowClass::Peep);
+                    auto intent = Intent(WindowClass::peep);
                     intent.PutExtra(INTENT_EXTRA_PEEP, staff);
                     ContextOpenIntent(&intent);
                 }
@@ -731,13 +731,14 @@ namespace OpenRCT2::Ui::Windows
     WindowBase* StaffListOpen()
     {
         auto* windowMgr = GetWindowManager();
-        return windowMgr->FocusOrCreate<StaffListWindow>(WindowClass::StaffList, kWindowSize, WF_10 | WF_RESIZABLE);
+        return windowMgr->FocusOrCreate<StaffListWindow>(
+            WindowClass::staffList, kWindowSize, { WindowFlag::higherContrastOnPress, WindowFlag::resizable });
     }
 
     void WindowStaffListRefresh()
     {
         auto* windowMgr = GetWindowManager();
-        auto* window = windowMgr->FindByClass(WindowClass::StaffList);
+        auto* window = windowMgr->FindByClass(WindowClass::staffList);
         if (window != nullptr)
         {
             static_cast<StaffListWindow*>(window)->RefreshList();

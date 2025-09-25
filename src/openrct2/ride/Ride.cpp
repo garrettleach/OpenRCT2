@@ -88,6 +88,48 @@
 using namespace OpenRCT2;
 using namespace OpenRCT2::TrackMetaData;
 
+static constexpr auto kRideModeBlockSectionedCounterpart = std::to_array(
+    {
+        RideMode::normal,                          // RideMode::normal,
+        RideMode::continuousCircuitBlockSectioned, // RideMode::continuousCircuit,
+        RideMode::reverseInclineLaunchedShuttle,   // RideMode::reverseInclineLaunchedShuttle,
+        RideMode::poweredLaunchBlockSectioned,     // RideMode::poweredLaunchPasstrough,
+        RideMode::shuttle,                         // RideMode::shuttle,
+        RideMode::boatHire,                        // RideMode::boatHire,
+        RideMode::upwardLaunch,                    // RideMode::upwardLaunch,
+        RideMode::rotatingLift,                    // RideMode::rotatingLift,
+        RideMode::stationToStation,                // RideMode::stationToStation,
+        RideMode::singleRidePerAdmission,          // RideMode::singleRidePerAdmission,
+        RideMode::unlimitedRidesPerAdmission,      // RideMode::unlimitedRidesPerAdmission ,
+        RideMode::maze,                            // RideMode::maze,
+        RideMode::race,                            // RideMode::race,
+        RideMode::dodgems,                         // RideMode::dodgems,
+        RideMode::swing,                           // RideMode::swing,
+        RideMode::shopStall,                       // RideMode::shopStall,
+        RideMode::rotation,                        // RideMode::rotation,
+        RideMode::forwardRotation,                 // RideMode::forwardRotation,
+        RideMode::backwardRotation,                // RideMode::backwardRotation,
+        RideMode::filmAvengingAviators,            // RideMode::filmAvengingAviators,
+        RideMode::mouseTails3DFilm,                // RideMode::mouseTails3DFilm,
+        RideMode::spaceRings,                      // RideMode::spaceRings,
+        RideMode::beginners,                       // RideMode::beginners,
+        RideMode::limPoweredLaunch,                // RideMode::limPoweredLaunch,
+        RideMode::filmThrillRiders,                // RideMode::filmThrillRiders,
+        RideMode::stormChasers3DFilm,              // RideMode::stormChasers3DFilm,
+        RideMode::spaceRaiders3DFilm,              // RideMode::spaceRaiders3DFilm,
+        RideMode::intense,                         // RideMode::intense,
+        RideMode::berserk,                         // RideMode::berserk,
+        RideMode::hauntedHouse,                    // RideMode::hauntedHouse,
+        RideMode::circus,                          // RideMode::circus,
+        RideMode::downwardLaunch,                  // RideMode::downwardLaunch,
+        RideMode::crookedHouse,                    // RideMode::crookedHouse,
+        RideMode::freefallDrop,                    // RideMode::freefallDrop,
+        RideMode::continuousCircuitBlockSectioned, // RideMode::continuousCircuitBlockSectioned,
+        RideMode::poweredLaunchBlockSectioned,     // RideMode::poweredLaunch,
+        RideMode::poweredLaunchBlockSectioned,     // RideMode::poweredLaunchBlockSectioned,
+    });
+static_assert(kRideModeBlockSectionedCounterpart.size() == EnumValue(RideMode::count));
+
 RideMode& operator++(RideMode& d, int)
 {
     return d = (d == RideMode::count) ? RideMode::normal : static_cast<RideMode>(static_cast<uint8_t>(d) + 1);
@@ -384,7 +426,7 @@ void RideUpdateFavouritedStat()
     }
 
     auto* windowMgr = Ui::GetWindowManager();
-    windowMgr->InvalidateByClass(WindowClass::RideList);
+    windowMgr->InvalidateByClass(WindowClass::rideList);
 }
 
 /**
@@ -766,7 +808,7 @@ bool Ride::findTrackGap(const CoordsXYE& input, CoordsXYE* output) const
         return false;
 
     auto* windowMgr = Ui::GetWindowManager();
-    WindowBase* w = windowMgr->FindByClass(WindowClass::RideConstruction);
+    WindowBase* w = windowMgr->FindByClass(WindowClass::rideConstruction);
     if (w != nullptr && _rideConstructionState != RideConstructionState::State0 && _currentRideIndex == id)
     {
         RideConstructionInvalidateCurrentTrack();
@@ -2714,7 +2756,7 @@ static ResultWithMessage RideCheckBlockBrakes(const CoordsXYE& input, CoordsXYE*
     RideId rideIndex = input.element->AsTrack()->GetRideIndex();
 
     auto* windowMgr = Ui::GetWindowManager();
-    WindowBase* w = windowMgr->FindByClass(WindowClass::RideConstruction);
+    WindowBase* w = windowMgr->FindByClass(WindowClass::rideConstruction);
     if (w != nullptr && _rideConstructionState != RideConstructionState::State0 && _currentRideIndex == rideIndex)
         RideConstructionInvalidateCurrentTrack();
 
@@ -2779,7 +2821,7 @@ static bool RideCheckTrackContainsInversions(const CoordsXYE& input, CoordsXYE* 
     }
 
     auto* windowMgr = Ui::GetWindowManager();
-    WindowBase* w = windowMgr->FindByClass(WindowClass::RideConstruction);
+    WindowBase* w = windowMgr->FindByClass(WindowClass::rideConstruction);
     if (w != nullptr && _rideConstructionState != RideConstructionState::State0 && rideIndex == _currentRideIndex)
     {
         RideConstructionInvalidateCurrentTrack();
@@ -2840,7 +2882,7 @@ static bool RideCheckTrackContainsBanked(const CoordsXYE& input, CoordsXYE* outp
         return true;
 
     auto* windowMgr = Ui::GetWindowManager();
-    WindowBase* w = windowMgr->FindByClass(WindowClass::RideConstruction);
+    WindowBase* w = windowMgr->FindByClass(WindowClass::rideConstruction);
     if (w != nullptr && _rideConstructionState != RideConstructionState::State0 && rideIndex == _currentRideIndex)
     {
         RideConstructionInvalidateCurrentTrack();
@@ -2882,7 +2924,7 @@ static bool RideCheckTrackContainsBanked(const CoordsXYE& input, CoordsXYE* outp
 static int32_t RideCheckStationLength(const CoordsXYE& input, CoordsXYE* output)
 {
     auto* windowMgr = Ui::GetWindowManager();
-    WindowBase* w = windowMgr->FindByClass(WindowClass::RideConstruction);
+    WindowBase* w = windowMgr->FindByClass(WindowClass::rideConstruction);
     if (w != nullptr && _rideConstructionState != RideConstructionState::State0
         && _currentRideIndex == input.element->AsTrack()->GetRideIndex())
     {
@@ -2945,7 +2987,7 @@ static bool RideCheckStartAndEndIsStation(const CoordsXYE& input)
         return false;
 
     auto* windowMgr = Ui::GetWindowManager();
-    auto w = windowMgr->FindByClass(WindowClass::RideConstruction);
+    auto w = windowMgr->FindByClass(WindowClass::rideConstruction);
     if (w != nullptr && _rideConstructionState != RideConstructionState::State0 && rideIndex == _currentRideIndex)
     {
         RideConstructionInvalidateCurrentTrack();
@@ -3990,9 +4032,9 @@ void Ride::constructMissingEntranceOrExit() const
         }
 
         auto* windowMgr = Ui::GetWindowManager();
-        w = windowMgr->FindByClass(WindowClass::RideConstruction);
+        w = windowMgr->FindByClass(WindowClass::rideConstruction);
         if (w != nullptr)
-            w->OnMouseUp(entranceOrExit);
+            w->onMouseUp(entranceOrExit);
     }
 }
 
@@ -4049,7 +4091,7 @@ ResultWithMessage Ride::test(bool isApplying)
     }
 
     auto* windowMgr = Ui::GetWindowManager();
-    windowMgr->CloseByNumber(WindowClass::RideConstruction, id.ToUnderlying());
+    windowMgr->CloseByNumber(WindowClass::rideConstruction, id.ToUnderlying());
 
     StationIndex stationIndex = {};
     auto message = changeStatusDoStationChecks(stationIndex);
@@ -4128,10 +4170,10 @@ ResultWithMessage Ride::open(bool isApplying)
     // to set the track to its final state and clean up ghosts.
     // We can't just call close as it would cause a stack overflow during shop creation
     // with auto open on.
-    if (isToolActive(WindowClass::RideConstruction, static_cast<rct_windownumber>(id.ToUnderlying())))
+    if (isToolActive(WindowClass::rideConstruction, static_cast<WindowNumber>(id.ToUnderlying())))
     {
         auto* windowMgr = Ui::GetWindowManager();
-        windowMgr->CloseByNumber(WindowClass::RideConstruction, id.ToUnderlying());
+        windowMgr->CloseByNumber(WindowClass::rideConstruction, id.ToUnderlying());
     }
 
     StationIndex stationIndex = {};
@@ -4666,7 +4708,7 @@ void InvalidateTestResults(Ride& ride)
     }
 
     auto* windowMgr = Ui::GetWindowManager();
-    windowMgr->InvalidateByNumber(WindowClass::Ride, ride.id.ToUnderlying());
+    windowMgr->InvalidateByNumber(WindowClass::ride, ride.id.ToUnderlying());
 }
 
 /**
@@ -5040,7 +5082,7 @@ static int32_t RideGetTrackLength(const Ride& ride)
     RideId rideIndex = tileElement->AsTrack()->GetRideIndex();
 
     auto* windowMgr = Ui::GetWindowManager();
-    WindowBase* w = windowMgr->FindByClass(WindowClass::RideConstruction);
+    WindowBase* w = windowMgr->FindByClass(WindowClass::rideConstruction);
     if (w != nullptr && _rideConstructionState != RideConstructionState::State0 && _currentRideIndex == rideIndex)
     {
         RideConstructionInvalidateCurrentTrack();
@@ -5226,7 +5268,7 @@ void Ride::updateMaxVehicles()
         numTrains = newNumTrains;
 
         auto* windowMgr = Ui::GetWindowManager();
-        windowMgr->InvalidateByNumber(WindowClass::Ride, id.ToUnderlying());
+        windowMgr->InvalidateByNumber(WindowClass::ride, id.ToUnderlying());
     }
 }
 
@@ -5289,7 +5331,7 @@ void Ride::crash(uint8_t vehicleIndex)
     if (gLegacyScene != LegacyScene::titleSequence && vehicle != nullptr)
     {
         // Open ride window for crashed vehicle
-        auto intent = Intent(WD_VEHICLE);
+        auto intent = Intent(WindowDetail::vehicle);
         intent.PutExtra(INTENT_EXTRA_VEHICLE, vehicle);
         WindowBase* w = ContextOpenIntent(&intent);
 
@@ -6037,4 +6079,10 @@ ResultWithMessage Ride::changeStatusCreateVehicles(bool isApplying, const Coords
     }
 
     return { true };
+}
+
+RideMode RideModeGetBlockSectionedCounterpart(RideMode originalMode)
+{
+    assert(originalMode < RideMode::count);
+    return kRideModeBlockSectionedCounterpart[EnumValue(originalMode)];
 }

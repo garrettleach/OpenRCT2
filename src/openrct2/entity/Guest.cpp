@@ -924,7 +924,8 @@ void Guest::UpdateConsumptionMotives()
 void Guest::Tick128UpdateGuest(uint32_t index)
 {
     const auto currentTicks = getGameState().currentTicks;
-    if ((index & 0x1FF) != (currentTicks & 0x1FF))
+    const bool ticksMatchIndex = (index & 0x1FF) != (currentTicks & 0x1FF);
+    if (ticksMatchIndex && !(PeepFlags & PEEP_FLAGS_POSITION_FROZEN))
     {
         UpdateConsumptionMotives();
         return;
@@ -1462,14 +1463,14 @@ void Guest::CheckCantFindRide()
     GuestHeadingToRideId = RideId::GetNull();
 
     auto* windowMgr = Ui::GetWindowManager();
-    WindowBase* w = windowMgr->FindByNumber(WindowClass::Peep, Id);
+    WindowBase* w = windowMgr->FindByNumber(WindowClass::peep, Id);
 
     if (w != nullptr)
     {
-        w->OnPrepareDraw();
+        w->onPrepareDraw();
     }
 
-    windowMgr->InvalidateByNumber(WindowClass::Peep, Id);
+    windowMgr->InvalidateByNumber(WindowClass::peep, Id);
 }
 
 /**
@@ -2349,7 +2350,7 @@ void Guest::SpendMoney(money64& peep_expend_type, money64 amount, ExpenditureTyp
     peep_expend_type += amount;
 
     auto* windowMgr = Ui::GetWindowManager();
-    windowMgr->InvalidateByNumber(WindowClass::Peep, Id);
+    windowMgr->InvalidateByNumber(WindowClass::peep, Id);
 
     FinancePayment(-amount, expenditure);
 
@@ -3161,10 +3162,10 @@ static void GuestLeavePark(Guest& guest)
     guest.InsertNewThought(PeepThoughtType::GoHome);
 
     auto* windowMgr = Ui::GetWindowManager();
-    WindowBase* w = windowMgr->FindByNumber(WindowClass::Peep, guest.Id);
+    WindowBase* w = windowMgr->FindByNumber(WindowClass::peep, guest.Id);
     if (w != nullptr)
-        w->OnPrepareDraw();
-    windowMgr->InvalidateByNumber(WindowClass::Peep, guest.Id);
+        w->onPrepareDraw();
+    windowMgr->InvalidateByNumber(WindowClass::peep, guest.Id);
 }
 
 template<typename T>
@@ -3407,7 +3408,7 @@ void Guest::UpdateBuying()
                 CashInPocket += 50.00_GBP;
             }
             auto* windowMgr = Ui::GetWindowManager();
-            windowMgr->InvalidateByNumber(WindowClass::Peep, Id);
+            windowMgr->InvalidateByNumber(WindowClass::peep, Id);
         }
         Orientation ^= 0x10;
 
@@ -3922,7 +3923,7 @@ void Guest::UpdateRideFreeVehicleEnterRide(Ride& ride)
     {
         station.QueueTime = queueTime;
         auto* windowMgr = Ui::GetWindowManager();
-        windowMgr->InvalidateByNumber(WindowClass::Ride, CurrentRide.ToUnderlying());
+        windowMgr->InvalidateByNumber(WindowClass::ride, CurrentRide.ToUnderlying());
     }
 
     if (PeepFlags & PEEP_FLAGS_TRACKING)
@@ -5923,7 +5924,7 @@ void Guest::UpdateLeavingPark()
     Var37 = 1;
 
     auto* windowMgr = Ui::GetWindowManager();
-    windowMgr->InvalidateByClass(WindowClass::GuestList);
+    windowMgr->InvalidateByClass(WindowClass::guestList);
 
     const auto [pathingResult, _] = PerformNextAction();
     if (!(pathingResult & PATHING_OUTSIDE_PARK))

@@ -853,7 +853,7 @@ void Vehicle::UpdateMeasurements()
         ClearFlag(VehicleFlags::Testing);
 
         auto* windowMgr = Ui::GetWindowManager();
-        windowMgr->InvalidateByNumber(WindowClass::Ride, ride.ToUnderlying());
+        windowMgr->InvalidateByNumber(WindowClass::ride, ride.ToUnderlying());
         return;
     }
 
@@ -2350,7 +2350,7 @@ static void test_finish(Ride& ride)
     ride.averageSpeed = ride.averageSpeed / totalTime;
 
     auto* windowMgr = Ui::GetWindowManager();
-    windowMgr->InvalidateByNumber(WindowClass::Ride, ride.id.ToUnderlying());
+    windowMgr->InvalidateByNumber(WindowClass::ride, ride.id.ToUnderlying());
 }
 
 void Vehicle::UpdateTestFinish()
@@ -2404,7 +2404,7 @@ static void test_reset(Ride& ride, StationIndex curStation)
     ride.currentTestStation = curStation;
 
     auto* windowMgr = Ui::GetWindowManager();
-    windowMgr->InvalidateByNumber(WindowClass::Ride, ride.id.ToUnderlying());
+    windowMgr->InvalidateByNumber(WindowClass::ride, ride.id.ToUnderlying());
 }
 
 void Vehicle::TestReset()
@@ -4966,7 +4966,7 @@ void Vehicle::UpdateSound()
     int32_t soundVector = ((velocity >> 14) * soundDirection) >> 14;
     soundVector = std::clamp(soundVector, -127, 127);
 
-    sound_vector_factor = soundVector & 0xFF;
+    dopplerShift = soundVector & 0xFF;
 }
 
 /**
@@ -5788,19 +5788,19 @@ int32_t Vehicle::GetSwingAmount() const
 
 static uint8_t GetSwingSprite(int16_t swingPosition)
 {
-    if (swingPosition < -10012)
+    if (swingPosition < -10010)
         return 11;
-    if (swingPosition > 10012)
+    if (swingPosition > 10010)
         return 12;
 
-    if (swingPosition < -8191)
+    if (swingPosition < -8190)
         return 9;
-    if (swingPosition > 8191)
+    if (swingPosition > 8190)
         return 10;
 
-    if (swingPosition < -6371)
+    if (swingPosition < -6370)
         return 7;
-    if (swingPosition > 6371)
+    if (swingPosition > 6370)
         return 8;
 
     if (swingPosition < -4550)
@@ -9030,7 +9030,7 @@ void Vehicle::Serialise(DataSerialiser& stream)
     stream << sound1_volume;
     stream << sound2_id;
     stream << sound2_volume;
-    stream << sound_vector_factor;
+    stream << dopplerShift;
     stream << var_C0;
     stream << speed;
     stream << powered_acceleration;

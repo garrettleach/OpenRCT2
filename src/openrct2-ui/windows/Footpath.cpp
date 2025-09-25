@@ -200,9 +200,9 @@ namespace OpenRCT2::Ui::Windows
     public:
 #pragma region Window Override Events
 
-        void OnOpen() override
+        void onOpen() override
         {
-            SetWidgets(window_footpath_widgets);
+            setWidgets(window_footpath_widgets);
 
             WindowInitScrollWidgets(*this);
             WindowPushOthersRight(*this);
@@ -218,22 +218,22 @@ namespace OpenRCT2::Ui::Windows
             _footpathPlaceCtrlState = false;
             _footpathPlaceShiftState = false;
 
-            hold_down_widgets = (1u << WIDX_CONSTRUCT) | (1u << WIDX_REMOVE);
+            holdDownWidgets = (1u << WIDX_CONSTRUCT) | (1u << WIDX_REMOVE);
         }
 
-        void OnClose() override
+        void onClose() override
         {
             FootpathUpdateProvisional();
-            ViewportSetVisibility(ViewportVisibility::Default);
+            ViewportSetVisibility(ViewportVisibility::standard);
             MapInvalidateMapSelectionTiles();
             gMapSelectFlags.unset(MapSelectFlag::enableConstruct);
 
             auto* windowMgr = Ui::GetWindowManager();
-            windowMgr->InvalidateByClass(WindowClass::TopToolbar);
+            windowMgr->InvalidateByClass(WindowClass::topToolbar);
             HideGridlines();
         }
 
-        void OnUpdate() override
+        void onUpdate() override
         {
             WindowFootpathUpdateProvisionalPathForBridgeMode();
 
@@ -248,17 +248,17 @@ namespace OpenRCT2::Ui::Windows
             // Check tool
             if (_footpathConstructionMode == PathConstructionMode::land)
             {
-                if (!isToolActive(WindowClass::Footpath, WIDX_CONSTRUCT_ON_LAND))
-                    Close();
+                if (!isToolActive(WindowClass::footpath, WIDX_CONSTRUCT_ON_LAND))
+                    close();
             }
             else if (_footpathConstructionMode == PathConstructionMode::bridgeOrTunnelPick)
             {
-                if (!isToolActive(WindowClass::Footpath, WIDX_CONSTRUCT_BRIDGE_OR_TUNNEL))
-                    Close();
+                if (!isToolActive(WindowClass::footpath, WIDX_CONSTRUCT_BRIDGE_OR_TUNNEL))
+                    close();
             }
         }
 
-        void OnMouseDown(WidgetIndex widgetIndex) override
+        void onMouseDown(WidgetIndex widgetIndex) override
         {
             switch (widgetIndex)
             {
@@ -301,12 +301,12 @@ namespace OpenRCT2::Ui::Windows
             }
         }
 
-        void OnMouseUp(WidgetIndex widgetIndex) override
+        void onMouseUp(WidgetIndex widgetIndex) override
         {
             switch (widgetIndex)
             {
                 case WIDX_CLOSE:
-                    Close();
+                    close();
                     break;
                 case WIDX_CONSTRUCT_ON_LAND:
                     if (_footpathConstructionMode == PathConstructionMode::land)
@@ -345,7 +345,7 @@ namespace OpenRCT2::Ui::Windows
             }
         }
 
-        void OnDropdown(WidgetIndex widgetIndex, int32_t selectedIndex) override
+        void onDropdown(WidgetIndex widgetIndex, int32_t selectedIndex) override
         {
             if (selectedIndex < 0 || static_cast<size_t>(selectedIndex) >= _dropdownEntries.size())
                 return;
@@ -388,10 +388,10 @@ namespace OpenRCT2::Ui::Windows
 
             FootpathUpdateProvisional();
             _windowFootpathCost = kMoney64Undefined;
-            Invalidate();
+            invalidate();
         }
 
-        void OnToolUpdate(WidgetIndex widgetIndex, const ScreenCoordsXY& screenCoords) override
+        void onToolUpdate(WidgetIndex widgetIndex, const ScreenCoordsXY& screenCoords) override
         {
             if (widgetIndex == WIDX_CONSTRUCT_ON_LAND)
             {
@@ -403,7 +403,7 @@ namespace OpenRCT2::Ui::Windows
             }
         }
 
-        void OnToolUp(WidgetIndex widgetIndex, const ScreenCoordsXY&) override
+        void onToolUp(WidgetIndex widgetIndex, const ScreenCoordsXY&) override
         {
             if (widgetIndex == WIDX_CONSTRUCT_ON_LAND)
             {
@@ -411,7 +411,7 @@ namespace OpenRCT2::Ui::Windows
             }
         }
 
-        void OnToolDown(WidgetIndex widgetIndex, const ScreenCoordsXY& screenCoords) override
+        void onToolDown(WidgetIndex widgetIndex, const ScreenCoordsXY& screenCoords) override
         {
             if (widgetIndex == WIDX_CONSTRUCT_ON_LAND)
             {
@@ -423,7 +423,7 @@ namespace OpenRCT2::Ui::Windows
             }
         }
 
-        void OnToolDrag(WidgetIndex widgetIndex, const ScreenCoordsXY& screenCoords) override
+        void onToolDrag(WidgetIndex widgetIndex, const ScreenCoordsXY& screenCoords) override
         {
             if (widgetIndex == WIDX_CONSTRUCT_ON_LAND)
             {
@@ -431,13 +431,12 @@ namespace OpenRCT2::Ui::Windows
             }
         }
 
-        void OnPrepareDraw() override
+        void onPrepareDraw() override
         {
             // Press / unpress footpath and queue type buttons
-            pressed_widgets &= ~(1uLL << WIDX_FOOTPATH_TYPE);
-            pressed_widgets &= ~(1uLL << WIDX_QUEUELINE_TYPE);
-            pressed_widgets |= gFootpathSelection.IsQueueSelected ? (1uLL << WIDX_QUEUELINE_TYPE)
-                                                                  : (1uLL << WIDX_FOOTPATH_TYPE);
+            pressedWidgets &= ~(1uLL << WIDX_FOOTPATH_TYPE);
+            pressedWidgets &= ~(1uLL << WIDX_QUEUELINE_TYPE);
+            pressedWidgets |= gFootpathSelection.IsQueueSelected ? (1uLL << WIDX_QUEUELINE_TYPE) : (1uLL << WIDX_FOOTPATH_TYPE);
 
             // Enable / disable construct button
             widgets[WIDX_CONSTRUCT].type = _footpathConstructionMode == PathConstructionMode::bridgeOrTunnel
@@ -454,13 +453,13 @@ namespace OpenRCT2::Ui::Windows
             }
         }
 
-        void OnDraw(RenderTarget& rt) override
+        void onDraw(RenderTarget& rt) override
         {
             ScreenCoordsXY screenCoords;
             WindowDrawWidgets(*this, rt);
             WindowFootpathDrawDropdownButtons(rt);
 
-            if (!IsWidgetDisabled(WIDX_CONSTRUCT))
+            if (!isWidgetDisabled(WIDX_CONSTRUCT))
             {
                 // Get construction image
                 uint8_t direction = (_footpathConstructDirection + GetCurrentRotation()) % 4;
@@ -537,7 +536,7 @@ namespace OpenRCT2::Ui::Windows
                 return { _footpathPlaceZ, kTileSlopeFlat };
 
             auto info = GetMapCoordinatesFromPos(
-                screenCoords, EnumsToFlags(ViewportInteractionItem::Terrain, ViewportInteractionItem::Footpath));
+                screenCoords, EnumsToFlags(ViewportInteractionItem::terrain, ViewportInteractionItem::footpath));
 
             return FootpathGetPlacementFromInfo(info);
         }
@@ -572,7 +571,7 @@ namespace OpenRCT2::Ui::Windows
                 auto pathConstructFlags = FootpathCreateConstructFlags(type);
 
                 _windowFootpathCost = FootpathProvisionalSet(type, railings, footpathLoc, slope, pathConstructFlags);
-                InvalidateWidget(WIDX_CONSTRUCT);
+                invalidateWidget(WIDX_CONSTRUCT);
             }
 
             auto curTime = Platform::GetTicks();
@@ -804,29 +803,25 @@ namespace OpenRCT2::Ui::Windows
             WindowFootpathSetEnabledAndPressedWidgets();
         }
 
-        std::optional<CoordsXY> FootpathGetPlacePositionFromScreenPosition(ScreenCoordsXY screenCoords)
+        void WindowFootpathUpdateModifierKeyState(ScreenCoordsXY& screenCoords)
         {
-            CoordsXY mapCoords;
             auto& im = GetInputManager();
 
-            if (!_footpathPlaceCtrlState)
+            // First, store the initial copy/ctrl state
+            if (!_footpathPlaceCtrlState && im.IsModifierKeyPressed(ModifierKey::ctrl))
             {
-                if (im.IsModifierKeyPressed(ModifierKey::ctrl))
+                constexpr auto interactionFlags = EnumsToFlags(
+                    ViewportInteractionItem::terrain, ViewportInteractionItem::ride, ViewportInteractionItem::scenery,
+                    ViewportInteractionItem::footpath, ViewportInteractionItem::wall, ViewportInteractionItem::largeScenery);
+
+                auto info = GetMapCoordinatesFromPos(screenCoords, interactionFlags);
+                if (info.interactionType != ViewportInteractionItem::none)
                 {
-                    constexpr auto interactionFlags = EnumsToFlags(
-                        ViewportInteractionItem::Terrain, ViewportInteractionItem::Ride, ViewportInteractionItem::Scenery,
-                        ViewportInteractionItem::Footpath, ViewportInteractionItem::Wall,
-                        ViewportInteractionItem::LargeScenery);
+                    const bool allowInvalidHeights = getGameState().cheats.allowTrackPlaceInvalidHeights;
+                    const auto heightStep = kCoordsZStep * (!allowInvalidHeights ? 2 : 1);
 
-                    auto info = GetMapCoordinatesFromPos(screenCoords, interactionFlags);
-                    if (info.interactionType != ViewportInteractionItem::None)
-                    {
-                        const bool allowInvalidHeights = getGameState().cheats.allowTrackPlaceInvalidHeights;
-                        const auto heightStep = kCoordsZStep * (!allowInvalidHeights ? 2 : 1);
-
-                        _footpathPlaceCtrlZ = floor2(info.Element->GetBaseZ(), heightStep);
-                        _footpathPlaceCtrlState = true;
-                    }
+                    _footpathPlaceCtrlZ = floor2(info.Element->GetBaseZ(), heightStep);
+                    _footpathPlaceCtrlState = true;
                 }
             }
             else if (!im.IsModifierKeyPressed(ModifierKey::ctrl))
@@ -835,6 +830,7 @@ namespace OpenRCT2::Ui::Windows
                 _footpathPlaceCtrlZ = 0;
             }
 
+            // In addition, vertical shifting on top of the base (copy) placement?
             if (!_footpathPlaceShiftState && im.IsModifierKeyPressed(ModifierKey::shift))
             {
                 _footpathPlaceShiftState = true;
@@ -843,7 +839,7 @@ namespace OpenRCT2::Ui::Windows
             }
             else if (im.IsModifierKeyPressed(ModifierKey::shift))
             {
-                uint16_t maxHeight = ZoomLevel::max().ApplyTo(
+                uint16_t maxPathHeight = ZoomLevel::max().ApplyTo(
                     std::numeric_limits<decltype(TileElement::BaseHeight)>::max() - 32);
 
                 _footpathPlaceShiftZ = _footpathPlaceShiftStart.y - screenCoords.y + 4;
@@ -859,7 +855,7 @@ namespace OpenRCT2::Ui::Windows
                 _footpathPlaceShiftZ = floor2(_footpathPlaceShiftZ, heightStep);
 
                 // Clamp to maximum possible value of BaseHeight can offer.
-                _footpathPlaceShiftZ = std::min<int16_t>(_footpathPlaceShiftZ, maxHeight);
+                _footpathPlaceShiftZ = std::min<int16_t>(_footpathPlaceShiftZ, maxPathHeight);
 
                 screenCoords = _footpathPlaceShiftStart;
             }
@@ -868,13 +864,20 @@ namespace OpenRCT2::Ui::Windows
                 _footpathPlaceShiftState = false;
                 _footpathPlaceShiftZ = 0;
             }
+        }
+
+        std::optional<CoordsXY> FootpathGetPlacePositionFromScreenPosition(ScreenCoordsXY screenCoords)
+        {
+            WindowFootpathUpdateModifierKeyState(screenCoords);
+
+            CoordsXY mapCoords;
 
             if (!_footpathPlaceCtrlState)
             {
                 auto info = GetMapCoordinatesFromPos(
-                    screenCoords, EnumsToFlags(ViewportInteractionItem::Terrain, ViewportInteractionItem::Footpath));
+                    screenCoords, EnumsToFlags(ViewportInteractionItem::terrain, ViewportInteractionItem::footpath));
 
-                if (info.interactionType == ViewportInteractionItem::None)
+                if (info.interactionType == ViewportInteractionItem::none)
                     return std::nullopt;
 
                 mapCoords = info.Loc;
@@ -920,7 +923,7 @@ namespace OpenRCT2::Ui::Windows
 
         FootpathPlacementResult FootpathGetPlacementFromInfo(const InteractionInfo& info)
         {
-            if (info.interactionType == ViewportInteractionItem::None || info.Element == nullptr)
+            if (info.interactionType == ViewportInteractionItem::none || info.Element == nullptr)
             {
                 gMapSelectFlags.unset(MapSelectFlag::enable);
                 FootpathUpdateProvisional();
@@ -929,7 +932,7 @@ namespace OpenRCT2::Ui::Windows
 
             switch (info.interactionType)
             {
-                case ViewportInteractionItem::Terrain:
+                case ViewportInteractionItem::terrain:
                 {
                     auto surfaceElement = info.Element->AsSurface();
                     if (surfaceElement != nullptr)
@@ -938,7 +941,7 @@ namespace OpenRCT2::Ui::Windows
                     }
                     break;
                 }
-                case ViewportInteractionItem::Footpath:
+                case ViewportInteractionItem::footpath:
                 {
                     auto pathElement = info.Element->AsPath();
                     if (pathElement != nullptr)
@@ -1007,7 +1010,7 @@ namespace OpenRCT2::Ui::Windows
             if (_windowFootpathCost != footpathCost)
             {
                 _windowFootpathCost = footpathCost;
-                InvalidateWidget(WIDX_CONSTRUCT);
+                invalidateWidget(WIDX_CONSTRUCT);
             }
         }
 
@@ -1180,7 +1183,7 @@ namespace OpenRCT2::Ui::Windows
                     }
 
                     auto* windowMgr = GetWindowManager();
-                    auto* self = static_cast<FootpathWindow*>(windowMgr->FindByClass(WindowClass::Footpath));
+                    auto* self = static_cast<FootpathWindow*>(windowMgr->FindByClass(WindowClass::footpath));
                     if (self == nullptr)
                     {
                         return;
@@ -1199,7 +1202,7 @@ namespace OpenRCT2::Ui::Windows
 
                         if (gFootpathGroundFlags & ELEMENT_IS_UNDERGROUND)
                         {
-                            ViewportSetVisibility(ViewportVisibility::UndergroundViewOn);
+                            ViewportSetVisibility(ViewportVisibility::undergroundViewOn);
                         }
 
                         _footpathConstructFromPosition = footpathLoc;
@@ -1358,55 +1361,55 @@ namespace OpenRCT2::Ui::Windows
                 MapInvalidateMapSelectionTiles();
             }
 
-            uint64_t pressedWidgets = pressed_widgets
+            uint64_t newPressedWidgets = pressedWidgets
                 & ~((1LL << WIDX_DIRECTION_NW) | (1LL << WIDX_DIRECTION_NE) | (1LL << WIDX_DIRECTION_SW)
                     | (1LL << WIDX_DIRECTION_SE) | (1LL << WIDX_SLOPEDOWN) | (1LL << WIDX_LEVEL) | (1LL << WIDX_SLOPEUP));
-            uint64_t disabledWidgets = 0;
+            uint64_t newDisabledWidgets = 0;
             int32_t currentRotation = GetCurrentRotation();
             if (_footpathConstructionMode == PathConstructionMode::bridgeOrTunnel)
             {
                 // Set pressed directional widget
                 int32_t direction = (_footpathConstructDirection + currentRotation) & 3;
-                pressedWidgets |= (1LL << (WIDX_DIRECTION_NW + direction));
+                newPressedWidgets |= (1LL << (WIDX_DIRECTION_NW + direction));
 
                 // Set pressed slope widget
                 int32_t slope = _footpathConstructSlope;
                 if (slope == kTileSlopeSESideUp)
                 {
-                    pressedWidgets |= (1uLL << WIDX_SLOPEDOWN);
+                    newPressedWidgets |= (1uLL << WIDX_SLOPEDOWN);
                 }
                 else if (slope == kTileSlopeFlat)
                 {
-                    pressedWidgets |= (1uLL << WIDX_LEVEL);
+                    newPressedWidgets |= (1uLL << WIDX_LEVEL);
                 }
                 else
                 {
-                    pressedWidgets |= (1uLL << WIDX_SLOPEUP);
+                    newPressedWidgets |= (1uLL << WIDX_SLOPEUP);
                 }
 
                 // Enable / disable directional widgets
                 direction = _footpathConstructValidDirections;
                 if (direction != kInvalidDirection)
                 {
-                    disabledWidgets |= (1uLL << WIDX_DIRECTION_NW) | (1uLL << WIDX_DIRECTION_NE) | (1uLL << WIDX_DIRECTION_SW)
-                        | (1uLL << WIDX_DIRECTION_SE);
+                    newDisabledWidgets |= (1uLL << WIDX_DIRECTION_NW) | (1uLL << WIDX_DIRECTION_NE)
+                        | (1uLL << WIDX_DIRECTION_SW) | (1uLL << WIDX_DIRECTION_SE);
 
                     direction = (direction + currentRotation) & 3;
-                    disabledWidgets &= ~(1 << (WIDX_DIRECTION_NW + direction));
+                    newDisabledWidgets &= ~(1 << (WIDX_DIRECTION_NW + direction));
                 }
             }
             else
             {
                 // Disable all bridge mode widgets
-                disabledWidgets |= (1uLL << WIDX_DIRECTION_GROUP) | (1uLL << WIDX_DIRECTION_NW) | (1uLL << WIDX_DIRECTION_NE)
+                newDisabledWidgets |= (1uLL << WIDX_DIRECTION_GROUP) | (1uLL << WIDX_DIRECTION_NW) | (1uLL << WIDX_DIRECTION_NE)
                     | (1uLL << WIDX_DIRECTION_SW) | (1uLL << WIDX_DIRECTION_SE) | (1uLL << WIDX_SLOPE_GROUP)
                     | (1uLL << WIDX_SLOPEDOWN) | (1uLL << WIDX_LEVEL) | (1uLL << WIDX_SLOPEUP) | (1uLL << WIDX_CONSTRUCT)
                     | (1uLL << WIDX_REMOVE);
             }
 
-            pressed_widgets = pressedWidgets;
-            disabled_widgets = disabledWidgets;
-            Invalidate();
+            pressedWidgets = newPressedWidgets;
+            disabledWidgets = newDisabledWidgets;
+            invalidate();
         }
 
         /**
@@ -1452,8 +1455,8 @@ namespace OpenRCT2::Ui::Windows
     public:
         void KeyboardShortcutTurnLeft()
         {
-            if (IsWidgetDisabled(WIDX_DIRECTION_NW) || IsWidgetDisabled(WIDX_DIRECTION_NE)
-                || IsWidgetDisabled(WIDX_DIRECTION_SW) || IsWidgetDisabled(WIDX_DIRECTION_SE)
+            if (isWidgetDisabled(WIDX_DIRECTION_NW) || isWidgetDisabled(WIDX_DIRECTION_NE)
+                || isWidgetDisabled(WIDX_DIRECTION_SW) || isWidgetDisabled(WIDX_DIRECTION_SE)
                 || _footpathConstructionMode != PathConstructionMode::bridgeOrTunnel)
             {
                 return;
@@ -1465,8 +1468,8 @@ namespace OpenRCT2::Ui::Windows
 
         void KeyboardShortcutTurnRight()
         {
-            if (IsWidgetDisabled(WIDX_DIRECTION_NW) || IsWidgetDisabled(WIDX_DIRECTION_NE)
-                || IsWidgetDisabled(WIDX_DIRECTION_SW) || IsWidgetDisabled(WIDX_DIRECTION_SE)
+            if (isWidgetDisabled(WIDX_DIRECTION_NW) || isWidgetDisabled(WIDX_DIRECTION_NE)
+                || isWidgetDisabled(WIDX_DIRECTION_SW) || isWidgetDisabled(WIDX_DIRECTION_SE)
                 || _footpathConstructionMode != PathConstructionMode::bridgeOrTunnel)
             {
                 return;
@@ -1478,7 +1481,7 @@ namespace OpenRCT2::Ui::Windows
 
         void KeyboardShortcutShortcutSlopeDown()
         {
-            if (IsWidgetDisabled(WIDX_SLOPEDOWN) || IsWidgetDisabled(WIDX_LEVEL) || IsWidgetDisabled(WIDX_SLOPEUP)
+            if (isWidgetDisabled(WIDX_SLOPEDOWN) || isWidgetDisabled(WIDX_LEVEL) || isWidgetDisabled(WIDX_SLOPEUP)
                 || widgets[WIDX_LEVEL].type == WidgetType::empty)
             {
                 return;
@@ -1487,10 +1490,10 @@ namespace OpenRCT2::Ui::Windows
             switch (_footpathConstructSlope)
             {
                 case 0:
-                    OnMouseDown(WIDX_SLOPEDOWN);
+                    onMouseDown(WIDX_SLOPEDOWN);
                     break;
                 case 2:
-                    OnMouseDown(WIDX_LEVEL);
+                    onMouseDown(WIDX_LEVEL);
                     break;
                 default:
                 case 6:
@@ -1500,7 +1503,7 @@ namespace OpenRCT2::Ui::Windows
 
         void KeyboardShortcutSlopeUp()
         {
-            if (IsWidgetDisabled(WIDX_SLOPEDOWN) || IsWidgetDisabled(WIDX_LEVEL) || IsWidgetDisabled(WIDX_SLOPEUP)
+            if (isWidgetDisabled(WIDX_SLOPEDOWN) || isWidgetDisabled(WIDX_LEVEL) || isWidgetDisabled(WIDX_SLOPEUP)
                 || widgets[WIDX_LEVEL].type == WidgetType::empty)
             {
                 return;
@@ -1509,10 +1512,10 @@ namespace OpenRCT2::Ui::Windows
             switch (_footpathConstructSlope)
             {
                 case 6:
-                    OnMouseDown(WIDX_LEVEL);
+                    onMouseDown(WIDX_LEVEL);
                     break;
                 case 0:
-                    OnMouseDown(WIDX_SLOPEUP);
+                    onMouseDown(WIDX_SLOPEUP);
                     break;
                 default:
                 case 2:
@@ -1522,18 +1525,18 @@ namespace OpenRCT2::Ui::Windows
 
         void KeyboardShortcutSlopeLevel()
         {
-            if (IsWidgetDisabled(WIDX_SLOPEDOWN) || IsWidgetDisabled(WIDX_LEVEL) || IsWidgetDisabled(WIDX_SLOPEUP)
+            if (isWidgetDisabled(WIDX_SLOPEDOWN) || isWidgetDisabled(WIDX_LEVEL) || isWidgetDisabled(WIDX_SLOPEUP)
                 || widgets[WIDX_LEVEL].type == WidgetType::empty || _footpathConstructSlope == 0)
             {
                 return;
             }
 
-            OnMouseDown(WIDX_LEVEL);
+            onMouseDown(WIDX_LEVEL);
         }
 
         void KeyboardShortcutDemolishCurrent()
         {
-            if (IsWidgetDisabled(WIDX_REMOVE) || widgets[WIDX_REMOVE].type == WidgetType::empty
+            if (isWidgetDisabled(WIDX_REMOVE) || widgets[WIDX_REMOVE].type == WidgetType::empty
                 || (!getGameState().cheats.buildInPauseMode && GameIsPaused()))
             {
                 return;
@@ -1544,12 +1547,12 @@ namespace OpenRCT2::Ui::Windows
 
         void KeyboardShortcutBuildCurrent()
         {
-            if (IsWidgetDisabled(WIDX_CONSTRUCT) || widgets[WIDX_CONSTRUCT].type == WidgetType::empty)
+            if (isWidgetDisabled(WIDX_CONSTRUCT) || widgets[WIDX_CONSTRUCT].type == WidgetType::empty)
             {
                 return;
             }
 
-            OnMouseDown(WIDX_CONSTRUCT);
+            onMouseDown(WIDX_CONSTRUCT);
         }
 
 #pragma endregion
@@ -1568,7 +1571,7 @@ namespace OpenRCT2::Ui::Windows
         }
 
         auto* windowMgr = GetWindowManager();
-        return windowMgr->FocusOrCreate<FootpathWindow>(WindowClass::Footpath, kWindowSize, 0);
+        return windowMgr->FocusOrCreate<FootpathWindow>(WindowClass::footpath, kWindowSize, {});
     }
 
     void WindowFootpathResetSelectedPath()
@@ -1579,7 +1582,7 @@ namespace OpenRCT2::Ui::Windows
     void WindowFootpathKeyboardShortcutTurnLeft()
     {
         auto* windowMgr = GetWindowManager();
-        WindowBase* w = windowMgr->FindByClass(WindowClass::Footpath);
+        WindowBase* w = windowMgr->FindByClass(WindowClass::footpath);
         if (w != nullptr)
         {
             auto* footpathWindow = static_cast<FootpathWindow*>(w);
@@ -1593,7 +1596,7 @@ namespace OpenRCT2::Ui::Windows
     void WindowFootpathKeyboardShortcutTurnRight()
     {
         auto* windowMgr = GetWindowManager();
-        WindowBase* w = windowMgr->FindByClass(WindowClass::Footpath);
+        WindowBase* w = windowMgr->FindByClass(WindowClass::footpath);
         if (w != nullptr)
         {
             auto* footpathWindow = static_cast<FootpathWindow*>(w);
@@ -1607,7 +1610,7 @@ namespace OpenRCT2::Ui::Windows
     void WindowFootpathKeyboardShortcutSlopeDown()
     {
         auto* windowMgr = GetWindowManager();
-        WindowBase* w = windowMgr->FindByClass(WindowClass::Footpath);
+        WindowBase* w = windowMgr->FindByClass(WindowClass::footpath);
         if (w != nullptr)
         {
             auto* footpathWindow = static_cast<FootpathWindow*>(w);
@@ -1621,7 +1624,7 @@ namespace OpenRCT2::Ui::Windows
     void WindowFootpathKeyboardShortcutSlopeUp()
     {
         auto* windowMgr = GetWindowManager();
-        WindowBase* w = windowMgr->FindByClass(WindowClass::Footpath);
+        WindowBase* w = windowMgr->FindByClass(WindowClass::footpath);
         if (w != nullptr)
         {
             auto* footpathWindow = static_cast<FootpathWindow*>(w);
@@ -1635,7 +1638,7 @@ namespace OpenRCT2::Ui::Windows
     void WindowFootpathKeyboardShortcutDemolishCurrent()
     {
         auto* windowMgr = GetWindowManager();
-        WindowBase* w = windowMgr->FindByClass(WindowClass::Footpath);
+        WindowBase* w = windowMgr->FindByClass(WindowClass::footpath);
         if (w != nullptr)
         {
             auto* footpathWindow = static_cast<FootpathWindow*>(w);
@@ -1649,7 +1652,7 @@ namespace OpenRCT2::Ui::Windows
     void WindowFootpathKeyboardShortcutBuildCurrent()
     {
         auto* windowMgr = GetWindowManager();
-        WindowBase* w = windowMgr->FindByClass(WindowClass::Footpath);
+        WindowBase* w = windowMgr->FindByClass(WindowClass::footpath);
         if (w != nullptr)
         {
             auto* footpathWindow = static_cast<FootpathWindow*>(w);
@@ -1667,14 +1670,14 @@ namespace OpenRCT2::Ui::Windows
     void ToggleFootpathWindow()
     {
         auto* windowMgr = GetWindowManager();
-        if (windowMgr->FindByClass(WindowClass::Footpath) == nullptr)
+        if (windowMgr->FindByClass(WindowClass::footpath) == nullptr)
         {
-            ContextOpenWindow(WindowClass::Footpath);
+            ContextOpenWindow(WindowClass::footpath);
         }
         else
         {
             ToolCancel();
-            windowMgr->CloseByClass(WindowClass::Footpath);
+            windowMgr->CloseByClass(WindowClass::footpath);
         }
     }
 
@@ -1706,15 +1709,15 @@ namespace OpenRCT2::Ui::Windows
 
             if (gFootpathGroundFlags & ELEMENT_IS_UNDERGROUND)
             {
-                ViewportSetVisibility(ViewportVisibility::UndergroundViewOn);
+                ViewportSetVisibility(ViewportVisibility::undergroundViewOn);
             }
             else
             {
-                ViewportSetVisibility(ViewportVisibility::UndergroundViewOff);
+                ViewportSetVisibility(ViewportVisibility::undergroundViewOff);
             }
         }
 
-        if (!isToolActive(WindowClass::Scenery))
+        if (!isToolActive(WindowClass::scenery))
         {
             if (res.Error != GameActions::Status::Ok)
             {
