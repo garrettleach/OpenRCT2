@@ -127,7 +127,8 @@ namespace OpenRCT2::Ui::Vulkan
     private:
         void ReleaseUploadedSprites(std::vector<UploadedSpriteInfo>& sprites);
 
-        void CreateEmptyImageWithView(vk::Extent2D extent, vk::Image& image, VmaAllocation& imageAllocation, vk::UniqueImageView& imageView);
+        void CreateEmptyImageWithView(
+            vk::Extent2D extent, vk::Image& image, VmaAllocation& imageAllocation, vk::UniqueImageView& imageView);
 
         void UploadFilterPaletteImage(vk::CommandBuffer commandBuffer);
         void UploadBlendPaletteImage(vk::CommandBuffer commandBuffer);

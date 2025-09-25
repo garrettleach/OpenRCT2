@@ -558,7 +558,6 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::QueueBlendedSprite(
     if (textureIndex != TextureIndex::InvalidIndex)
     {
         _inProgressCommands.emplace_back(
-            bounds, clip, (uint32_t)ColourizeCommandFlags::ActionBlendSprite, (uint32_t)palette, index,
-            textureIndex);
+            bounds, clip, (uint32_t)ColourizeCommandFlags::ActionBlendSprite, (uint32_t)palette, index, textureIndex);
     }
 }

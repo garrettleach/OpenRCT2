@@ -24,19 +24,18 @@ namespace OpenRCT2::Ui::Vulkan
 
         std::array<vk::VertexInputAttributeDescription, 6> GetInstanceAttributeDescriptions()
         {
-            return {
-                vk::VertexInputAttributeDescription{ 0, 0, vk::Format::eR32G32B32A32Sint,
-                                                     offsetof(DrawSpritePipeline::Rect, bounds) },
-                vk::VertexInputAttributeDescription{ 1, 0, vk::Format::eR32G32B32A32Sint,
-                                                     offsetof(DrawSpritePipeline::Rect, clip) },
-                vk::VertexInputAttributeDescription{ 2, 0, vk::Format::eR32Uint, offsetof(DrawSpritePipeline::Rect, flags) },
+            return { vk::VertexInputAttributeDescription{ 0, 0, vk::Format::eR32G32B32A32Sint,
+                                                          offsetof(DrawSpritePipeline::Rect, bounds) },
+                     vk::VertexInputAttributeDescription{ 1, 0, vk::Format::eR32G32B32A32Sint,
+                                                          offsetof(DrawSpritePipeline::Rect, clip) },
+                     vk::VertexInputAttributeDescription{ 2, 0, vk::Format::eR32Uint,
+                                                          offsetof(DrawSpritePipeline::Rect, flags) },
                      vk::VertexInputAttributeDescription{ 3, 0, vk::Format::eR32Uint,
                                                           offsetof(DrawSpritePipeline::Rect, paletteOrTextureIndex) },
-                vk::VertexInputAttributeDescription{ 4, 0, vk::Format::eR32Uint,
-                                                     offsetof(DrawSpritePipeline::Rect, maskIndex) },
-                vk::VertexInputAttributeDescription{ 5, 0, vk::Format::eR32Uint,
-                                                     offsetof(DrawSpritePipeline::Rect, remapPalette) }
-            };
+                     vk::VertexInputAttributeDescription{ 4, 0, vk::Format::eR32Uint,
+                                                          offsetof(DrawSpritePipeline::Rect, maskIndex) },
+                     vk::VertexInputAttributeDescription{ 5, 0, vk::Format::eR32Uint,
+                                                          offsetof(DrawSpritePipeline::Rect, remapPalette) } };
         }
 
         vk::VertexInputBindingDescription GetVertexBindingDescription()
@@ -81,8 +80,7 @@ namespace OpenRCT2::Ui::Vulkan
         vk::DescriptorSetLayoutBinding filterPaletteLayoutBinding(
             1, vk::DescriptorType::eSampledImage, 1, vk::ShaderStageFlagBits::eFragment);
 
-        std::vector<vk::DescriptorSetLayoutBinding> bindings{ samplerLayoutBinding,
-                                                              filterPaletteLayoutBinding };
+        std::vector<vk::DescriptorSetLayoutBinding> bindings{ samplerLayoutBinding, filterPaletteLayoutBinding };
 
         vk::DescriptorSetLayoutCreateInfo layoutInfo(vk::DescriptorSetLayoutCreateFlags(), bindings);
 
@@ -206,8 +204,8 @@ namespace OpenRCT2::Ui::Vulkan
     }
 
     DrawSpritePipeline::DrawSpritePipeline(
-        VulkanDrawingEngine& engine, SpriteManager& spriteManager, const IVulkanDebug& vulkanDebug,
-        const vk::Device device, size_t framesInFlight, VulkanMemoryAllocator& vma)
+        VulkanDrawingEngine& engine, SpriteManager& spriteManager, const IVulkanDebug& vulkanDebug, const vk::Device device,
+        size_t framesInFlight, VulkanMemoryAllocator& vma)
         : _engine(engine)
         , _spriteManager(spriteManager)
         , _vulkanDebug(vulkanDebug)
@@ -218,7 +216,7 @@ namespace OpenRCT2::Ui::Vulkan
         , _descriptorIndexSetLayout(CreateDescriptorIndexSetLayout(device))
         , _pipelineLayout(CreatePipelineLayout(device, { *_descriptorSetLayout, *_descriptorIndexSetLayout }))
         , _pipeline(CreatePipeline(device, *_descriptorSetLayout, *_pipelineLayout))
-        , _tmpDescriptors(_framesInFlight,{})
+        , _tmpDescriptors(_framesInFlight, {})
     {
         CreateDescriptorPool();
         CreateDescriptorSets();
@@ -523,7 +521,8 @@ namespace OpenRCT2::Ui::Vulkan
         {
             uint32_t paletteValue = ((uint32_t)paletteCount << 24) | ((uint32_t)palettes[2] << 16)
                 | ((uint32_t)palettes[1] << 8) | (uint32_t)(palettes[0]);
-            _inProgressSprites.emplace_back(bounds, clip, RectFlags::Mask, static_cast<uint32_t>(textureIndex), textureIndex, paletteValue);
+            _inProgressSprites.emplace_back(
+                bounds, clip, RectFlags::Mask, static_cast<uint32_t>(textureIndex), textureIndex, paletteValue);
         }
     }
 
@@ -555,7 +554,8 @@ namespace OpenRCT2::Ui::Vulkan
         if (maskTextureIndex != TextureIndex::InvalidIndex && colourTextureIndex != TextureIndex::InvalidIndex)
         {
             glm::ivec4 bounds{ left, top, right, bottom };
-            _inProgressSprites.emplace_back(bounds, clip, RectFlags::Mask, static_cast<uint32_t>(colourTextureIndex), maskTextureIndex);
+            _inProgressSprites.emplace_back(
+                bounds, clip, RectFlags::Mask, static_cast<uint32_t>(colourTextureIndex), maskTextureIndex);
         }
     }
 
@@ -627,8 +627,7 @@ namespace OpenRCT2::Ui::Vulkan
         {
             glm::ivec4 bounds{ left, top, right, bottom };
             _inProgressSprites.emplace_back(
-                bounds, clip, RectFlags::Mask, static_cast<uint32_t>(textureIndex), textureIndex,
-                glyphId.palette);
+                bounds, clip, RectFlags::Mask, static_cast<uint32_t>(textureIndex), textureIndex, glyphId.palette);
         }
     }
 

@@ -70,8 +70,8 @@ namespace OpenRCT2::Ui::Vulkan
 
     public:
         ColourizePipeline(
-            VulkanDrawingEngine& engine, SpriteManager& spriteManager, const vk::Device& device,
-            size_t framesInFlight, VulkanMemoryAllocator& vma, const std::vector<vk::ImageView>& paletteInputViews,
+            VulkanDrawingEngine& engine, SpriteManager& spriteManager, const vk::Device& device, size_t framesInFlight,
+            VulkanMemoryAllocator& vma, const std::vector<vk::ImageView>& paletteInputViews,
             const std::vector<vk::ImageView>& depthInputViews);
         ~ColourizePipeline();
 

@@ -208,7 +208,8 @@ OpenRCT2::Ui::Vulkan::TextureIndex OpenRCT2::Ui::Vulkan::SpriteManager::QueueUpl
 {
     auto baseImage = ImageId(imageId.GetIndex());
 
-    auto& currentFrameImageDescriptorMap = (spritepool == SpritePool::DrawSpritePipeline) ? _currentFrameDrawSpriteImageDescriptorMap
+    auto& currentFrameImageDescriptorMap = (spritepool == SpritePool::DrawSpritePipeline)
+        ? _currentFrameDrawSpriteImageDescriptorMap
         : _currentFrameColourizeDescriptorMap;
 
     if (currentFrameImageDescriptorMap.contains(baseImage))
@@ -225,7 +226,7 @@ OpenRCT2::Ui::Vulkan::TextureIndex OpenRCT2::Ui::Vulkan::SpriteManager::QueueUpl
 
     auto newIndex = TextureIndex(currentFrameDescriptorList.size());
     vk::ImageView imageView;
-    
+
     if (uploadedQueue.contains(baseImage))
     {
         imageView = uploadedQueue[baseImage].imageView;
@@ -381,8 +382,7 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::ExecuteUpload(vk::CommandBuffer comman
                     glyphToUpload.first,
                     UploadedSpriteInfo(
                         stagingBuffer, stagingBufferAllocation, glyphToUpload.second.image,
-                        glyphToUpload.second.imageAllocation,
-                        glyphToUpload.second.imageView)));
+                        glyphToUpload.second.imageAllocation, glyphToUpload.second.imageView)));
         }
     }
     _glyphsToUpload.clear();
@@ -484,8 +484,7 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::UploadBlendPaletteImage(vk::CommandBuf
     BlendColourMapType* data = GetBlendColourMap();
 
     auto stagingResult = CreateStagingBuffer(
-        _allocator, data, extent.width * extent.height, _blendPaletteStagingBuffer,
-        _blendPaletteStagingBufferAllocation);
+        _allocator, data, extent.width * extent.height, _blendPaletteStagingBuffer, _blendPaletteStagingBufferAllocation);
     if (vk::Result::eSuccess != stagingResult)
     {
         throw std::runtime_error("Vulkan memory error while creating staging buffer");
