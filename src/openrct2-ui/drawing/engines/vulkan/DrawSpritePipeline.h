@@ -101,7 +101,6 @@ namespace OpenRCT2::Ui::Vulkan
 
         ~DrawSpritePipeline();
 
-        void BeginDraw(uint32_t currentFrame);
         void Draw(const vk::CommandBuffer& commandBuffer, const RenderTarget& renderTarget, uint32_t currentFrame);
 
         void QueueDraw(RenderTarget& rt, ImageId imageId, int32_t x, int32_t y);
