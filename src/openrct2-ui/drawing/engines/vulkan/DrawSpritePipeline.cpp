@@ -220,7 +220,6 @@ namespace OpenRCT2::Ui::Vulkan
         , _pipeline(CreatePipeline(device, *_descriptorSetLayout, *_pipelineLayout))
         , _tmpDescriptors(_framesInFlight,{})
     {
-        CreateBuffers();
         CreateDescriptorPool();
         CreateDescriptorSets();
         CreateInstanceBuffers();
