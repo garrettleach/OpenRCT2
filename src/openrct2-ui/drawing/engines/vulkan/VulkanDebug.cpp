@@ -35,40 +35,41 @@ namespace OpenRCT2::Ui::Vulkan
         _debugMessanger = _instance.createDebugUtilsMessengerEXTUnique(debugCreateInfo, nullptr, _vulkanDynamicDispatch);
     }
 
-    void VulkanDebug::beginDebugUtilsLabel(vk::Queue& queue, const char* labelName, array<float, 4> colour)
+    void VulkanDebug::beginDebugUtilsLabel(const vk::Queue& queue, const char* labelName, array<float, 4> colour) const
     {
         queue.beginDebugUtilsLabelEXT({ labelName, colour }, _vulkanDynamicDispatch);
     }
-    void VulkanDebug::endDebugUtilsLabel(vk::Queue& queue)
+    void VulkanDebug::endDebugUtilsLabel(const vk::Queue& queue) const
     {
         queue.endDebugUtilsLabelEXT(_vulkanDynamicDispatch);
     }
-    void VulkanDebug::insertDebugUtilsLabel(vk::Queue& queue, const char* labelName, array<float, 4> colour)
+    void VulkanDebug::insertDebugUtilsLabel(const vk::Queue& queue, const char* labelName, array<float, 4> colour) const
     {
         queue.insertDebugUtilsLabelEXT({ labelName, colour }, _vulkanDynamicDispatch);
     }
 
-    void VulkanDebug::beginDebugUtilsLabel(vk::CommandBuffer& commandBuffer, const char* labelName, array<float, 4> colour)
+    void VulkanDebug::beginDebugUtilsLabel(
+        const vk::CommandBuffer& commandBuffer, const char* labelName, array<float, 4> colour) const
     {
         commandBuffer.beginDebugUtilsLabelEXT({ labelName, colour }, _vulkanDynamicDispatch);
     }
-    void VulkanDebug::endDebugUtilsLabel(vk::CommandBuffer& commandBuffer)
+    void VulkanDebug::endDebugUtilsLabel(const vk::CommandBuffer& commandBuffer) const
     {
         commandBuffer.endDebugUtilsLabelEXT(_vulkanDynamicDispatch);
     }
-    void VulkanDebug::insertDebugUtilsLabel(vk::CommandBuffer& commandBuffer, const char* labelName, array<float, 4> colour)
+    void VulkanDebug::insertDebugUtilsLabel(const vk::CommandBuffer& commandBuffer, const char* labelName, array<float, 4> colour) const
     {
         commandBuffer.insertDebugUtilsLabelEXT({ labelName, colour }, _vulkanDynamicDispatch);
     }
 
-    void VulkanDebug::setObjectName(const vk::Device& device, const vk::DebugUtilsObjectNameInfoEXT& nameInfo)
+    void VulkanDebug::setObjectName(const vk::Device& device, const vk::DebugUtilsObjectNameInfoEXT& nameInfo) const
     {
         device.setDebugUtilsObjectNameEXT(nameInfo, _vulkanDynamicDispatch);
     }
 
     void VulkanDebug::submitDebugMessage(
         vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::DebugUtilsMessageTypeFlagsEXT flags,
-        const vk::DebugUtilsMessengerCallbackDataEXT& callbackData)
+        const vk::DebugUtilsMessengerCallbackDataEXT& callbackData) const
     {
         _instance.submitDebugUtilsMessageEXT(severity, flags, callbackData, _vulkanDynamicDispatch);
     }

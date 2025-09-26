@@ -10,25 +10,27 @@ namespace OpenRCT2::Ui::Vulkan
         {
         }
 
-        virtual void beginDebugUtilsLabel(vk::Queue& queue, const char* labelName, std::array<float, 4> = {}) = 0;
-        virtual void endDebugUtilsLabel(vk::Queue& queue) = 0;
-        virtual void insertDebugUtilsLabel(vk::Queue& queue, const char* labelName, std::array<float, 4> = {}) = 0;
+        virtual void beginDebugUtilsLabel(const vk::Queue& queue, const char* labelName, std::array<float, 4> = {}) const = 0;
+        virtual void endDebugUtilsLabel(const vk::Queue& queue) const = 0;
+        virtual void insertDebugUtilsLabel(const vk::Queue& queue, const char* labelName, std::array<float, 4> = {}) const = 0;
 
-        virtual void beginDebugUtilsLabel(vk::CommandBuffer& commandBuffer, const char* labelName, std::array<float, 4> = {})
+        virtual void beginDebugUtilsLabel(
+            const vk::CommandBuffer& commandBuffer, const char* labelName, std::array<float, 4> = {}) const
             = 0;
-        virtual void endDebugUtilsLabel(vk::CommandBuffer& commandBuffer) = 0;
-        virtual void insertDebugUtilsLabel(vk::CommandBuffer& commandBuffer, const char* labelName, std::array<float, 4> = {})
+        virtual void endDebugUtilsLabel(const vk::CommandBuffer& commandBuffer) const = 0;
+        virtual void insertDebugUtilsLabel(
+            const vk::CommandBuffer& commandBuffer, const char* labelName, std::array<float, 4> = {}) const
             = 0;
 
-        virtual void setObjectName(const vk::Device& device, const vk::DebugUtilsObjectNameInfoEXT& nameInfo) = 0;
+        virtual void setObjectName(const vk::Device& device, const vk::DebugUtilsObjectNameInfoEXT& nameInfo) const = 0;
 
         virtual void submitDebugMessage(
             vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::DebugUtilsMessageTypeFlagsEXT flags,
-            const vk::DebugUtilsMessengerCallbackDataEXT& callbackData)
+            const vk::DebugUtilsMessengerCallbackDataEXT& callbackData) const
             = 0;
 
         template<typename T>
-        void setCppObjectName(const vk::Device& device, const T& object, const std::string& name)
+        void setCppObjectName(const vk::Device& device, const T& object, const std::string& name) const
         {
             vk::DebugUtilsObjectNameInfoEXT objNameInfo(
                 T::objectType, reinterpret_cast<uint64_t>(static_cast<typename T::NativeType>(object)), name.c_str());
@@ -40,21 +42,21 @@ namespace OpenRCT2::Ui::Vulkan
     class DummyDebug : public IVulkanDebug
     {
     public:
-        void beginDebugUtilsLabel(vk::Queue& queue, const char* labelName, std::array<float, 4> = {}) override {};
-        void endDebugUtilsLabel(vk::Queue& queue) override {};
-        void insertDebugUtilsLabel(vk::Queue& queue, const char* labelName, std::array<float, 4> = {}) override {};
+        void beginDebugUtilsLabel(const vk::Queue& queue, const char* labelName, std::array<float, 4> = {}) const override {};
+        void endDebugUtilsLabel(const vk::Queue& queue) const override {};
+        void insertDebugUtilsLabel(const vk::Queue& queue, const char* labelName, std::array<float, 4> = {}) const override {};
 
-        void beginDebugUtilsLabel(vk::CommandBuffer& commandBuffer, const char* labelName, std::array<float, 4> = {}) override {
-        };
-        void endDebugUtilsLabel(vk::CommandBuffer& commandBuffer) override {};
+        void beginDebugUtilsLabel(
+            const vk::CommandBuffer& commandBuffer, const char* labelName, std::array<float, 4> = {}) const override {};
+        void endDebugUtilsLabel(const vk::CommandBuffer& commandBuffer) const override {};
         void insertDebugUtilsLabel(
-            vk::CommandBuffer& commandBuffer, const char* labelName, std::array<float, 4> = {}) override {};
+            const vk::CommandBuffer& commandBuffer, const char* labelName, std::array<float, 4> = {}) const override {};
 
-        void setObjectName(const vk::Device& device, const vk::DebugUtilsObjectNameInfoEXT& nameInfo) override {};
+        void setObjectName(const vk::Device& device, const vk::DebugUtilsObjectNameInfoEXT& nameInfo) const override {};
 
         void submitDebugMessage(
             vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::DebugUtilsMessageTypeFlagsEXT flags,
-            const vk::DebugUtilsMessengerCallbackDataEXT& callbackData) override {};
+            const vk::DebugUtilsMessengerCallbackDataEXT& callbackData) const override {};
     };
 
     class VulkanDebug : public IVulkanDebug
@@ -76,21 +78,22 @@ namespace OpenRCT2::Ui::Vulkan
         {
         }
 
-        void beginDebugUtilsLabel(vk::Queue& queue, const char* labelName, std::array<float, 4> colour = {}) override;
-        void endDebugUtilsLabel(vk::Queue& queue) override;
-        void insertDebugUtilsLabel(vk::Queue& queue, const char* labelName, std::array<float, 4> colour = {}) override;
+        void beginDebugUtilsLabel(
+            const vk::Queue& queue, const char* labelName, std::array<float, 4> colour = {}) const override;
+        void endDebugUtilsLabel(const vk::Queue& queue) const override;
+        void insertDebugUtilsLabel(const vk::Queue& queue, const char* labelName, std::array<float, 4> colour = {}) const override;
 
         void beginDebugUtilsLabel(
-            vk::CommandBuffer& commandBuffer, const char* labelName, std::array<float, 4> colour = {}) override;
-        void endDebugUtilsLabel(vk::CommandBuffer& commandBuffer) override;
-        void insertDebugUtilsLabel(
-            vk::CommandBuffer& commandBuffer, const char* labelName, std::array<float, 4> colour = {}) override;
+            const vk::CommandBuffer& commandBuffer, const char* labelName, std::array<float, 4> colour = {}) const override;
+        void endDebugUtilsLabel(const vk::CommandBuffer& commandBuffer) const override;
+        void insertDebugUtilsLabel(const vk::CommandBuffer& commandBuffer, const char* labelName, std::array<float, 4> colour = {})
+            const override;
 
-        void setObjectName(const vk::Device& device, const vk::DebugUtilsObjectNameInfoEXT& nameInfo) override;
+        void setObjectName(const vk::Device& device, const vk::DebugUtilsObjectNameInfoEXT& nameInfo) const override;
 
         void submitDebugMessage(
             vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::DebugUtilsMessageTypeFlagsEXT flags,
-            const vk::DebugUtilsMessengerCallbackDataEXT& callbackData) override;
+            const vk::DebugUtilsMessengerCallbackDataEXT& callbackData) const override;
 
         static VKAPI_ATTR vk::Bool32 VKAPI_CALL VulkanDebugCallback(
             vk::DebugUtilsMessageSeverityFlagBitsEXT severity, vk::DebugUtilsMessageTypeFlagsEXT messageType,
