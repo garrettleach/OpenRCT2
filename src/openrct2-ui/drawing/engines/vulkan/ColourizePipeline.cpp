@@ -42,11 +42,12 @@ namespace
 } // namespace
 
 OpenRCT2::Ui::Vulkan::ColourizePipeline::ColourizePipeline(
-    VulkanDrawingEngine& engine, SpriteManager& spriteManager, const vk::Device& device, size_t framesInFlight,
-    VulkanMemoryAllocator& vma, const std::vector<vk::ImageView>& paletteInputViews,
+    VulkanDrawingEngine& engine, SpriteManager& spriteManager, const IVulkanDebug& debug, const vk::Device& device,
+    size_t framesInFlight, VulkanMemoryAllocator& vma, const std::vector<vk::ImageView>& paletteInputViews,
     const std::vector<vk::ImageView>& depthInputViews)
     : _engine(engine)
     , _spriteManager(spriteManager)
+    , _debug(debug)
     , _device(device)
     , _framesInFlight(framesInFlight)
     , _vma(vma)
@@ -546,18 +547,32 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::QueueFilterRect(
 void OpenRCT2::Ui::Vulkan::ColourizePipeline::QueueBlendedSprite(
     uint32_t index, glm::ivec4 bounds, glm::ivec4 clip, ImageId imageId)
 {
-    FilterPaletteID palette = static_cast<FilterPaletteID>(imageId.GetRemap());
-    int32_t paletteY = PaletteToY(palette);
-    if (palette == FilterPaletteID::paletteWater)
-    {
-        paletteY -= 1;
-    }
-
     auto textureIndex = _spriteManager.QueueUpload(ImageId(imageId.GetIndex()), SpritePool::ColourizePipeline);
 
     if (textureIndex != TextureIndex::InvalidIndex)
     {
-        _inProgressCommands.emplace_back(
-            bounds, clip, (uint32_t)ColourizeCommandFlags::ActionBlendSprite, (uint32_t)palette, index, textureIndex);
+        FilterPaletteID palette = static_cast<FilterPaletteID>(imageId.GetRemap());
+        int32_t paletteY = PaletteToY(palette);
+        if (imageId.IsBlended())
+        {
+            if (palette == FilterPaletteID::paletteWater)
+            {
+                _inProgressCommands.emplace_back(
+                    bounds, clip, (uint32_t)ColourizeCommandFlags::ActionBlendSpriteWithExisting, (uint32_t)(paletteY), index,
+                    textureIndex);
+            }
+            else
+            {
+                _inProgressCommands.emplace_back(
+                    bounds, clip, (uint32_t)ColourizeCommandFlags::ActionBlendSpriteWithPalette, (uint32_t)paletteY, index,
+                    textureIndex);
+            }
+        }
+        else
+        {
+            _inProgressCommands.emplace_back(
+                bounds, clip, (uint32_t)ColourizeCommandFlags::ActionBlendSpriteWithPalette, (uint32_t)paletteY, index,
+                textureIndex);
+        }
     }
 }

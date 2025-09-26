@@ -11,12 +11,13 @@ namespace OpenRCT2::Ui::Vulkan
 {
     class ColourizePipeline
     {
-        const static uint32_t FlagActionMask = 0x1;
+        const static uint32_t FlagActionMask = 0x3;
 
         enum ColourizeCommandFlags
         {
             ActionFilterRect = 0 & FlagActionMask,
-            ActionBlendSprite = 1 & FlagActionMask,
+            ActionBlendSpriteWithPalette = 1 & FlagActionMask,
+            ActionBlendSpriteWithExisting = 2 & FlagActionMask,
         };
 
         struct ColourizeCommand
@@ -31,6 +32,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         VulkanDrawingEngine& _engine;
         SpriteManager& _spriteManager;
+        const IVulkanDebug& _debug;
         const vk::Device& _device;
         size_t _framesInFlight;
         VulkanMemoryAllocator& _vma;
@@ -70,8 +72,8 @@ namespace OpenRCT2::Ui::Vulkan
 
     public:
         ColourizePipeline(
-            VulkanDrawingEngine& engine, SpriteManager& spriteManager, const vk::Device& device, size_t framesInFlight,
-            VulkanMemoryAllocator& vma, const std::vector<vk::ImageView>& paletteInputViews,
+            VulkanDrawingEngine& engine, SpriteManager& spriteManager, const IVulkanDebug& debug, const vk::Device& device,
+            size_t framesInFlight, VulkanMemoryAllocator& vma, const std::vector<vk::ImageView>& paletteInputViews,
             const std::vector<vk::ImageView>& depthInputViews);
         ~ColourizePipeline();
 

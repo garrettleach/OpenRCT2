@@ -23,16 +23,21 @@ layout(push_constant) uniform pushConstants
     uint rectCount;
 } push;
 
-const uint FLAGS_ACTION_MASK = 0x1;
+const uint FLAGS_ACTION_MASK = 0x3;
 
 const uint FLAGS_ACTION_FILTERRECT = 0x0;
-const uint FLAGS_ACTION_BLEND = 0x1;
+const uint FLAGS_ACTION_BLEND_WITH_PALETTE = 0x1;
+const uint FLAGS_ACTION_BLEND_WITH_EXISTING = 0x2;
 
 struct ColourizeCommand
 {
     ivec4 bounds;
     ivec4 clip;
 	uint flags;
+	// filterId:
+	//   in FLAGS_ACTION_FILTERRECT: filter palette id
+	//   in FLAGS_ACTION_BLEND_WITH_PALETTE: value to blend previous colour with
+	//   in FLAGS_ACTION_BLEND_WITH_EXISTING: offset to use when determining filter to use
     uint filterId; //filter number to use for filterPalette and dstColor in blend
     uint depth;
 	uint textureIndex;
@@ -59,9 +64,13 @@ void main() {
                 coords.x > commands[i].bounds.x &&
                 coords.y > commands[i].bounds.y &&
                 coords.x < commands[i].bounds.z &&
-                coords.y < commands[i].bounds.w)
+                coords.y < commands[i].bounds.w &&
+				coords.x > commands[i].clip.x &&
+                coords.y > commands[i].clip.y &&
+                coords.x < commands[i].clip.z &&
+                coords.y < commands[i].clip.w )
             {
-				if((commands[i].flags & FLAGS_ACTION_MASK) == FLAGS_ACTION_FILTERRECT)
+				if((commands[i].flags & FLAGS_ACTION_MASK) == FLAGS_ACTION_FILTERRECT) // GENERALLY GUI
 				{
 					//vec4 clipRect = commands[i].clip * push.scaleFactor;
 					ivec2 uv = ivec2(colour, commands[i].filterId);
@@ -71,9 +80,39 @@ void main() {
 						colour = thisColour;
 					}
 				}
+				else if((commands[i].flags & FLAGS_ACTION_MASK) == FLAGS_ACTION_BLEND_WITH_EXISTING) // EXAMPLE: WATER
+				{
+					ivec2 uvTexture = ivec2(coords.x - commands[i].bounds.x, coords.y - commands[i].bounds.y);
+                    uint colourInSprite = texelFetch(usampler2D(textures[commands[i].textureIndex], singleSampler), uvTexture, 0).x;
+					
+					if(colourInSprite != 0)
+					{
+						ivec2 uvColourToFilter = ivec2(colour, colourInSprite+commands[i].filterId-1);
+						
+						uint possibleWater = texelFetch(usampler2D(filterPalette, singleSampler), uvColourToFilter, 0).x;
+					
+						if(possibleWater != 0)
+						{
+							colour = possibleWater;
+						}
+					}
+				}
 				else
 				{
-					// temporarily empty
+					// FLAGS_ACTION_BLEND_WITH_PALETTE EXAMPLE: GLASS (texture is used only as a mask)
+				
+					ivec2 uvMaskTexture = ivec2(coords.x - commands[i].bounds.x, coords.y - commands[i].bounds.y);
+                    uint maskValue = texelFetch(usampler2D(textures[commands[i].textureIndex], singleSampler), uvMaskTexture, 0).x;
+				
+					if(maskValue != 0)
+					{
+						ivec2 uvBlend = ivec2(colour, commands[i].filterId);
+						uint thisColour = texelFetch(usampler2D(blendPalette, singleSampler), uvBlend, 0).x;
+						if(thisColour != 0)
+						{
+							colour = thisColour;
+						}
+					}
 				}
             }
         }

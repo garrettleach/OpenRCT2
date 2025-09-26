@@ -508,6 +508,11 @@ namespace OpenRCT2::Ui::Vulkan
             paletteCount = 1;
             FilterPaletteID palette = static_cast<FilterPaletteID>(imageId.GetRemap());
             palettes[0] = PaletteToY(palette);
+            if (palette == FilterPaletteID::paletteWater)
+            {
+                _engine.GetColourizePipeline().QueueBlendedSprite(QueuePlaceholder(), bounds, clip, imageId);
+                return;
+            }
         }
         else if (imageId.IsBlended())
         {

@@ -519,7 +519,7 @@ namespace OpenRCT2::Ui::Vulkan
         }
 
         _colourizePipeline = std::make_unique<ColourizePipeline>(
-            *this, *_spriteManager, *_device, _framesInFlight, *_vmaAllocator, paletteImageViews, depthImageViews);
+            *this, *_spriteManager, *_debug, *_device, _framesInFlight, *_vmaAllocator, paletteImageViews, depthImageViews);
     }
 
     void VulkanDrawingEngine::CreateCommandPool()

@@ -419,11 +419,9 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::GetSpritePipelineDescriptors(std::vect
 void OpenRCT2::Ui::Vulkan::SpriteManager::GetColourizePipelineDescriptors(std::vector<vk::DescriptorImageInfo>& descriptors)
 {
     descriptors.clear();
+    std::swap(_currentFrameColourizeDescriptors, descriptors);
 
-    for (auto& uploadedSprite : _colourizeUploadedSprites)
-    {
-        descriptors.emplace_back(vk::Sampler{}, uploadedSprite.second.imageView, vk::ImageLayout::eShaderReadOnlyOptimal);
-    }
+    _currentFrameColourizeDescriptorMap.clear();
 }
 
 void OpenRCT2::Ui::Vulkan::SpriteManager::CreateEmptyImageWithView(
