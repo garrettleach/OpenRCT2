@@ -66,7 +66,7 @@ namespace OpenRCT2::Ui::Vulkan
         vk::UniqueHandle<vk::DebugUtilsMessengerEXT, vk::detail::DispatchLoaderDynamic> _debugMessanger;
 
     public:
-        VulkanDebug(vk::Instance& instance);
+        VulkanDebug(vk::Instance instance);
 
         VulkanDebug(const VulkanDebug&) = delete;
         VulkanDebug(VulkanDebug&&) = delete;

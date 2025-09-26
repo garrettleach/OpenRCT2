@@ -45,7 +45,6 @@ namespace OpenRCT2::Ui::Vulkan
         vk::detail::DispatchLoaderDynamic _vulkanDynamicDispatch;
         std::unique_ptr<VulkanInstance> _instance;
         std::unique_ptr<IVulkanDebug> _debug;
-        vk::UniqueSurfaceKHR _surface;
         vk::PhysicalDevice _physicalDevice;
         detail::QueueIndicies _queueIndicies{};
         vk::PhysicalDeviceMemoryProperties _physicalDeviceMemoryProps{};
@@ -133,7 +132,6 @@ namespace OpenRCT2::Ui::Vulkan
 
     private:
         void CreateInstance();
-        void CreateSurface();
         void PickPhysicalDevice();
         void CreateLogicalDevice();
         void CreateAllocator();

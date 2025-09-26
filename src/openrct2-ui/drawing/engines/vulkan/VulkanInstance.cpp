@@ -291,6 +291,15 @@ namespace OpenRCT2::Ui::Vulkan
         }
 
         _instance = vk::createInstanceUnique(createInfo.get());
+
+        VkSurfaceKHR surfaceTemp{};
+        if (!SDL_Vulkan_CreateSurface(window, *_instance, &surfaceTemp))
+        {
+            throw runtime_error("Failed to create SDL Vulkan surface");
+        }
+
+        _surface = std::move(vk::UniqueSurfaceKHR(
+            surfaceTemp, vk::detail::ObjectDestroy(*_instance, nullptr, VULKAN_HPP_DEFAULT_DISPATCHER)));
     }
 
     std::vector<const char*> VulkanInstance::GetDeviceLayers()

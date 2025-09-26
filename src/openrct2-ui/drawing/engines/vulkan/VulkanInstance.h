@@ -7,6 +7,7 @@ namespace OpenRCT2::Ui::Vulkan
     class VulkanInstance
     {
         vk::UniqueInstance _instance;
+        vk::UniqueSurfaceKHR _surface;
 
         bool _enabledValidationLayer = false;
         bool _monitorLayerEnabled = false;
@@ -15,7 +16,6 @@ namespace OpenRCT2::Ui::Vulkan
 
     public:
         VulkanInstance(SDL_Window* window, uint32_t authoredVulkanApiVersion);
-        ~VulkanInstance() = default;
 
         VulkanInstance(const VulkanInstance& instance) = delete;
         VulkanInstance& operator=(const VulkanInstance& instance) = delete;
@@ -28,19 +28,19 @@ namespace OpenRCT2::Ui::Vulkan
             return _instance.get();
         }
 
-        vk::Instance& operator*()
-        {
-            return _instance.get();
-        }
-
         const vk::Instance* operator->() const
         {
             return &*_instance;
         }
 
-        vk::Instance* operator->()
+        const vk::Instance GetInstance()
         {
-            return &*_instance;
+            return *_instance;
+        }
+
+        const vk::SurfaceKHR GetSurface()
+        {
+            return *_surface;
         }
 
         bool MonitorLayerEnabled() const

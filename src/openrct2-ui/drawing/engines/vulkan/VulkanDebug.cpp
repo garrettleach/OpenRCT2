@@ -24,7 +24,7 @@ namespace OpenRCT2::Ui::Vulkan
             | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
     } // namespace
 
-    VulkanDebug::VulkanDebug(vk::Instance& instance)
+    VulkanDebug::VulkanDebug(vk::Instance instance)
         : _instance(instance)
         , _vulkanDynamicDispatch(vk::detail::DispatchLoaderDynamic(_instance, vkGetInstanceProcAddr))
     {

@@ -102,18 +102,6 @@ namespace OpenRCT2::Ui::Vulkan
         }
     }
 
-    void VulkanDrawingEngine::CreateSurface()
-    {
-        VkSurfaceKHR surfaceTemp{};
-        if (!SDL_Vulkan_CreateSurface(_window, **_instance, &surfaceTemp))
-        {
-            throw runtime_error("Failed to create SDL Vulkan surface");
-        }
-
-        _surface = vk::UniqueSurfaceKHR(
-            surfaceTemp, vk::detail::ObjectDestroy(**_instance, nullptr, VULKAN_HPP_DEFAULT_DISPATCHER));
-    }
-
     void VulkanDrawingEngine::PickPhysicalDevice()
     {
         vk::PhysicalDevice chosenDevice = nullptr;
@@ -134,7 +122,7 @@ namespace OpenRCT2::Ui::Vulkan
                 }
 
                 if (!presentationQueueIndex.has_value()
-                    && physicalDevice.getSurfaceSupportKHR(static_cast<uint32_t>(i), *_surface))
+                    && physicalDevice.getSurfaceSupportKHR(static_cast<uint32_t>(i), _instance->GetSurface()))
                 {
                     presentationQueueIndex = i;
                 }
@@ -165,11 +153,11 @@ namespace OpenRCT2::Ui::Vulkan
                 continue;
             }
 
-            if (physicalDevice.getSurfaceFormatsKHR(*_surface).size() == 0)
+            if (physicalDevice.getSurfaceFormatsKHR(_instance->GetSurface()).size() == 0)
             {
                 continue;
             }
-            if (physicalDevice.getSurfacePresentModesKHR(*_surface).size() == 0)
+            if (physicalDevice.getSurfacePresentModesKHR(_instance->GetSurface()).size() == 0)
             {
                 continue;
             }
@@ -277,7 +265,7 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::ChooseSwapchainImageFormat()
     {
-        auto availableFormats = _physicalDevice.getSurfaceFormatsKHR(*_surface);
+        auto availableFormats = _physicalDevice.getSurfaceFormatsKHR(_instance->GetSurface());
 
         auto findFormat = std::find_if(
             availableFormats.begin(), availableFormats.end(), [](vk::SurfaceFormatKHR& surfaceFormat) {
@@ -315,7 +303,7 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::ChoosePresentMode()
     {
-        auto availablePresentModes = _physicalDevice.getSurfacePresentModesKHR(*_surface);
+        auto availablePresentModes = _physicalDevice.getSurfacePresentModesKHR(_instance->GetSurface());
 
         if (std::find(availablePresentModes.begin(), availablePresentModes.end(), vk::PresentModeKHR::eMailbox)
             != availablePresentModes.end())
@@ -350,8 +338,8 @@ namespace OpenRCT2::Ui::Vulkan
         }
 
         vk::SwapchainCreateInfoKHR createInfo(
-            vk::SwapchainCreateFlagsKHR(), *_surface, _swapchainImageCount, _surfaceFormat.format, _surfaceFormat.colorSpace,
-            _swapchainExtent, 1,
+            vk::SwapchainCreateFlagsKHR(), _instance->GetSurface(), _swapchainImageCount, _surfaceFormat.format,
+            _surfaceFormat.colorSpace, _swapchainExtent, 1,
             vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferDst,
             sharingMode, swapQueueFamilyIndices, _surfaceCapabilities.currentTransform, vk::CompositeAlphaFlagBitsKHR::eOpaque,
             _presentationMode, true, {});
@@ -662,12 +650,11 @@ namespace OpenRCT2::Ui::Vulkan
         SDL_Vulkan_LoadLibrary(nullptr);
 
         CreateInstance();
-        CreateSurface();
         PickPhysicalDevice();
         CreateLogicalDevice();
         CreateAllocator();
         CreateQueues();
-        _surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(*_surface);
+        _surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(_instance->GetSurface());
         ChooseSwapchainImageFormat();
         ChooseSwapchainExtent();
         ChoosePresentMode();
@@ -715,7 +702,7 @@ namespace OpenRCT2::Ui::Vulkan
         {
             _framebufferResized = false;
 
-            _surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(*_surface);
+            _surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(_instance->GetSurface());
             ChooseSwapchainImageFormat();
             ChooseSwapchainExtent();
 
@@ -893,7 +880,7 @@ namespace OpenRCT2::Ui::Vulkan
         {
             _framebufferResized = false;
 
-            _surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(*_surface);
+            _surfaceCapabilities = _physicalDevice.getSurfaceCapabilitiesKHR(_instance->GetSurface());
             ChooseSwapchainImageFormat();
             ChooseSwapchainExtent();
 
