@@ -769,7 +769,9 @@ namespace OpenRCT2::Ui::Vulkan
                                                                    {},
                                                                    VULKAN_HPP_NAMESPACE::ImageLayout::eUndefined,
                                                                    vk::AttachmentLoadOp::eClear,
-                                                                   vk::AttachmentStoreOp::eDontCare },
+                                                                   vk::AttachmentStoreOp::eDontCare,
+                                                                   vk::ClearColorValue(
+                                                                       std::array<uint32_t, 4>{ 10, 0, 0, 0 }) },
                                                                  { *_intermediateColourImageViews[_currentFrame],
                                                                    vk::ImageLayout::eColorAttachmentOptimal,
                                                                    vk::ResolveModeFlagBits::eNone,
