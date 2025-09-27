@@ -72,6 +72,7 @@
     <ClInclude Include="drawing\engines\vulkan\SpriteManager.h" />
     <ClInclude Include="drawing\engines\vulkan\SwapchainSync.h" />
     <ClInclude Include="drawing\engines\vulkan\VulkanDebug.h" />
+    <ClInclude Include="drawing\engines\vulkan\VulkanDebugSettings.h" />
     <ClInclude Include="drawing\engines\vulkan\VulkanDrawingContext.h" />
     <ClInclude Include="drawing\engines\vulkan\VulkanDrawingEngine.h" />
     <ClInclude Include="drawing\engines\vulkan\VulkanInstance.h" />
@@ -152,6 +153,7 @@
     <ClCompile Include="drawing\engines\vulkan\SwapchainSync.cpp" />
     <ClCompile Include="drawing\engines\vulkan\vma.cpp" />
     <ClCompile Include="drawing\engines\vulkan\VulkanDebug.cpp" />
+    <ClCompile Include="drawing\engines\vulkan\VulkanDebugSettings.cpp" />
     <ClCompile Include="drawing\engines\vulkan\VulkanDrawingContext.cpp" />
     <ClCompile Include="drawing\engines\vulkan\VulkanDrawingEngine.cpp" />
     <ClCompile Include="drawing\engines\vulkan\VulkanInstance.cpp" />

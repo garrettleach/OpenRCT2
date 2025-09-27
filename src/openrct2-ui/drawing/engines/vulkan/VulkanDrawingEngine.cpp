@@ -7,6 +7,7 @@
     #include "LinePipeline.h"
     #include "MemoryType.h"
     #include "SpirV.h"
+    #include "VulkanDebugSettings.h"
     #include "VulkanDrawingContext.h"
     #include "VulkanUtils.h"
 
@@ -217,11 +218,11 @@ namespace OpenRCT2::Ui::Vulkan
             queueCreateInfos.emplace_back(vk::DeviceQueueCreateFlags(), _queueIndicies.presentation, priorities);
         }
 
-        vector<const char*> layers = _instance->GetDeviceLayers();
+        auto layers = DebugSettings::GetDeviceValidationLayers();
 
         auto requiredExtensions = kRequiredExtensions;
 
-        auto requestedDeviceExtensions = _instance->GetDeviceExtensions();
+        auto requestedDeviceExtensions = DebugSettings::GetDeviceDebugExtensions();
 
         requiredExtensions.insert(requiredExtensions.end(), requestedDeviceExtensions.begin(), requestedDeviceExtensions.end());
 
@@ -245,8 +246,8 @@ namespace OpenRCT2::Ui::Vulkan
         deviceCreateInfo.get<vk::PhysicalDeviceVulkan12Features>().runtimeDescriptorArray = true;
         deviceCreateInfo.get<vk::PhysicalDeviceVulkan12Features>().uniformBufferStandardLayout = true;
 
-        _instance->FilterPhysicalDeviceFeatures(deviceCreateInfo.get<vk::PhysicalDeviceFeatures2>().features);
-        _instance->FilterPhysicalDeviceRobustness2FeaturesEXT(deviceCreateInfo.get<vk::PhysicalDeviceRobustness2FeaturesEXT>());
+        DebugSettings::FilterPhysicalDeviceFeatures(deviceCreateInfo.get<vk::PhysicalDeviceFeatures2>().features);
+        DebugSettings::FilterPhysicalDeviceRobustness2FeaturesEXT(deviceCreateInfo.get<vk::PhysicalDeviceRobustness2FeaturesEXT>());
 
         _device = _physicalDevice.createDeviceUnique(deviceCreateInfo.get());
     }

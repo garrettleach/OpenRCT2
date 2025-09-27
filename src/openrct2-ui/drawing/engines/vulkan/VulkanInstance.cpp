@@ -1,6 +1,7 @@
 #include "VulkanInstance.h"
 
 #include "VulkanDebug.h"
+#include "VulkanDebugSettings.h"
 
 #include <SDL2/SDL_vulkan.h>
 #include <set>
@@ -16,93 +17,11 @@ using namespace std;
 
 namespace
 {
-    constexpr bool whenDebugBuild =
-#ifndef _NDEBUG
-        true
-#else
-        false
-#endif
-        ;
-
     // Application decription
     const char* applicationName = "OpenRCT2";
     const uint32_t applicationVersion = 1;
     const char* engineName = "No Engine";
     const uint32_t engineVersion = 0;
-
-    // some miscelaneous debug-ish settings
-    constexpr bool robustAccess = whenDebugBuild;
-
-    // debug settings
-    const vk::Bool32 enableDebugUtils = whenDebugBuild;
-    constexpr vk::Bool32 enableValidationLayer = whenDebugBuild;
-    const vk::Bool32 tryEnableMonitorLayer = whenDebugBuild;
-
-    // debug utils configuration
-    const vk::DebugUtilsMessageSeverityFlagsEXT instanceCreateDebugUtilsMsgSeverityFlags
-        = vk::DebugUtilsMessageSeverityFlagBitsEXT::eError | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning
-        | vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose | vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo;
-    const vk::DebugUtilsMessageTypeFlagsEXT instanceCreateDebugUtilsMsgTypeFlags = vk::DebugUtilsMessageTypeFlagBitsEXT::
-                                                                                       eGeneral
-        | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
-
-    // when vk::LayerSettingEXT is present and validation layer is enabled we can set the validation settings
-    constexpr bool setValidationLayerSettings = whenDebugBuild;
-
-    // Validation layer (Core)
-    const VkBool32 validate_core_value = true;
-    const VkBool32 validate_core_imagelayout_value = true;          // requires validate_core_value
-    const VkBool32 validate_core_commandbuffer_value = true;        // requires validate_core_value
-    const VkBool32 validate_core_objectinuse_value = true;          // requires validate_core_value
-    const VkBool32 validate_core_query_value = true;                // requires validate_core_value
-    const VkBool32 validate_core_shaders_value = true;              // requires validate_core_value
-    const VkBool32 validate_core_shaders_checkcaching_value = true; // requires validate_core_value and
-
-    // Validation layer (Validate handles)
-    const VkBool32 validate_handles_value = true;
-
-    // Validation layer (Object lifetimes)
-    const VkBool32 validate_objlifetime_value = true;
-
-    // Validation layer (Stateless param)
-    const VkBool32 validate_statelessparam_value = true;
-
-    // Validation layer (Threadsafety)
-    const VkBool32 validate_threadsafety_value = true;
-
-    // Validation layer (Synchronization)
-    const VkBool32 validate_sync_value = true;
-    const VkBool32 validate_sync_submittime_value = true;                // requires validate_sync_value
-    const VkBool32 validate_sync_shaderaccess_value = true;              // requires validate_sync_value
-    const VkBool32 validate_sync_reporting_extraproperties_value = true; // requires validate_sync_value
-
-    // Validation layer (Printf)
-    const VkBool32 prinft_value = false;
-    const VkBool32 prinft_stdout_value = true;     // requires printf_value
-    const VkBool32 printf_verbose_value = true;    // requires printf_value
-    const uint32_t printf_buffersize_value = 1024; // requires printf_value
-
-    // Validation layer (GPU assisted validation)
-    const VkBool32 gpuvalidation_value = false;
-    const VkBool32 gpuvalidation_safemode_value = false;              // requires gpuvalidation_value
-    const VkBool32 gpuvalidation_forcerobustness_value = false;       // requires gpuvalidation_value
-    const VkBool32 gpuvalidation_shaderinstrumentation_value = false; // requires gpuvalidation_value
-
-    // Validation layer (limit dumplicates)
-    const VkBool32 limitduplicates_value = true;
-    const int32_t limitduplicates_limit_value = 10; // requires limitduplicates_value
-
-    // we could add message_id_filter to remove some messages we don't care about
-
-    // Validation layer (misc. message format settings)
-    const VkBool32 messageformat_json_value = false;
-    const VkBool32 messageformat_displayappname_value = false;
-
-    // Note: Validation Features is now deprecated (vk::ValidationFeaturesEXT) in favor of layer settings
-
-    // Validation layer names
-    constexpr const char* khronosValidationLayerName = "VK_LAYER_KHRONOS_validation";
-    constexpr const char* lunargMonitorLayerName = "VK_LAYER_LUNARG_monitor"; // FPS display on available platforms
 
     std::vector<const char*> GetRequiredSdlInstanceExtensions(SDL_Window* window)
     {
@@ -126,116 +45,6 @@ namespace
 
 namespace OpenRCT2::Ui::Vulkan
 {
-    std::vector<vk::LayerSettingEXT> VulkanInstance::GetValidationLayerSettings()
-    {
-        std::vector<vk::LayerSettingEXT> settings;
-
-        if constexpr (enableValidationLayer && setValidationLayerSettings)
-        {
-            settings.emplace_back(
-                khronosValidationLayerName, "validate_core", vk::LayerSettingTypeEXT::eBool32, 1, &validate_core_value);
-            if (validate_core_value)
-            {
-                settings.emplace_back(
-                    khronosValidationLayerName, "check_image_layout", vk::LayerSettingTypeEXT::eBool32, 1,
-                    &validate_core_imagelayout_value);
-                settings.emplace_back(
-                    khronosValidationLayerName, "check_command_buffer", vk::LayerSettingTypeEXT::eBool32, 1,
-                    &validate_core_commandbuffer_value);
-                settings.emplace_back(
-                    khronosValidationLayerName, "check_object_in_use", vk::LayerSettingTypeEXT::eBool32, 1,
-                    &validate_core_objectinuse_value);
-                settings.emplace_back(
-                    khronosValidationLayerName, "check_query", vk::LayerSettingTypeEXT::eBool32, 1, &validate_core_query_value);
-                settings.emplace_back(
-                    khronosValidationLayerName, "check_shaders", vk::LayerSettingTypeEXT::eBool32, 1,
-                    &validate_core_shaders_value);
-                if (validate_core_shaders_value)
-                {
-                    settings.emplace_back(
-                        khronosValidationLayerName, "check_shaders_caching", vk::LayerSettingTypeEXT::eBool32, 1,
-                        &validate_core_shaders_checkcaching_value);
-                }
-            }
-
-            settings.emplace_back(
-                khronosValidationLayerName, "unique_handles", vk::LayerSettingTypeEXT::eBool32, 1, &validate_handles_value);
-
-            settings.emplace_back(
-                khronosValidationLayerName, "object_lifetime", vk::LayerSettingTypeEXT::eBool32, 1,
-                &validate_objlifetime_value);
-
-            settings.emplace_back(
-                khronosValidationLayerName, "stateless_param", vk::LayerSettingTypeEXT::eBool32, 1,
-                &validate_statelessparam_value);
-
-            settings.emplace_back(
-                khronosValidationLayerName, "thread_safety", vk::LayerSettingTypeEXT::eBool32, 1, &validate_threadsafety_value);
-
-            settings.emplace_back(
-                khronosValidationLayerName, "validate_sync", vk::LayerSettingTypeEXT::eBool32, 1, &validate_sync_value);
-            if (validate_sync_value)
-            {
-                settings.emplace_back(
-                    khronosValidationLayerName, "syncval_submit_time_validation", vk::LayerSettingTypeEXT::eBool32, 1,
-                    &validate_sync_submittime_value);
-                settings.emplace_back(
-                    khronosValidationLayerName, "syncval_shader_accesses_heuristic", vk::LayerSettingTypeEXT::eBool32, 1,
-                    &validate_sync_shaderaccess_value);
-                settings.emplace_back(
-                    khronosValidationLayerName, "syncval_reporting", vk::LayerSettingTypeEXT::eBool32, 1,
-                    &validate_sync_reporting_extraproperties_value);
-            }
-
-            settings.emplace_back(
-                khronosValidationLayerName, "printf_enable", vk::LayerSettingTypeEXT::eBool32, 1, &prinft_value);
-            if (prinft_value)
-            {
-                _enabledGpuDebugPrintf = true;
-                settings.emplace_back(
-                    khronosValidationLayerName, "printf_to_stdout", vk::LayerSettingTypeEXT::eBool32, 1, &prinft_stdout_value);
-                settings.emplace_back(
-                    khronosValidationLayerName, "printf_verbose", vk::LayerSettingTypeEXT::eBool32, 1, &printf_verbose_value);
-                settings.emplace_back(
-                    khronosValidationLayerName, "printf_buffer_size", vk::LayerSettingTypeEXT::eInt32, 1,
-                    &printf_buffersize_value);
-            }
-
-            settings.emplace_back(
-                khronosValidationLayerName, "gpuav_enable", vk::LayerSettingTypeEXT::eBool32, 1, &gpuvalidation_value);
-            if (gpuvalidation_value)
-            {
-                settings.emplace_back(
-                    khronosValidationLayerName, "gpuav_safe_mode", vk::LayerSettingTypeEXT::eBool32, 1,
-                    &gpuvalidation_safemode_value);
-                settings.emplace_back(
-                    khronosValidationLayerName, "gpuav_force_on_robustness", vk::LayerSettingTypeEXT::eBool32, 1,
-                    &gpuvalidation_forcerobustness_value);
-                settings.emplace_back(
-                    khronosValidationLayerName, "gpuav_shader_instrumentation", vk::LayerSettingTypeEXT::eBool32, 1,
-                    &gpuvalidation_shaderinstrumentation_value);
-            }
-
-            settings.emplace_back(
-                khronosValidationLayerName, "enable_message_limit", vk::LayerSettingTypeEXT::eBool32, 1,
-                &limitduplicates_value);
-            if (limitduplicates_value)
-            {
-                settings.emplace_back(
-                    khronosValidationLayerName, "duplicate_message_limit", vk::LayerSettingTypeEXT::eInt32, 1,
-                    &limitduplicates_limit_value);
-            }
-
-            settings.emplace_back(
-                khronosValidationLayerName, "message_format_json", vk::LayerSettingTypeEXT::eBool32, 1,
-                &messageformat_json_value);
-            settings.emplace_back(
-                khronosValidationLayerName, "message_format_display_application_name", vk::LayerSettingTypeEXT::eBool32, 1,
-                &messageformat_displayappname_value);
-        }
-
-        return settings;
-    }
 
     VulkanInstance::VulkanInstance(SDL_Window* window, uint32_t authoredVulkanApiVersion)
     {
@@ -243,41 +52,20 @@ namespace OpenRCT2::Ui::Vulkan
                                              authoredVulkanApiVersion };
 
         vector<const char*> enabledExtensions = GetRequiredSdlInstanceExtensions(window);
-        if (enableDebugUtils)
+
+        for (auto extension : DebugSettings::GetInstanceDebugExtensions())
         {
-            _enabledDebugUtils = true;
-            enabledExtensions.push_back(vk::EXTDebugUtilsExtensionName);
+            enabledExtensions.push_back(extension);
         }
 
-        vector<const char*> enabledLayers;
-        if (enableValidationLayer)
-        {
-            _enabledValidationLayer = true;
-            enabledLayers.push_back(khronosValidationLayerName);
-        }
-        if (tryEnableMonitorLayer)
-        {
-            auto instanceLayerProps = vk::enumerateInstanceLayerProperties();
+        vector<const char*> enabledLayers = DebugSettings::GetInstanceValidationLayers();
 
-            // Add the FPS display *if* it is available
-            for (auto& layer : instanceLayerProps)
-            {
-                if (strcmp(lunargMonitorLayerName, layer.layerName) == 0)
-                {
-                    enabledLayers.push_back(lunargMonitorLayerName);
-                    _monitorLayerEnabled = true;
-                }
-            }
-        }
-
-        auto validationLayerSettings = enableValidationLayer ? GetValidationLayerSettings()
-                                                             : std::vector<vk::LayerSettingEXT>{};
+        auto validationLayerSettings = DebugSettings::GetValidationLayerSettings();
+        auto debugSettings = DebugSettings::GetDebugMessangerSettings();
 
         vk::StructureChain<vk::InstanceCreateInfo, vk::DebugUtilsMessengerCreateInfoEXT, vk::LayerSettingsCreateInfoEXT>
             createInfo{ vk::InstanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo, enabledLayers, enabledExtensions },
-                        vk::DebugUtilsMessengerCreateInfoEXT{
-                            vk::DebugUtilsMessengerCreateFlagsEXT{}, instanceCreateDebugUtilsMsgSeverityFlags,
-                            instanceCreateDebugUtilsMsgTypeFlags, &VulkanDebug::VulkanDebugCallback, nullptr },
+                        debugSettings.value_or({}),
                         vk::LayerSettingsCreateInfoEXT{ validationLayerSettings } };
 
         if (validationLayerSettings.size() == 0)
@@ -285,7 +73,7 @@ namespace OpenRCT2::Ui::Vulkan
             createInfo.unlink<vk::LayerSettingsCreateInfoEXT>();
         }
 
-        if (!_enabledDebugUtils)
+        if (!debugSettings.has_value())
         {
             createInfo.unlink<vk::DebugUtilsMessengerCreateInfoEXT>();
         }
@@ -299,52 +87,187 @@ namespace OpenRCT2::Ui::Vulkan
         }
 
         _surface = std::move(vk::UniqueSurfaceKHR(
-            surfaceTemp, vk::detail::ObjectDestroy(*_instance, nullptr, VULKAN_HPP_DEFAULT_DISPATCHER)));
+            vk::SurfaceKHR(surfaceTemp), vk::detail::ObjectDestroy(*_instance, nullptr, VULKAN_HPP_DEFAULT_DISPATCHER)));
     }
 
-    std::vector<const char*> VulkanInstance::GetDeviceLayers()
+    static bool MissingGraphicsQueue(vk::PhysicalDevice physicalDevice)
     {
-        std::vector<const char*> layers;
+        auto queueFamilyProps = physicalDevice.getQueueFamilyProperties();
 
-        if (_enabledValidationLayer)
-        {
-            layers.push_back(khronosValidationLayerName);
-        }
-
-        if (_monitorLayerEnabled)
-        {
-            layers.push_back(lunargMonitorLayerName);
-        }
-
-        return layers;
+        return !std::any_of(queueFamilyProps.begin(), queueFamilyProps.end(), [](auto familyProp) {
+            return familyProp.queueFlags & vk::QueueFlagBits::eGraphics;
+        });
     }
-    std::vector<const char*> VulkanInstance::GetDeviceExtensions()
+
+    static bool MissingCompatiblePresentationQueue(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface)
     {
-        if (_enabledGpuDebugPrintf)
+        auto queueFamilyProps = physicalDevice.getQueueFamilyProperties();
+
+        for (size_t i = 0; i < queueFamilyProps.size(); i++)
         {
-            return { vk::KHRShaderNonSemanticInfoExtensionName };
+            if (physicalDevice.getSurfaceSupportKHR(static_cast<uint32_t>(i), surface))
+            {
+                return false;
+            }
         }
 
-        return {};
+        return true;
     }
-    void VulkanInstance::FilterPhysicalDeviceFeatures(vk::PhysicalDeviceFeatures& features)
+
+    static bool MissingExtensions(vk::PhysicalDevice physicalDevice, std::vector<std::string> extensionNames)
     {
-        if (robustAccess)
+        for (const auto& extensionProps : physicalDevice.enumerateDeviceExtensionProperties())
         {
-            features.robustBufferAccess = true;
+            std::string extension = extensionProps.extensionName;
+
+            auto findResult = std::find(extensionNames.begin(), extensionNames.end(), extension);
+
+            if (findResult != extensionNames.end())
+            {
+                extensionNames.erase(findResult, extensionNames.end());
+            }
         }
 
-        if (_enabledGpuDebugPrintf)
+        return extensionNames.size() > 0;
+    }
+
+    static bool NoCompatibleSurfaceFormat(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, std::vector<vk::SurfaceFormatKHR> compatibleSurfaceFormats)
+    {
+        auto availableFormats = physicalDevice.getSurfaceFormatsKHR(surface);
+
+        std::sort(compatibleSurfaceFormats.begin(),compatibleSurfaceFormats.end());
+        std::sort(availableFormats.begin(), availableFormats.end());
+
+        auto it = std::find_first_of(
+            availableFormats.begin(), availableFormats.end(), compatibleSurfaceFormats.begin(), compatibleSurfaceFormats.end());
+
+        return it == availableFormats.end();
+    }
+
+    static bool NoCompatiblePresentationMode(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, std::vector < vk::PresentModeKHR> compatiblePresentationModes)
+    {
+        auto availablePresentaitonModes = physicalDevice.getSurfacePresentModesKHR(surface);
+
+        std::sort(compatiblePresentationModes.begin(), compatiblePresentationModes.end());
+        std::sort(availablePresentaitonModes.begin(), availablePresentaitonModes.end());
+
+        auto it = std::find_first_of(
+            availablePresentaitonModes.begin(), availablePresentaitonModes.end(), compatiblePresentationModes.begin(),
+            compatiblePresentationModes.end());
+
+        return it == availablePresentaitonModes.end();
+    }
+
+    static int scoreDeviceType(vk::PhysicalDevice physicalDevice)
+    {
+        switch (physicalDevice.getProperties().deviceType)
         {
-            features.sampleRateShading = true;
+            case vk::PhysicalDeviceType::eDiscreteGpu:
+                return 5;
+            case vk::PhysicalDeviceType::eIntegratedGpu:
+                return 2;
+            case vk::PhysicalDeviceType::eCpu:
+            case vk::PhysicalDeviceType::eVirtualGpu:
+                return 1;
+            case vk::PhysicalDeviceType::eOther:
+            default:
+                return 0;
         }
     }
-    void VulkanInstance::FilterPhysicalDeviceRobustness2FeaturesEXT(vk::PhysicalDeviceRobustness2FeaturesEXT& features)
+
+    static int scoreQueues(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface)
     {
-        if (robustAccess)
+        // is there a queue that does both graphics and presentation?
+
+        auto queueFamilyProps = physicalDevice.getQueueFamilyProperties();
+
+        for (size_t i = 0; i < queueFamilyProps.size(); i++)
         {
-            features.robustBufferAccess2 = true;
-            features.robustImageAccess2 = true;
+            if (physicalDevice.getSurfaceSupportKHR(static_cast<uint32_t>(i), surface)
+                && (queueFamilyProps[i].queueFlags & vk::QueueFlagBits::eGraphics))
+            {
+                return 1;
+            }
         }
+
+        return 0;
+    }
+
+    static int scoreOptionalExtensions(vk::PhysicalDevice physicalDevice)
+    {
+        // TODO
+        return 0;
+    }
+
+    std::vector<vk::PhysicalDevice> VulkanInstance::GetCapablePhysicalDevices()
+    {
+        auto physicalDevices = _instance->enumeratePhysicalDevices();
+
+        physicalDevices.erase(
+            std::remove_if(physicalDevices.begin(), physicalDevices.end(), MissingGraphicsQueue), physicalDevices.end());
+
+        physicalDevices.erase(
+            std::remove_if(
+                physicalDevices.begin(), physicalDevices.end(),
+                [surface = *_surface](vk::PhysicalDevice pd) { return MissingCompatiblePresentationQueue(pd, surface); }),
+            physicalDevices.end());
+
+        const vector<std::string> kRequiredExtensions{ vk::KHRSwapchainExtensionName, vk::KHRDynamicRenderingLocalReadExtensionName,
+                                                 vk::KHRRelaxedBlockLayoutExtensionName };
+
+        physicalDevices.erase(
+            std::remove_if(
+                physicalDevices.begin(), physicalDevices.end(),
+                [&kRequiredExtensions](vk::PhysicalDevice pd) { return MissingExtensions(pd, kRequiredExtensions); }),
+            physicalDevices.end());
+
+        std::vector<vk::SurfaceFormatKHR> kCompatibleSurfaceFormats{ vk::SurfaceFormatKHR{
+            vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear } };
+
+        physicalDevices.erase(
+            std::remove_if(
+                physicalDevices.begin(), physicalDevices.end(),
+                [surface = *_surface, kCompatibleSurfaceFormats](vk::PhysicalDevice pd) {
+                    return NoCompatibleSurfaceFormat(pd, surface, kCompatibleSurfaceFormats);
+                }),
+            physicalDevices.end());
+
+        // mailbox is vsync=on, the others are vsync=off
+        std::vector<vk::PresentModeKHR> kPresentFormats{ vk::PresentModeKHR::eMailbox, vk::PresentModeKHR::eImmediate,
+                                                         vk::PresentModeKHR::eFifo };
+
+        physicalDevices.erase(
+            std::remove_if(
+                physicalDevices.begin(), physicalDevices.end(),
+                [surface = *_surface, kPresentFormats](vk::PhysicalDevice pd) { return NoCompatiblePresentationMode(pd, surface, kPresentFormats);
+                }),
+            physicalDevices.end());
+
+        std::sort(
+            physicalDevices.begin(), physicalDevices.end(),
+            [surface = *_surface](const vk::PhysicalDevice& left, const vk::PhysicalDevice& right) {
+                auto leftDeviceTypeScore = scoreDeviceType(left);
+                auto rightDeviceTypeScore = scoreDeviceType(right);
+                if (leftDeviceTypeScore > rightDeviceTypeScore)
+                    return true;
+                if (leftDeviceTypeScore < rightDeviceTypeScore)
+                    return false;
+
+                auto leftQueueScore = scoreQueues(left, surface);
+                auto rightQueueScore = scoreQueues(right, surface);
+                if (leftQueueScore > rightQueueScore)
+                    return true;
+                if (leftQueueScore < rightQueueScore)
+                    return false;
+
+                auto leftOptionalExtensionsScore = scoreOptionalExtensions(left);
+                auto rightOptionalExtensionsScore = scoreOptionalExtensions(right);
+                if (leftOptionalExtensionsScore > rightOptionalExtensionsScore)
+                    return true;
+
+                return false;
+            });
+
+        return physicalDevices;
     }
 } // namespace OpenRCT2::Ui::Vulkan

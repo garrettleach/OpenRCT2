@@ -52,13 +52,7 @@ namespace OpenRCT2::Ui::Vulkan
         {
             return _enabledDebugUtils;
         }
-        std::vector<const char*> GetDeviceLayers();
-        std::vector<const char*> GetDeviceExtensions();
 
-        void FilterPhysicalDeviceFeatures(vk::PhysicalDeviceFeatures& features);
-        void FilterPhysicalDeviceRobustness2FeaturesEXT(vk::PhysicalDeviceRobustness2FeaturesEXT& features);
-
-    private:
-        std::vector<vk::LayerSettingEXT> GetValidationLayerSettings();
+        std::vector<vk::PhysicalDevice> GetCapablePhysicalDevices();
     };
 } // namespace OpenRCT2::Ui::Vulkan
