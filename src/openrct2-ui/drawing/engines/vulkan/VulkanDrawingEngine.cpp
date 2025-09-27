@@ -105,104 +105,47 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::PickPhysicalDevice()
     {
-        vk::PhysicalDevice chosenDevice = nullptr;
-        int chosenRating = 0;
-        QueueIndicies chosenIndicies{};
+        auto capablePhysicalDevices = _instance->GetCapablePhysicalDevices();
 
-        for (auto& physicalDevice : (*_instance)->enumeratePhysicalDevices())
+        if (capablePhysicalDevices.size() == 0)
         {
-            auto queueFamilyProps = physicalDevice.getQueueFamilyProperties();
-            optional<size_t> graphicsQueueIndex;
-            optional<size_t> presentationQueueIndex;
+            throw std::runtime_error("No capable physical devices for vulkan");
+        }
 
-            for (size_t i = 0; i < queueFamilyProps.size(); i++)
+        _physicalDevice = capablePhysicalDevices[0];
+
+        auto queueFamilyProps = _physicalDevice.getQueueFamilyProperties();
+        vector<size_t> graphicsQueueIndicies;
+        vector<size_t> presentationQueueIndicies;
+
+        for (size_t i = 0; i < queueFamilyProps.size(); i++)
+        {
+            if (queueFamilyProps[i].queueFlags & vk::QueueFlagBits::eGraphics)
             {
-                if (!graphicsQueueIndex.has_value() && (queueFamilyProps[i].queueFlags & vk::QueueFlagBits::eGraphics))
-                {
-                    graphicsQueueIndex = i;
-                }
-
-                if (!presentationQueueIndex.has_value()
-                    && physicalDevice.getSurfaceSupportKHR(static_cast<uint32_t>(i), _instance->GetSurface()))
-                {
-                    presentationQueueIndex = i;
-                }
+                graphicsQueueIndicies.push_back(i);
             }
 
-            if (!graphicsQueueIndex.has_value() && !presentationQueueIndex.has_value())
+            if (_physicalDevice.getSurfaceSupportKHR(static_cast<uint32_t>(i), _instance->GetSurface()))
             {
-                continue;
-            }
-
-            auto extensionProperties = physicalDevice.enumerateDeviceExtensionProperties();
-
-            auto missingExtensions = kRequiredExtensions;
-
-            for (auto& extensionProps : extensionProperties)
-            {
-                missingExtensions.erase(
-                    remove_if(
-                        missingExtensions.begin(), missingExtensions.end(),
-                        [&extensionProps](const char* extension) {
-                            return strcmp(extensionProps.extensionName, extension) == 0;
-                        }),
-                    missingExtensions.end());
-            }
-
-            if (!missingExtensions.empty())
-            {
-                continue;
-            }
-
-            if (physicalDevice.getSurfaceFormatsKHR(_instance->GetSurface()).size() == 0)
-            {
-                continue;
-            }
-            if (physicalDevice.getSurfacePresentModesKHR(_instance->GetSurface()).size() == 0)
-            {
-                continue;
-            }
-
-            int rating = 1;
-
-            switch (physicalDevice.getProperties().deviceType)
-            {
-                case vk::PhysicalDeviceType::eOther:
-                    rating += 0;
-                    break;
-                case vk::PhysicalDeviceType::eIntegratedGpu:
-                    rating += 2;
-                    break;
-                case vk::PhysicalDeviceType::eDiscreteGpu:
-                    rating += 5;
-                    break;
-                case vk::PhysicalDeviceType::eVirtualGpu:
-                    rating += 1;
-                    break;
-                case vk::PhysicalDeviceType::eCpu:
-                    rating += 1;
-                    break;
-                default:
-                    rating += 0;
-                    break;
-            }
-
-            if (rating > chosenRating)
-            {
-                chosenDevice = physicalDevice;
-                chosenRating = rating;
-                chosenIndicies.graphics = static_cast<uint32_t>(graphicsQueueIndex.value());
-                chosenIndicies.presentation = static_cast<uint32_t>(presentationQueueIndex.value());
+                presentationQueueIndicies.push_back(i);
             }
         }
 
-        if (chosenRating == 0)
+        auto singleQueue = std::find_first_of(
+            graphicsQueueIndicies.begin(), graphicsQueueIndicies.end(), presentationQueueIndicies.begin(),
+            presentationQueueIndicies.end());
+
+        if (singleQueue != graphicsQueueIndicies.end())
         {
-            throw runtime_error("No suitable physical device");
+            _queueIndicies.graphics = *singleQueue;
+            _queueIndicies.presentation = *singleQueue;
+        }
+        else
+        {
+            _queueIndicies.graphics = graphicsQueueIndicies[0];
+            _queueIndicies.presentation = presentationQueueIndicies[0];
         }
 
-        _physicalDevice = chosenDevice;
-        _queueIndicies = chosenIndicies;
         _physicalDeviceMemoryProps = _physicalDevice.getMemoryProperties();
     }
 
