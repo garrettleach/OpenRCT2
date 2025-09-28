@@ -1,6 +1,7 @@
 #pragma once
 
 #include "SwapchainSync.h"
+#include "VulkanAttachments.h"
 #include "VulkanDebug.h"
 #include "VulkanInstance.h"
 #include "VulkanMemoryAllocator.h"
@@ -62,17 +63,7 @@ namespace OpenRCT2::Ui::Vulkan
         std::vector<vk::Image> _swapchainImages{};               // [0,_swapchainImageCount)
         std::vector<vk::UniqueImageView> _swapchainImageViews{}; // [0,_swapchainImageCount)
 
-        std::vector<vk::Image> _intermediatePaletteImages{};               // [0,_framesInFlight)
-        std::vector<VmaAllocation> _intermediatePaletteImageAllocations{}; // [0,_framesInFlight)
-        std::vector<vk::UniqueImageView> _intermediatePaletteImageViews{}; // [0,_framesInFlight)
-
-        std::vector<vk::Image> _intermediateDepthImages{};               // [0,_framesInFlight)
-        std::vector<VmaAllocation> _intermediateDepthImageAllocations{}; // [0,_framesInFlight)
-        std::vector<vk::UniqueImageView> _intermediateDepthImageViews{}; // [0,_framesInFlight)
-
-        std::vector<vk::Image> _intermediateColourImages{};               // [0,_framesInFlight)
-        std::vector<VmaAllocation> _intermediateColourImageAllocations{}; // [0,_framesInFlight)
-        std::vector<vk::UniqueImageView> _intermediateColourImageViews{}; // [0,_framesInFlight)
+        std::unique_ptr<VulkanAttachments> _attachments;
 
         std::unique_ptr<SpriteManager> _spriteManager;
         std::unique_ptr<DrawSpritePipeline> _drawSpritePipeline;
@@ -143,11 +134,10 @@ namespace OpenRCT2::Ui::Vulkan
         void CreateSwapchainImages();
         void CreateSwapchainImageViews();
         void CreateIntermediateImages();
-        void CreateIntermediateImageViews();
         void CreateGraphicsPipelines();
-        void CreateCommandPool();
         void CreateCommandBuffers();
         void CreateSyncObjects();
+        void PrepIntermediateImages(const vk::CommandBuffer& commandBuffer);
         void PrepIntermediateImages();
 
         void RecreateSwapChain();
