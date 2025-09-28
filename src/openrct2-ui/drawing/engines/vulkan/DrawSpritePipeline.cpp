@@ -399,7 +399,7 @@ namespace OpenRCT2::Ui::Vulkan
     {
         _spriteManager.GetSpritePipelineDescriptors(_tmpDescriptors[currentFrame]);
 
-        if (_tmpDescriptors.size() != 0)
+        if (_tmpDescriptors[currentFrame].size() != 0)
         {
             vk::WriteDescriptorSet writeAllImageDesc(
                 _descriptorIndexSets[currentFrame], 0, 0, vk::DescriptorType::eSampledImage, _tmpDescriptors[currentFrame], {},
