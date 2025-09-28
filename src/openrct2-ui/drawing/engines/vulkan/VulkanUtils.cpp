@@ -1,7 +1,7 @@
 #include "VulkanUtils.h"
 
-vk::Result OpenRCT2::Ui::Vulkan::CreateStagingBuffer(
-    VmaAllocator allocator, const void* data, vk::DeviceSize size, vk::Buffer& buffer, VmaAllocation& vmaAllocation)
+OpenRCT2::Ui::Vulkan::UniqueVmaBuffer OpenRCT2::Ui::Vulkan::CreateStagingBuffer(
+    VmaAllocator allocator, const void* data, vk::DeviceSize size)
 {
     vk::BufferCreateInfo bufferInfo(
         vk::BufferCreateFlags{}, size, vk::BufferUsageFlagBits::eTransferSrc, vk::SharingMode::eExclusive, {});
@@ -10,23 +10,14 @@ vk::Result OpenRCT2::Ui::Vulkan::CreateStagingBuffer(
     allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
     allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
-    VkBuffer bufferTemp;
-    VmaAllocationInfo allocationInfo;
+    UniqueVmaBuffer tempBuffer(allocator, bufferInfo, allocInfo);
 
-    auto result = vk::Result(vmaCreateBuffer(allocator, bufferInfo, &allocInfo, &bufferTemp, &vmaAllocation, &allocationInfo));
+    std::memcpy(tempBuffer.GetMappedPointer(), data, size);
 
-    if (result == vk::Result::eSuccess)
-    {
-        buffer = vk::Buffer(bufferTemp);
-
-        std::memcpy(allocationInfo.pMappedData, data, size);
-    }
-
-    return vk::Result(result);
+    return tempBuffer;
 }
 
-vk::Result OpenRCT2::Ui::Vulkan::CreateImage(
-    VmaAllocator allocator, vk::Extent2D extent, vk::Image& image, VmaAllocation& vmaAllocation)
+OpenRCT2::Ui::Vulkan::UniqueVmaImage OpenRCT2::Ui::Vulkan::CreateImage(VmaAllocator allocator, vk::Extent2D extent)
 {
     vk::ImageCreateInfo imageCreateInfo(
         vk::ImageCreateFlags{}, vk::ImageType::e2D, vk::Format::eR8Uint, vk::Extent3D{ extent, 1 }, 1u, 1u,
@@ -37,20 +28,10 @@ vk::Result OpenRCT2::Ui::Vulkan::CreateImage(
     VmaAllocationCreateInfo allocCreateInfo{};
     allocCreateInfo.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO;
 
-    VkImage tempImage;
-
-    auto result = vk::Result(
-        vmaCreateImage(allocator, &*imageCreateInfo, &allocCreateInfo, &tempImage, &vmaAllocation, nullptr));
-
-    if (result == vk::Result::eSuccess)
-    {
-        image = vk::Image(tempImage);
-    }
-
-    return result;
+    return UniqueVmaImage(allocator, imageCreateInfo, allocCreateInfo);
 }
 
-void OpenRCT2::Ui::Vulkan::TransitionImageToTransferDst(vk::CommandBuffer& commandBuffer, vk::Image& image)
+void OpenRCT2::Ui::Vulkan::TransitionImageToTransferDst(vk::CommandBuffer& commandBuffer, const vk::Image& image)
 {
     vk::ImageMemoryBarrier preCopyBarrier(
         {}, vk::AccessFlagBits::eTransferWrite, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal,
@@ -61,14 +42,14 @@ void OpenRCT2::Ui::Vulkan::TransitionImageToTransferDst(vk::CommandBuffer& comma
 }
 
 void OpenRCT2::Ui::Vulkan::CopyBufferToImage(
-    vk::CommandBuffer& commandBuffer, vk::Buffer& buffer, vk::Image& image, vk::Extent2D extent)
+    vk::CommandBuffer& commandBuffer, const vk::Buffer& buffer, const vk::Image& image, vk::Extent2D extent)
 {
     vk::BufferImageCopy region(0, 0, 0, { vk::ImageAspectFlagBits::eColor, 0, 0, 1 }, { 0, 0, 0 }, vk::Extent3D{ extent, 1 });
 
     commandBuffer.copyBufferToImage(buffer, image, vk::ImageLayout::eTransferDstOptimal, { region });
 }
 
-void OpenRCT2::Ui::Vulkan::TransitionImageToFragmentReadOpt(vk::CommandBuffer& commandBuffer, vk::Image& image)
+void OpenRCT2::Ui::Vulkan::TransitionImageToFragmentReadOpt(vk::CommandBuffer& commandBuffer, const vk::Image& image)
 {
     vk::ImageMemoryBarrier postCopyBarrier(
         vk::AccessFlagBits::eTransferWrite, vk::AccessFlagBits::eShaderRead, vk::ImageLayout::eTransferDstOptimal,
@@ -79,19 +60,11 @@ void OpenRCT2::Ui::Vulkan::TransitionImageToFragmentReadOpt(vk::CommandBuffer& c
         vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, nullptr, postCopyBarrier);
 }
 
-std::tuple<vk::Buffer, VmaAllocation> OpenRCT2::Ui::Vulkan::UploadToEmptyImage(
+OpenRCT2::Ui::Vulkan::UniqueVmaBuffer OpenRCT2::Ui::Vulkan::UploadToEmptyImage(
     VmaAllocator allocator, const vk::Device& device, vk::CommandBuffer& commandBuffer, uint8_t* data, vk::Extent2D extent,
     vk::Image image)
 {
-    vk::Buffer stagingBuffer;
-    VmaAllocation stagingAllocation;
-
-    auto stagingResult = OpenRCT2::Ui::Vulkan::CreateStagingBuffer(
-        allocator, data, vk::DeviceSize(extent.width * extent.height), stagingBuffer, stagingAllocation);
-    if (stagingResult != vk::Result::eSuccess)
-    {
-        throw std::runtime_error("Could not create staging buffer for image");
-    }
+    auto stagingBuffer = OpenRCT2::Ui::Vulkan::CreateStagingBuffer(allocator, data, vk::DeviceSize(extent.width * extent.height));
 
     OpenRCT2::Ui::Vulkan::TransitionImageToTransferDst(commandBuffer, image);
 
@@ -99,25 +72,17 @@ std::tuple<vk::Buffer, VmaAllocation> OpenRCT2::Ui::Vulkan::UploadToEmptyImage(
 
     OpenRCT2::Ui::Vulkan::TransitionImageToFragmentReadOpt(commandBuffer, image);
 
-    return std::make_tuple(stagingBuffer, stagingAllocation);
+    return stagingBuffer;
 }
 
 vk::ImageView OpenRCT2::Ui::Vulkan::AddUpload(
     VmaAllocator allocator, const vk::Device& device, vk::CommandBuffer& commandBuffer, uint8_t* data, vk::Extent2D extent,
-    vk::Image& image, VmaAllocation& imageAllocation, vk::Buffer& stagingBuffer, VmaAllocation& stagingAllocation)
+    UniqueVmaImage& image, UniqueVmaBuffer& stagingBuffer)
 {
-    auto imageResult = OpenRCT2::Ui::Vulkan::CreateImage(allocator, extent, image, imageAllocation);
-    if (imageResult != vk::Result::eSuccess)
-    {
-        throw std::runtime_error("Could not create image");
-    }
+    image = OpenRCT2::Ui::Vulkan::CreateImage(allocator, extent);
 
-    auto stagingResult = OpenRCT2::Ui::Vulkan::CreateStagingBuffer(
-        allocator, data, vk::DeviceSize(extent.width * extent.height), stagingBuffer, stagingAllocation);
-    if (stagingResult != vk::Result::eSuccess)
-    {
-        throw std::runtime_error("Could not create staging buffer for image");
-    }
+    stagingBuffer = OpenRCT2::Ui::Vulkan::CreateStagingBuffer(
+        allocator, data, vk::DeviceSize(extent.width * extent.height));
 
     OpenRCT2::Ui::Vulkan::TransitionImageToTransferDst(commandBuffer, image);
 

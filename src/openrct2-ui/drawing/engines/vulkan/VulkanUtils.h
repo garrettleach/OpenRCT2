@@ -1,4 +1,6 @@
 #pragma once
+#include "UniqueVmaBuffer.h"
+#include "UniqueVmaImage.h"
 #include "VulkanMemoryAllocator.h"
 #include "vulkan/vulkan.hpp"
 
@@ -7,24 +9,23 @@
 
 namespace OpenRCT2::Ui::Vulkan
 {
-    vk::Result CreateStagingBuffer(
-        VmaAllocator allocator, const void* data, vk::DeviceSize size, vk::Buffer& buffer, VmaAllocation& vmaAllocation);
+    UniqueVmaBuffer CreateStagingBuffer(VmaAllocator allocator, const void* data, vk::DeviceSize size);
 
-    vk::Result CreateImage(VmaAllocator allocator, vk::Extent2D extent, vk::Image& image, VmaAllocation& vmaAllocation);
+    UniqueVmaImage CreateImage(VmaAllocator allocator, vk::Extent2D extent);
 
-    void TransitionImageToTransferDst(vk::CommandBuffer& commandBuffer, vk::Image& image);
+    void TransitionImageToTransferDst(vk::CommandBuffer& commandBuffer, const vk::Image& image);
 
-    void CopyBufferToImage(vk::CommandBuffer& commandBuffer, vk::Buffer& buffer, vk::Image& image, vk::Extent2D extent);
+    void CopyBufferToImage(vk::CommandBuffer& commandBuffer, const vk::Buffer& buffer, const vk::Image& image, vk::Extent2D extent);
 
-    void TransitionImageToFragmentReadOpt(vk::CommandBuffer& commandBuffer, vk::Image& image);
+    void TransitionImageToFragmentReadOpt(vk::CommandBuffer& commandBuffer, const vk::Image& image);
 
-    std::tuple<vk::Buffer, VmaAllocation> UploadToEmptyImage(
+    UniqueVmaBuffer UploadToEmptyImage(
         VmaAllocator allocator, const vk::Device& device, vk::CommandBuffer& commandBuffer, uint8_t* data, vk::Extent2D extent,
         vk::Image image);
 
     vk::ImageView AddUpload(
         VmaAllocator allocator, const vk::Device& device, vk::CommandBuffer& commandBuffer, uint8_t* data, vk::Extent2D extent,
-        vk::Image& image, VmaAllocation& imageAllocation, vk::Buffer& stagingBuffer, VmaAllocation& stagingAllocation);
+        UniqueVmaImage& image, UniqueVmaBuffer& stagingBuffer);
 
     glm::ivec4 CalcClip(const RenderTarget& rt, const RenderTarget& mainRT);
 

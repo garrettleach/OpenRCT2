@@ -123,79 +123,14 @@ OpenRCT2::Ui::Vulkan::SpriteManager::SpriteManager(
     , _device(device)
     , _framesInFlight(framesInFlight)
     , _allocator(vma)
-    , _queuedImageInvalidation(framesInFlight, std::vector<UploadedSpriteInfo>())
 {
-    CreateEmptyImageWithView(filterImageExtent, _filterPaletteImage, _filterPaletteImageAllocation, _filterPaletteImageView);
-    CreateEmptyImageWithView(
-        vk::Extent2D(kPaletteCount, kPaletteCount), _blendPaletteImage, _blendPaletteImageAllocation, _blendPaletteImageView);
-}
-
-OpenRCT2::Ui::Vulkan::SpriteManager::~SpriteManager()
-{
-    _blendPaletteImageView.reset();
-    _filterPaletteImageView.reset();
-
-    if (_blendPaletteImage)
+    for (size_t i = 0; i < framesInFlight; i++)
     {
-        vmaDestroyImage(_allocator, _blendPaletteImage, _blendPaletteImageAllocation);
+        _queuedImageInvalidation.emplace_back();
     }
 
-    if (_filterPaletteImage)
-    {
-        vmaDestroyImage(_allocator, _filterPaletteImage, _filterPaletteImageAllocation);
-    }
-
-    if (_filterPaletteStagingBuffer)
-    {
-        vmaDestroyBuffer(_allocator, _filterPaletteStagingBuffer, _filterPaletteStagingBufferAllocation);
-    }
-
-    if (_blendPaletteStagingBuffer)
-    {
-        vmaDestroyBuffer(_allocator, _blendPaletteStagingBuffer, _blendPaletteStagingBufferAllocation);
-    }
-
-    for (auto& currentSprite : _currentFrameQueuedImageInvalidation)
-    {
-        _device.destroyImageView(currentSprite.imageView);
-        vmaDestroyImage(_allocator, currentSprite.image, currentSprite.imageAllocation);
-        vmaDestroyBuffer(_allocator, currentSprite.buffer, currentSprite.bufferAllocation);
-    }
-
-    for (auto& queuedInvalidations : _queuedImageInvalidation)
-    {
-        for (auto& invalidation : queuedInvalidations)
-        {
-            _device.destroyImageView(invalidation.imageView);
-            vmaDestroyImage(_allocator, invalidation.image, invalidation.imageAllocation);
-            vmaDestroyBuffer(_allocator, invalidation.buffer, invalidation.bufferAllocation);
-        }
-    }
-
-    for (auto& uploadedSprite : _colourizeUploadedSprites)
-    {
-        _device.destroyImageView(uploadedSprite.second.imageView);
-        vmaDestroyImage(_allocator, uploadedSprite.second.image, uploadedSprite.second.imageAllocation);
-        vmaDestroyBuffer(_allocator, uploadedSprite.second.buffer, uploadedSprite.second.bufferAllocation);
-    }
-
-    for (auto& uploadedSprite : _drawSpriteUploadedSprites)
-    {
-        _device.destroyImageView(uploadedSprite.second.imageView);
-        vmaDestroyImage(_allocator, uploadedSprite.second.image, uploadedSprite.second.imageAllocation);
-        vmaDestroyBuffer(_allocator, uploadedSprite.second.buffer, uploadedSprite.second.bufferAllocation);
-    }
-
-    for (auto& uploadedGlyph : _uploadedGlyphs)
-    {
-        _device.destroyImageView(uploadedGlyph.second.imageView);
-        vmaDestroyImage(_allocator, uploadedGlyph.second.image, uploadedGlyph.second.imageAllocation);
-        vmaDestroyBuffer(_allocator, uploadedGlyph.second.buffer, uploadedGlyph.second.bufferAllocation);
-    }
-
-    _colourizeSpritesToUpload.clear();
-    _drawSpriteSpritesToUpload.clear();
-    _glyphsToUpload.clear();
+    CreateEmptyImageWithView(filterImageExtent, _filterPaletteImage, _filterPaletteImageView);
+    CreateEmptyImageWithView(vk::Extent2D(kPaletteCount, kPaletteCount), _blendPaletteImage, _blendPaletteImageView);
 }
 
 OpenRCT2::Ui::Vulkan::TextureIndex OpenRCT2::Ui::Vulkan::SpriteManager::QueueUpload(ImageId imageId, SpritePool spritepool)
@@ -229,11 +164,11 @@ OpenRCT2::Ui::Vulkan::TextureIndex OpenRCT2::Ui::Vulkan::SpriteManager::QueueUpl
 
     if (uploadedQueue.contains(baseImage))
     {
-        imageView = uploadedQueue[baseImage].imageView;
+        imageView = *uploadedQueue[baseImage].imageView;
     }
     else if (toUploadQueue.contains(baseImage))
     {
-        imageView = toUploadQueue[baseImage].imageView;
+        imageView = *toUploadQueue[baseImage].imageView;
     }
     else
     {
@@ -245,17 +180,16 @@ OpenRCT2::Ui::Vulkan::TextureIndex OpenRCT2::Ui::Vulkan::SpriteManager::QueueUpl
             return TextureIndex::InvalidIndex;
         }
 
-        vk::Image tempImage;
-        VmaAllocation tempImageAllocation;
+        UniqueVmaImage tempImage;
         vk::UniqueImageView tempImageView;
-        CreateEmptyImageWithView(extent, tempImage, tempImageAllocation, tempImageView);
+        CreateEmptyImageWithView(extent, tempImage, tempImageView);
 
         imageView = tempImageView.get();
 
         toUploadQueue.insert(
             std::make_pair(
                 baseImage,
-                SpriteUpload(std::move(imgData), extent, spritepool, tempImage, tempImageAllocation, tempImageView.release())));
+                SpriteUpload(std::move(imgData), extent, spritepool, std::move(tempImage), std::move(tempImageView))));
     }
 
     currentFrameDescriptorList.emplace_back(vk::Sampler{}, imageView, vk::ImageLayout::eShaderReadOnlyOptimal);
@@ -278,21 +212,20 @@ OpenRCT2::Ui::Vulkan::TextureIndex OpenRCT2::Ui::Vulkan::SpriteManager::QueueUpl
 
     if (_uploadedGlyphs.contains(glyphId))
     {
-        imageView = _uploadedGlyphs[glyphId].imageView;
+        imageView = *_uploadedGlyphs[glyphId].imageView;
     }
     else if (_glyphsToUpload.contains(glyphId))
     {
-        imageView = _glyphsToUpload[glyphId].imageView;
+        imageView = *_glyphsToUpload[glyphId].imageView;
     }
     else
     {
         vk::Extent2D extent;
         auto imgData = GlyphImageIdToData(image, extent, palette);
 
-        vk::Image tempImage;
-        VmaAllocation tempImageAllocation;
+        UniqueVmaImage tempImage;
         vk::UniqueImageView tempImageView;
-        CreateEmptyImageWithView(extent, tempImage, tempImageAllocation, tempImageView);
+        CreateEmptyImageWithView(extent, tempImage, tempImageView);
 
         imageView = tempImageView.get();
 
@@ -300,8 +233,8 @@ OpenRCT2::Ui::Vulkan::TextureIndex OpenRCT2::Ui::Vulkan::SpriteManager::QueueUpl
             std::make_pair(
                 glyphId,
                 SpriteUpload(
-                    std::move(imgData), extent, SpritePool::ColourizePipeline, tempImage, tempImageAllocation,
-                    tempImageView.release())));
+                    std::move(imgData), extent, SpritePool::ColourizePipeline, std::move(tempImage),
+                    std::move(tempImageView))));
     }
 
     _currentFrameDrawSpriteDescriptors.emplace_back(vk::Sampler{}, imageView, vk::ImageLayout::eShaderReadOnlyOptimal);
@@ -327,7 +260,7 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::ExecuteUpload(vk::CommandBuffer comman
 
         if (!_drawSpriteUploadedSprites.contains(spriteToUpload.first))
         {
-            auto [stagingBuffer, stagingBufferAllocation] = UploadToEmptyImage(
+            auto stagingBuffer = UploadToEmptyImage(
                 _allocator, _device, commandBuffer, spriteToUpload.second.data.get(), spriteToUpload.second.size,
                 spriteToUpload.second.image);
 
@@ -335,8 +268,8 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::ExecuteUpload(vk::CommandBuffer comman
                 std::make_pair(
                     spriteToUpload.first,
                     UploadedSpriteInfo(
-                        stagingBuffer, stagingBufferAllocation, spriteToUpload.second.image,
-                        spriteToUpload.second.imageAllocation, spriteToUpload.second.imageView)));
+                        std::move(stagingBuffer), std::move(spriteToUpload.second.image),
+                        std::move(spriteToUpload.second.imageView))));
         }
     }
     _drawSpriteSpritesToUpload.clear();
@@ -350,7 +283,7 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::ExecuteUpload(vk::CommandBuffer comman
 
         if (!_colourizeUploadedSprites.contains(spriteToUpload.first))
         {
-            auto [stagingBuffer, stagingBufferAllocation] = UploadToEmptyImage(
+            auto stagingBuffer = UploadToEmptyImage(
                 _allocator, _device, commandBuffer, spriteToUpload.second.data.get(), spriteToUpload.second.size,
                 spriteToUpload.second.image);
 
@@ -358,8 +291,8 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::ExecuteUpload(vk::CommandBuffer comman
                 std::make_pair(
                     spriteToUpload.first,
                     UploadedSpriteInfo(
-                        stagingBuffer, stagingBufferAllocation, spriteToUpload.second.image,
-                        spriteToUpload.second.imageAllocation, spriteToUpload.second.imageView)));
+                        std::move(stagingBuffer), std::move(spriteToUpload.second.image),
+                        std::move(spriteToUpload.second.imageView))));
         }
     }
     _colourizeSpritesToUpload.clear();
@@ -373,7 +306,7 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::ExecuteUpload(vk::CommandBuffer comman
 
         if (!_uploadedGlyphs.contains(glyphToUpload.first))
         {
-            auto [stagingBuffer, stagingBufferAllocation] = UploadToEmptyImage(
+            auto stagingBuffer = UploadToEmptyImage(
                 _allocator, _device, commandBuffer, glyphToUpload.second.data.get(), glyphToUpload.second.size,
                 glyphToUpload.second.image);
 
@@ -381,8 +314,8 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::ExecuteUpload(vk::CommandBuffer comman
                 std::make_pair(
                     glyphToUpload.first,
                     UploadedSpriteInfo(
-                        stagingBuffer, stagingBufferAllocation, glyphToUpload.second.image,
-                        glyphToUpload.second.imageAllocation, glyphToUpload.second.imageView)));
+                        std::move(stagingBuffer), std::move(glyphToUpload.second.image),
+                        std::move(glyphToUpload.second.imageView))));
         }
     }
     _glyphsToUpload.clear();
@@ -390,8 +323,6 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::ExecuteUpload(vk::CommandBuffer comman
 
 void OpenRCT2::Ui::Vulkan::SpriteManager::BeginDraw(uint32_t frameNumber)
 {
-    ReleaseUploadedSprites(_queuedImageInvalidation[frameNumber]);
-
     _queuedImageInvalidation[frameNumber].clear();
 
     std::swap(_queuedImageInvalidation[frameNumber], _currentFrameQueuedImageInvalidation);
@@ -425,7 +356,7 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::GetColourizePipelineDescriptors(std::v
 }
 
 void OpenRCT2::Ui::Vulkan::SpriteManager::CreateEmptyImageWithView(
-    vk::Extent2D extent, vk::Image& image, VmaAllocation& imageAllocation, vk::UniqueImageView& imageView)
+    vk::Extent2D extent, UniqueVmaImage& vmaImage, vk::UniqueImageView& imageView)
 {
     vk::ImageCreateInfo imageCreateInfo(
         vk::ImageCreateFlags{}, vk::ImageType::e2D, vk::Format::eR8Uint, vk::Extent3D(extent, 1), 1, 1,
@@ -436,24 +367,13 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::CreateEmptyImageWithView(
     VmaAllocationCreateInfo allocImageCreateInfo{};
     allocImageCreateInfo.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO;
 
-    vk::Image tempImage;
-    VmaAllocation tempImageAllocation;
-
-    auto imageResult = vmaCreateImage(
-        _allocator, imageCreateInfo, &allocImageCreateInfo, tempImage, tempImageAllocation, nullptr);
-
-    if (vk::Result::eSuccess != imageResult)
-    {
-        throw std::runtime_error("Vulkan memory error while creating empty image");
-    }
+    vmaImage = UniqueVmaImage(_allocator, imageCreateInfo, allocImageCreateInfo);
 
     vk::ImageViewCreateInfo imageViewCreate(
-        vk::ImageViewCreateFlags{}, tempImage, vk::ImageViewType::e2D, vk::Format::eR8Uint, {},
+        vk::ImageViewCreateFlags{}, vmaImage, vk::ImageViewType::e2D, vk::Format::eR8Uint, {},
         vk::ImageSubresourceRange(vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1));
 
     imageView = _device.createImageViewUnique(imageViewCreate);
-    image = tempImage;
-    imageAllocation = tempImageAllocation;
 }
 
 void OpenRCT2::Ui::Vulkan::SpriteManager::UploadFilterPaletteImage(vk::CommandBuffer commandBuffer)
@@ -461,13 +381,7 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::UploadFilterPaletteImage(vk::CommandBu
     vk::Extent2D extent;
     auto imageData = CreateFilterPaletteMapData(extent);
 
-    auto stagingResult = CreateStagingBuffer(
-        _allocator, imageData.get(), extent.width * extent.height, _filterPaletteStagingBuffer,
-        _filterPaletteStagingBufferAllocation);
-    if (vk::Result::eSuccess != stagingResult)
-    {
-        throw std::runtime_error("Vulkan memory error while creating staging buffer");
-    }
+    _filterPaletteStagingBuffer = CreateStagingBuffer(_allocator, imageData.get(), extent.width * extent.height);
 
     TransitionImageToTransferDst(commandBuffer, _filterPaletteImage);
 
@@ -481,28 +395,13 @@ void OpenRCT2::Ui::Vulkan::SpriteManager::UploadBlendPaletteImage(vk::CommandBuf
     auto extent = vk::Extent2D(kPaletteCount, kPaletteCount);
     BlendColourMapType* data = GetBlendColourMap();
 
-    auto stagingResult = CreateStagingBuffer(
-        _allocator, data, extent.width * extent.height, _blendPaletteStagingBuffer, _blendPaletteStagingBufferAllocation);
-    if (vk::Result::eSuccess != stagingResult)
-    {
-        throw std::runtime_error("Vulkan memory error while creating staging buffer");
-    }
+    _blendPaletteStagingBuffer = CreateStagingBuffer(_allocator, data, extent.width * extent.height);
 
     TransitionImageToTransferDst(commandBuffer, _blendPaletteImage);
 
     CopyBufferToImage(commandBuffer, _blendPaletteStagingBuffer, _blendPaletteImage, extent);
 
     TransitionImageToFragmentReadOpt(commandBuffer, _blendPaletteImage);
-}
-
-void OpenRCT2::Ui::Vulkan::SpriteManager::ReleaseUploadedSprites(std::vector<UploadedSpriteInfo>& sprites)
-{
-    for (auto& invalidateImage : sprites)
-    {
-        _device.destroyImageView(invalidateImage.imageView);
-        vmaDestroyImage(_allocator, invalidateImage.image, invalidateImage.imageAllocation);
-        vmaDestroyBuffer(_allocator, invalidateImage.buffer, invalidateImage.bufferAllocation);
-    }
 }
 
 void OpenRCT2::Ui::Vulkan::SpriteManager::InvalidateImage(uint32_t image)

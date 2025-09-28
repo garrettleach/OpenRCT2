@@ -1,4 +1,6 @@
 #pragma once
+#include "UniqueVmaBuffer.h"
+#include "UniqueVmaImage.h"
 #include "VulkanDebug.h"
 #include "VulkanMemoryAllocator.h"
 #include "vulkan/vulkan.hpp"
@@ -49,20 +51,17 @@ namespace OpenRCT2::Ui::Vulkan
             std::unique_ptr<uint8_t[]> data;
             vk::Extent2D size;
             SpritePool pool;
-            vk::Image image;
-            VmaAllocation imageAllocation;
-            vk::ImageView imageView;
+            UniqueVmaImage image;
+            vk::UniqueImageView imageView;
         };
 
         struct UploadedSpriteInfo
         {
-            vk::Buffer buffer;
-            VmaAllocation bufferAllocation;
+            UniqueVmaBuffer buffer;
 
-            vk::Image image;
-            VmaAllocation imageAllocation;
+            UniqueVmaImage image;
 
-            vk::ImageView imageView; // This is what is passed to the shader
+            vk::UniqueImageView imageView;
         };
 
         IVulkanDebug& _debug;
@@ -92,21 +91,16 @@ namespace OpenRCT2::Ui::Vulkan
         std::once_flag _initializedPaletteData;
 
         // Filter Palette
-        vk::Image _filterPaletteImage{};
-        VmaAllocation _filterPaletteImageAllocation{};
+        UniqueVmaImage _filterPaletteImage{};
         vk::UniqueImageView _filterPaletteImageView{};
-        vk::Buffer _filterPaletteStagingBuffer;
-        VmaAllocation _filterPaletteStagingBufferAllocation;
+        UniqueVmaBuffer _filterPaletteStagingBuffer;
 
-        vk::Image _blendPaletteImage{};
-        VmaAllocation _blendPaletteImageAllocation{};
+        UniqueVmaImage _blendPaletteImage{};
         vk::UniqueImageView _blendPaletteImageView{};
-        vk::Buffer _blendPaletteStagingBuffer;
-        VmaAllocation _blendPaletteStagingBufferAllocation;
+        UniqueVmaBuffer _blendPaletteStagingBuffer;
 
     public:
         SpriteManager(IVulkanDebug& debug, vk::Device device, uint32_t framesInFlight, VulkanMemoryAllocator& vma);
-        ~SpriteManager();
 
         [[nodiscard]] TextureIndex QueueUpload(ImageId imageId, SpritePool spritePool);
         [[nodiscard]] TextureIndex QueueUpload(ImageId imageId, ImageId image, SpritePool spritePool);
@@ -125,10 +119,7 @@ namespace OpenRCT2::Ui::Vulkan
         void GetColourizePipelineDescriptors(std::vector<vk::DescriptorImageInfo>& descriptors);
 
     private:
-        void ReleaseUploadedSprites(std::vector<UploadedSpriteInfo>& sprites);
-
-        void CreateEmptyImageWithView(
-            vk::Extent2D extent, vk::Image& image, VmaAllocation& imageAllocation, vk::UniqueImageView& imageView);
+        void CreateEmptyImageWithView(vk::Extent2D extent, UniqueVmaImage& vmaImage, vk::UniqueImageView& imageView);
 
         void UploadFilterPaletteImage(vk::CommandBuffer commandBuffer);
         void UploadBlendPaletteImage(vk::CommandBuffer commandBuffer);
