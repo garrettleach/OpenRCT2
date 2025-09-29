@@ -9,10 +9,6 @@ namespace OpenRCT2::Ui::Vulkan
         vk::UniqueInstance _instance;
         vk::UniqueSurfaceKHR _surface;
 
-        bool _enabledValidationLayer = false;
-        bool _monitorLayerEnabled = false;
-        bool _enabledDebugUtils = false;
-        bool _enabledGpuDebugPrintf = false;
 
     public:
         VulkanInstance(SDL_Window* window, uint32_t authoredVulkanApiVersion);
@@ -41,16 +37,6 @@ namespace OpenRCT2::Ui::Vulkan
         const vk::SurfaceKHR GetSurface()
         {
             return *_surface;
-        }
-
-        bool MonitorLayerEnabled() const
-        {
-            return _monitorLayerEnabled;
-        }
-
-        bool DebugUtilsEnabled() const
-        {
-            return _enabledDebugUtils;
         }
 
         std::vector<vk::PhysicalDevice> GetCapablePhysicalDevices();

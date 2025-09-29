@@ -10,6 +10,10 @@ namespace OpenRCT2::Ui::Vulkan
         static std::vector<vk::LayerSettingEXT> GetValidationLayerSettings();
         static std::optional<vk::DebugUtilsMessengerCreateInfoEXT> GetDebugMessangerSettings();
 
+        static bool DebugUtilsExtensionEnabled();
+        static bool MonitorLayerEnabled();
+        static bool ValidationLayerEnabled();
+
         static std::vector<const char*> GetInstanceDebugExtensions();
         static std::vector<const char*> GetInstanceValidationLayers();
 

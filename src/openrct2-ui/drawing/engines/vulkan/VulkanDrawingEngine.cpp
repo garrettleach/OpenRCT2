@@ -65,7 +65,7 @@ namespace OpenRCT2::Ui::Vulkan
     void VulkanDrawingEngine::CreateInstance()
     {
         _instance = std::make_unique<VulkanInstance>(_window, authoredVulkanApiVersion);
-        if (_instance->DebugUtilsEnabled())
+        if (DebugSettings::DebugUtilsExtensionEnabled())
         {
             _debug = std::make_unique<VulkanDebug>(**_instance);
         }

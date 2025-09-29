@@ -195,10 +195,39 @@ namespace OpenRCT2::Ui::Vulkan
         return settings;
     }
 
+    bool DebugSettings::DebugUtilsExtensionEnabled()
+    {
+        return enableDebugUtils;
+    }
+
+    bool DebugSettings::MonitorLayerEnabled()
+    {
+        if constexpr (tryEnableMonitorLayer)
+        {
+            auto instanceLayerProps = vk::enumerateInstanceLayerProperties();
+
+            // Add the FPS display *if* it is available
+            for (auto& layer : instanceLayerProps)
+            {
+                if (strcmp(lunargMonitorLayerName, layer.layerName) == 0)
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    bool DebugSettings::ValidationLayerEnabled()
+    {
+        return enableValidationLayer;
+    }
+
     std::vector<const char*> DebugSettings::GetInstanceDebugExtensions()
     {
         std::vector<const char*> enabledExtensions;
-        if constexpr (enableDebugUtils)
+        if (DebugUtilsExtensionEnabled())
         {
             enabledExtensions.push_back(vk::EXTDebugUtilsExtensionName);
         }
@@ -212,18 +241,9 @@ namespace OpenRCT2::Ui::Vulkan
         {
             enabledLayers.push_back(khronosValidationLayerName);
         }
-        if constexpr (tryEnableMonitorLayer)
+        if (MonitorLayerEnabled())
         {
-            auto instanceLayerProps = vk::enumerateInstanceLayerProperties();
-
-            // Add the FPS display *if* it is available
-            for (auto& layer : instanceLayerProps)
-            {
-                if (strcmp(lunargMonitorLayerName, layer.layerName) == 0)
-                {
-                    enabledLayers.push_back(lunargMonitorLayerName);
-                }
-            }
+            enabledLayers.push_back(lunargMonitorLayerName);
         }
         return enabledLayers;
     }
