@@ -180,7 +180,7 @@ namespace OpenRCT2::Ui::Vulkan
             if (limitduplicates_value)
             {
                 settings.emplace_back(
-                    khronosValidationLayerName, "duplicate_message_limit", vk::LayerSettingTypeEXT::eInt32, 1,
+                    khronosValidationLayerName, "duplicate_message_limit", vk::LayerSettingTypeEXT::eUint32, 1,
                     &limitduplicates_limit_value);
             }
 
