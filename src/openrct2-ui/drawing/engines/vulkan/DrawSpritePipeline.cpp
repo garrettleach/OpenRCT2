@@ -230,11 +230,6 @@ namespace OpenRCT2::Ui::Vulkan
     {
         _sampler.reset();
 
-        for (auto& pool : _descriptorIndexPools)
-        {
-            _device.destroyDescriptorPool(pool);
-        }
-
         vmaDestroyBuffer(_alloc, _indexBuffer, _indexDeviceMemory);
         vmaDestroyBuffer(_alloc, _vertexBuffer, _vertexDeviceMemory);
 
@@ -678,17 +673,17 @@ namespace OpenRCT2::Ui::Vulkan
         vk::DescriptorPoolCreateInfo descPoolInfo(vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind, 1, { descPoolSize });
         for (size_t i = 0; i < _framesInFlight; i++)
         {
-            auto pool = _device.createDescriptorPool(descPoolInfo);
+            auto pool = _device.createDescriptorPoolUnique(descPoolInfo);
 
             std::vector<uint32_t> counts{ initialDescriptorCount };
 
             vk::StructureChain<vk::DescriptorSetAllocateInfo, vk::DescriptorSetVariableDescriptorCountAllocateInfo> allocInfo(
-                vk::DescriptorSetAllocateInfo{ pool, { *_descriptorIndexSetLayout } },
+                vk::DescriptorSetAllocateInfo{ *pool, { *_descriptorIndexSetLayout } },
                 vk::DescriptorSetVariableDescriptorCountAllocateInfo{ counts });
 
             _descriptorIndexSets.push_back(_device.allocateDescriptorSets(allocInfo.get()).front());
 
-            _descriptorIndexPools.push_back(pool);
+            _descriptorIndexPools.push_back(std::move(pool));
         }
     }
 } // namespace OpenRCT2::Ui::Vulkan

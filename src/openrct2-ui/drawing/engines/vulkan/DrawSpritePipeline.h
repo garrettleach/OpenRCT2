@@ -73,7 +73,7 @@ namespace OpenRCT2::Ui::Vulkan
         vk::Buffer _indexBuffer;
         void* _indexMappedMemory;
 
-        std::vector<vk::DescriptorPool> _descriptorIndexPools;
+        std::vector<vk::UniqueDescriptorPool> _descriptorIndexPools;
         std::vector<vk::DescriptorSet> _descriptorIndexSets;
 
         std::vector<Rect> _inProgressSprites;
