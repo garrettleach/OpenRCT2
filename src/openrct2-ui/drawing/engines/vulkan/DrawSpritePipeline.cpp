@@ -228,7 +228,7 @@ namespace OpenRCT2::Ui::Vulkan
 
     DrawSpritePipeline::~DrawSpritePipeline()
     {
-        _device.destroySampler(_sampler);
+        _sampler.reset();
 
         for (auto& pool : _descriptorIndexPools)
         {
@@ -277,12 +277,12 @@ namespace OpenRCT2::Ui::Vulkan
             0.0f, false, 0.0f, false, vk::CompareOp::eNever, 0.0f, 0.0f,
             VULKAN_HPP_NAMESPACE::BorderColor::eFloatTransparentBlack, false);
 
-        _sampler = _device.createSampler(samplerCreateInfo);
+        _sampler = _device.createSamplerUnique(samplerCreateInfo);
 
         for (size_t i = 0; i < _uniformBufferDescriptorSets.size(); i++)
         {
             // TODO: Can we convert this to an immutable sampler?
-            vk::DescriptorImageInfo samplerImageInfo(_sampler, nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
+            vk::DescriptorImageInfo samplerImageInfo(*_sampler, nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
 
             vk::WriteDescriptorSet samplerDescriptorWrite(
                 _uniformBufferDescriptorSets[i], 0, 0, vk::DescriptorType::eSampler, { samplerImageInfo }, {}, {});

@@ -49,7 +49,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         VmaAllocator _alloc;
 
-        vk::Sampler _sampler;
+        vk::UniqueSampler _sampler;
 
         vk::UniqueDescriptorSetLayout _descriptorSetLayout;
         vk::UniqueDescriptorSetLayout _descriptorIndexSetLayout;
