@@ -52,8 +52,8 @@ OpenRCT2::Ui::Vulkan::ColourizePipeline::ColourizePipeline(
     , _framesInFlight(framesInFlight)
     , _vma(vma)
 {
-    CreateGraphicsPipeline();
     CreateSampler();
+    CreateGraphicsPipeline();
     CreateBuffers();
     GetImageViews();
     CreateDescriptorPool();
@@ -117,10 +117,12 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateGraphicsPipeline()
 
     vk::PipelineDynamicStateCreateInfo dynamicStateCreate(vk::PipelineDynamicStateCreateFlags{}, dynamicStates);
 
+    std::vector<vk::Sampler> singleImmutableSampler{ *_sampler };
+
     std::vector<vk::DescriptorSetLayoutBinding> constantDescSetLayoutBindings{
-        { 0, vk::DescriptorType::eSampler, 1, vk::ShaderStageFlagBits::eFragment },
-        { 1, vk::DescriptorType::eSampledImage, 1, vk::ShaderStageFlagBits::eFragment },
-        { 2, vk::DescriptorType::eSampledImage, 1, vk::ShaderStageFlagBits::eFragment }
+        { 0, vk::DescriptorType::eSampler, vk::ShaderStageFlagBits::eFragment, singleImmutableSampler },
+        { 1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment, singleImmutableSampler },
+        { 2, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment, singleImmutableSampler }
     };
 
     std::vector<vk::DescriptorSetLayoutBinding> frameDescSetLayoutBindings{
@@ -288,7 +290,7 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateDescriptorPool()
     vk::DescriptorPoolSize poolSizeUniformBuffer(vk::DescriptorType::eUniformBuffer, static_cast<uint32_t>(_framesInFlight));
     vk::DescriptorPoolSize poolSizeStorageBuffer(vk::DescriptorType::eStorageBuffer, static_cast<uint32_t>(_framesInFlight));
     vk::DescriptorPoolSize poolSizeSampler(vk::DescriptorType::eSampler, static_cast<uint32_t>(_framesInFlight));
-    vk::DescriptorPoolSize poolSizeSampledImage(vk::DescriptorType::eSampledImage, static_cast<uint32_t>(_framesInFlight * 2));
+    vk::DescriptorPoolSize poolSizeSampledImage(vk::DescriptorType::eCombinedImageSampler, static_cast<uint32_t>(_framesInFlight * 2));
     vk::DescriptorPoolSize poolSizeInputAttachments(
         vk::DescriptorType::eInputAttachment, static_cast<uint32_t>(_framesInFlight * 2));
 
@@ -344,19 +346,17 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateDescriptorSets()
         vk::DescriptorBufferInfo uniformCreate(_uniformBuffer[i], vk::DeviceSize(0), vk::DeviceSize(sizeof(UniformValues)));
         vk::DescriptorBufferInfo storageCreate(_storageBuffer[i], vk::DeviceSize(0), vk::DeviceSize(_storageBufferSize[i]));
 
-        vk::WriteDescriptorSet writeConstantSampler(
-            _constantDescriptorSets[i], 0, 0, vk::DescriptorType::eSampler, { samplerImageDescCreate });
         vk::WriteDescriptorSet writeFilterPaletteImage(
-            _constantDescriptorSets[i], 1, 0, vk::DescriptorType::eSampledImage, { filterPaletteImageCreate });
+            _constantDescriptorSets[i], 1, 0, vk::DescriptorType::eCombinedImageSampler, { filterPaletteImageCreate });
         vk::WriteDescriptorSet writeBlendPaletteImage(
-            _constantDescriptorSets[i], 2, 0, vk::DescriptorType::eSampledImage, { blendPaletteImageCreate });
+            _constantDescriptorSets[i], 2, 0, vk::DescriptorType::eCombinedImageSampler, { blendPaletteImageCreate });
 
         vk::WriteDescriptorSet writeFrameUniform(
             _frameDescriptorSets[i], 2, 0, vk::DescriptorType::eUniformBuffer, {}, { uniformCreate });
         vk::WriteDescriptorSet writeFrameStorage(
             _frameDescriptorSets[i], 3, 0, vk::DescriptorType::eStorageBuffer, {}, { storageCreate });
 
-        std::vector<vk::WriteDescriptorSet> writeDescSet{ writeConstantSampler, writeFilterPaletteImage, writeBlendPaletteImage,
+        std::vector<vk::WriteDescriptorSet> writeDescSet{ writeFilterPaletteImage, writeBlendPaletteImage,
                                                           writeFrameUniform, writeFrameStorage };
 
         _device.updateDescriptorSets(writeDescSet, {});

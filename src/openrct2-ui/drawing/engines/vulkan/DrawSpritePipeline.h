@@ -98,7 +98,7 @@ namespace OpenRCT2::Ui::Vulkan
         uint32_t QueuePlaceholder();
 
     private:
-        static vk::UniqueDescriptorSetLayout CreateDescriptorSetLayout(const vk::Device& device);
+        static vk::UniqueDescriptorSetLayout CreateDescriptorSetLayout(const vk::Device& device, vk::Sampler sampler);
         static vk::UniqueDescriptorSetLayout CreateDescriptorIndexSetLayout(const vk::Device& device);
         static vk::UniquePipelineLayout CreatePipelineLayout(
             const vk::Device& device, const std::vector<vk::DescriptorSetLayout>& descriptorSetLayouts);

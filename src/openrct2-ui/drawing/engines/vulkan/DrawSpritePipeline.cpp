@@ -71,14 +71,22 @@ namespace OpenRCT2::Ui::Vulkan
         {
             return palette > FilterPaletteID::paletteWater ? EnumValue(palette) + 5 : EnumValue(palette) + 1;
         }
+
+        vk::SamplerCreateInfo samplerCreateInfo(
+            vk::SamplerCreateFlags(), vk::Filter::eNearest, vk::Filter::eNearest, vk::SamplerMipmapMode::eNearest,
+            vk::SamplerAddressMode::eClampToBorder, vk::SamplerAddressMode::eClampToBorder,
+            vk::SamplerAddressMode::eClampToBorder, 0.0f, false, 0.0f, false, vk::CompareOp::eNever, 0.0f, 0.0f,
+            VULKAN_HPP_NAMESPACE::BorderColor::eFloatTransparentBlack, false);
     } // namespace
 
-    vk::UniqueDescriptorSetLayout DrawSpritePipeline::CreateDescriptorSetLayout(const vk::Device& device)
+    vk::UniqueDescriptorSetLayout DrawSpritePipeline::CreateDescriptorSetLayout(const vk::Device& device, vk::Sampler sampler)
     {
+        std::vector<vk::Sampler> singleImmutableSampler{ sampler };
+
         vk::DescriptorSetLayoutBinding samplerLayoutBinding(
-            0, vk::DescriptorType::eSampler, 1, vk::ShaderStageFlagBits::eFragment);
+            0, vk::DescriptorType::eSampler, vk::ShaderStageFlagBits::eFragment, singleImmutableSampler);
         vk::DescriptorSetLayoutBinding filterPaletteLayoutBinding(
-            1, vk::DescriptorType::eSampledImage, 1, vk::ShaderStageFlagBits::eFragment);
+            1, vk::DescriptorType::eCombinedImageSampler, vk::ShaderStageFlagBits::eFragment, singleImmutableSampler);
 
         std::vector<vk::DescriptorSetLayoutBinding> bindings{ samplerLayoutBinding, filterPaletteLayoutBinding };
 
@@ -212,7 +220,8 @@ namespace OpenRCT2::Ui::Vulkan
         , _device(device)
         , _framesInFlight(framesInFlight)
         , _alloc(vma)
-        , _descriptorSetLayout(CreateDescriptorSetLayout(device))
+        , _sampler(_device.createSamplerUnique(samplerCreateInfo))
+        , _descriptorSetLayout(CreateDescriptorSetLayout(device, *_sampler))
         , _descriptorIndexSetLayout(CreateDescriptorIndexSetLayout(device))
         , _pipelineLayout(CreatePipelineLayout(device, { *_descriptorSetLayout, *_descriptorIndexSetLayout }))
         , _pipeline(CreatePipeline(device, *_descriptorSetLayout, *_pipelineLayout))
@@ -232,7 +241,7 @@ namespace OpenRCT2::Ui::Vulkan
             vk::DescriptorType::eUniformBuffer, static_cast<uint32_t>(_framesInFlight * 2));
         vk::DescriptorPoolSize poolSizeSampler(vk::DescriptorType::eSampler, static_cast<uint32_t>(_framesInFlight));
         vk::DescriptorPoolSize poolSizeFilterPaletteImage(
-            vk::DescriptorType::eSampledImage, static_cast<uint32_t>(_framesInFlight));
+            vk::DescriptorType::eCombinedImageSampler, static_cast<uint32_t>(_framesInFlight));
 
         std::vector<vk::DescriptorPoolSize> poolSizes{ poolSizeUniformBuffer, poolSizeSampler, poolSizeFilterPaletteImage };
 
@@ -250,30 +259,15 @@ namespace OpenRCT2::Ui::Vulkan
 
         _uniformBufferDescriptorSets = _device.allocateDescriptorSets(allocInfo);
 
-        // TODO: maybe change to clamp to border
-        vk::SamplerCreateInfo samplerCreateInfo(
-            vk::SamplerCreateFlags(), vk::Filter::eNearest, vk::Filter::eNearest, vk::SamplerMipmapMode::eNearest,
-            vk::SamplerAddressMode::eClampToEdge, vk::SamplerAddressMode::eClampToBorder, vk::SamplerAddressMode::eClampToEdge,
-            0.0f, false, 0.0f, false, vk::CompareOp::eNever, 0.0f, 0.0f,
-            VULKAN_HPP_NAMESPACE::BorderColor::eFloatTransparentBlack, false);
-
-        _sampler = _device.createSamplerUnique(samplerCreateInfo);
-
         for (size_t i = 0; i < _uniformBufferDescriptorSets.size(); i++)
         {
-            // TODO: Can we convert this to an immutable sampler?
-            vk::DescriptorImageInfo samplerImageInfo(*_sampler, nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
-
-            vk::WriteDescriptorSet samplerDescriptorWrite(
-                _uniformBufferDescriptorSets[i], 0, 0, vk::DescriptorType::eSampler, { samplerImageInfo }, {}, {});
-
             vk::DescriptorImageInfo filterPaletteImageInfo(
                 nullptr, _spriteManager.GetPaletteImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
 
             vk::WriteDescriptorSet filterPaletteDescriptorWrite(
-                _uniformBufferDescriptorSets[i], 1, 0, vk::DescriptorType::eSampledImage, { filterPaletteImageInfo }, {}, {});
+                _uniformBufferDescriptorSets[i], 1, 0, vk::DescriptorType::eCombinedImageSampler, { filterPaletteImageInfo }, {}, {});
 
-            _device.updateDescriptorSets({ samplerDescriptorWrite, filterPaletteDescriptorWrite }, {});
+            _device.updateDescriptorSets({ filterPaletteDescriptorWrite }, {});
         }
     }
 
