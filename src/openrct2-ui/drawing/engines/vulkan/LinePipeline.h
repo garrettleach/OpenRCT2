@@ -1,4 +1,5 @@
 #pragma once
+#include "UniqueVmaBuffer.h"
 #include "VulkanDebug.h"
 #include "VulkanMemoryAllocator.h"
 
@@ -38,10 +39,8 @@ namespace OpenRCT2::Ui::Vulkan
         vk::UniquePipelineLayout _pipelineLayout;
         vk::UniquePipeline _pipeline;
 
-        std::vector<vk::Buffer> _linePointBuffer;
-        std::vector<VmaAllocation> _linePointAllocation;
+        std::vector<UniqueVmaBuffer> _linePointBuffer;
         std::vector<uint32_t> _linePointSize;
-        std::vector<void*> _linePointMemory;
 
         std::vector<LineCommand> _inProgressLines;
 
@@ -56,7 +55,7 @@ namespace OpenRCT2::Ui::Vulkan
         LinePipeline& operator=(LinePipeline&&) = delete;
         LinePipeline(LinePipeline&&) = delete;
 
-        ~LinePipeline();
+        ~LinePipeline() = default;
 
         void Draw(const vk::CommandBuffer& commandBuffer, const RenderTarget& renderTarget, uint32_t currentFrame);
 

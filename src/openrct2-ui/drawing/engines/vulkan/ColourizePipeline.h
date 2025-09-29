@@ -1,5 +1,6 @@
 #pragma once
 #include "SpriteManager.h"
+#include "UniqueVmaBuffer.h"
 #include "VulkanDrawingEngine.h"
 #include "VulkanMemoryAllocator.h"
 
@@ -37,16 +38,11 @@ namespace OpenRCT2::Ui::Vulkan
         size_t _framesInFlight;
         VulkanMemoryAllocator& _vma;
 
-        vk::Buffer _vertexBuffer;
-        VmaAllocation _vertexAllocation;
+        UniqueVmaBuffer _vertexBuffer;
 
-        std::vector<vk::Buffer> _uniformBuffer;
-        std::vector<VmaAllocation> _uniformAllocation;
-        std::vector<void*> _uniformBufferPointer;
+        std::vector<UniqueVmaBuffer> _uniformBuffer;
 
-        std::vector<vk::Buffer> _storageBuffer;
-        std::vector<VmaAllocation> _storageAllocation;
-        std::vector<void*> _storageBufferPointer;
+        std::vector<UniqueVmaBuffer> _storageBuffer;
         std::vector<size_t> _storageBufferSize;
 
         vk::UniquePipeline _pipeline;
@@ -75,7 +71,7 @@ namespace OpenRCT2::Ui::Vulkan
             VulkanDrawingEngine& engine, SpriteManager& spriteManager, const IVulkanDebug& debug, const vk::Device& device,
             size_t framesInFlight, VulkanMemoryAllocator& vma, const std::vector<vk::ImageView>& paletteInputViews,
             const std::vector<vk::ImageView>& depthInputViews);
-        ~ColourizePipeline();
+        ~ColourizePipeline() = default;
 
         void Draw(const vk::CommandBuffer& commandBuffer, RenderTarget& renderTarget, uint32_t currentFrame);
 

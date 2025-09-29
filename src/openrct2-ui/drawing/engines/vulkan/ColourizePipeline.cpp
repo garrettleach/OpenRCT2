@@ -61,21 +61,6 @@ OpenRCT2::Ui::Vulkan::ColourizePipeline::ColourizePipeline(
     UpdateInputViews(paletteInputViews, depthInputViews);
 }
 
-OpenRCT2::Ui::Vulkan::ColourizePipeline::~ColourizePipeline()
-{
-    for (int i = 0; i < _storageBuffer.size(); i++)
-    {
-        vmaDestroyBuffer(_vma, _storageBuffer[i], _storageAllocation[i]);
-    }
-
-    for (int i = 0; i < _uniformBuffer.size(); i++)
-    {
-        vmaDestroyBuffer(_vma, _uniformBuffer[i], _uniformAllocation[i]);
-    }
-
-    vmaDestroyBuffer(_vma, _vertexBuffer, _vertexAllocation);
-}
-
 void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateGraphicsPipeline()
 {
     auto vertexShaderSpirV = ReadSpirVFile("colourize.vertex.spirv");
@@ -224,20 +209,9 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateBuffers()
     allocInfo.preferredFlags = (VkMemoryPropertyFlags)(vk::MemoryPropertyFlagBits::eHostCoherent
                                                        | vk::MemoryPropertyFlagBits::eHostCached);
 
-    vk::Buffer vertexBuffer;
-    VmaAllocation vertexAllocation;
-    VmaAllocationInfo vertexAllocationInfo;
+    _vertexBuffer = UniqueVmaBuffer(_vma, bufferCreateVerticies, allocInfo);
 
-    if (vk::Result::eSuccess
-        != vmaCreateBuffer(_vma, bufferCreateVerticies, &allocInfo, vertexBuffer, vertexAllocation, &vertexAllocationInfo))
-    {
-        throw std::runtime_error("Vulkan memory error while creating vertex buffer");
-    }
-
-    _vertexBuffer = vertexBuffer;
-    _vertexAllocation = vertexAllocation;
-
-    std::memcpy(vertexAllocationInfo.pMappedData, quad.data(), quadsBufferSize);
+    std::memcpy(_vertexBuffer.GetMappedPointer(), quad.data(), quadsBufferSize);
 
     size_t initialStorageBufferSize = sizeof(OpenRCT2::Ui::Vulkan::ColourizePipeline::ColourizeCommand) * 100;
 
@@ -247,19 +221,7 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateBuffers()
             vk::BufferCreateFlags{}, vk::DeviceSize(sizeof(UniformValues)), vk::BufferUsageFlagBits::eUniformBuffer,
             vk::SharingMode::eExclusive, {});
 
-        vk::Buffer uniformBuffer;
-        VmaAllocation uniformAllocation;
-        VmaAllocationInfo uniformAllocationInfo;
-
-        if (vk::Result::eSuccess
-            != vmaCreateBuffer(_vma, uniformBufferCreate, &allocInfo, uniformBuffer, uniformAllocation, &uniformAllocationInfo))
-        {
-            throw std::runtime_error("Vulkan memory error while creating uniform buffer");
-        }
-
-        _uniformBuffer.emplace_back(uniformBuffer);
-        _uniformAllocation.push_back(uniformAllocation);
-        _uniformBufferPointer.push_back(uniformAllocationInfo.pMappedData);
+        _uniformBuffer.emplace_back(_vma, uniformBufferCreate, allocInfo);
 
         _storageBufferSize.push_back(initialStorageBufferSize);
 
@@ -267,19 +229,7 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateBuffers()
             vk::BufferCreateFlags{}, vk::DeviceSize(_storageBufferSize[i]), vk::BufferUsageFlagBits::eStorageBuffer,
             vk::SharingMode::eExclusive, {});
 
-        vk::Buffer storageBuffer;
-        VmaAllocation storageAllocation;
-        VmaAllocationInfo storageAllocationInfo;
-
-        if (vk::Result::eSuccess
-            != vmaCreateBuffer(_vma, storageBufferCreate, &allocInfo, storageBuffer, storageAllocation, &storageAllocationInfo))
-        {
-            throw std::runtime_error("Vulkan memory error while creating storage buffer");
-        }
-
-        _storageBuffer.emplace_back(storageBuffer);
-        _storageAllocation.push_back(storageAllocation);
-        _storageBufferPointer.push_back(storageAllocationInfo.pMappedData);
+        _storageBuffer.emplace_back(_vma, storageBufferCreate, allocInfo);
     }
 }
 
@@ -435,7 +385,7 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::UpdateInputViews(
 void OpenRCT2::Ui::Vulkan::ColourizePipeline::Draw(
     const vk::CommandBuffer& commandBuffer, RenderTarget& renderTarget, uint32_t currentFrame)
 {
-    std::byte* colorPalette = reinterpret_cast<std::byte*>(_uniformBufferPointer[currentFrame])
+    std::byte* colorPalette = reinterpret_cast<std::byte*>(_uniformBuffer[currentFrame].GetMappedPointer())
         + offsetof(UniformValues, colourPalette);
     std::memcpy(colorPalette, _palette.data(), _palette.size() * sizeof(decltype(_palette)::value_type));
 
@@ -447,7 +397,7 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::Draw(
 
     if (_storageBufferSize[currentFrame] < bufferSizeNeeded)
     {
-        vmaDestroyBuffer(_vma, _storageBuffer[currentFrame], _storageAllocation[currentFrame]);
+        _storageBuffer[currentFrame].Reset();
 
         vk::BufferCreateInfo bufferCreate(
             vk::BufferCreateFlags{}, vk::DeviceSize(bufferSizeNeeded), vk::BufferUsageFlagBits::eStorageBuffer,
@@ -460,20 +410,7 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::Draw(
         allocInfo.preferredFlags = (VkMemoryPropertyFlags)(vk::MemoryPropertyFlagBits::eHostCoherent
                                                            | vk::MemoryPropertyFlagBits::eHostCached);
 
-        vk::Buffer newBuffer;
-        VmaAllocation newAllocation;
-        VmaAllocationInfo newAllocationInfo;
-
-        vk::Result createResult = vmaCreateBuffer(_vma, bufferCreate, &allocInfo, newBuffer, newAllocation, &newAllocationInfo);
-
-        if (vk::Result::eSuccess != createResult)
-        {
-            throw std::runtime_error("Failed to allocate larger buffer for filter rects");
-        }
-
-        _storageBuffer[currentFrame] = newBuffer;
-        _storageAllocation[currentFrame] = newAllocation;
-        _storageBufferPointer[currentFrame] = newAllocationInfo.pMappedData;
+        _storageBuffer[currentFrame] = UniqueVmaBuffer(_vma, bufferCreate, allocInfo);
         _storageBufferSize[currentFrame] = bufferSizeNeeded;
 
         vk::DescriptorBufferInfo storageCreate(
@@ -499,7 +436,7 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::Draw(
 
     // set the texture index in the commands
 
-    std::memcpy(_storageBufferPointer[currentFrame], _inProgressCommands.data(), bufferSizeNeeded);
+    std::memcpy(_storageBuffer[currentFrame].GetMappedPointer(), _inProgressCommands.data(), bufferSizeNeeded);
     _inProgressCommands.clear();
 
     vk::Viewport viewport(0.0f, 0.0f, renderTarget.width, renderTarget.height, 0.0f, 1.0f);

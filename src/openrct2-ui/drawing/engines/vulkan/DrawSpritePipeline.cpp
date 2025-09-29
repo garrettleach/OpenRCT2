@@ -226,21 +226,6 @@ namespace OpenRCT2::Ui::Vulkan
         CreateIndexDescriptors();
     }
 
-    DrawSpritePipeline::~DrawSpritePipeline()
-    {
-        _sampler.reset();
-
-        vmaDestroyBuffer(_alloc, _indexBuffer, _indexDeviceMemory);
-        vmaDestroyBuffer(_alloc, _vertexBuffer, _vertexDeviceMemory);
-
-        for (size_t i = 0; i < _instanceBuffers.size(); i++)
-        {
-            vmaDestroyBuffer(_alloc, _instanceBuffers[i], _instanceDeviceMemory[i]);
-        }
-
-        _inProgressSprites.clear();
-    }
-
     void DrawSpritePipeline::CreateDescriptorPool()
     {
         vk::DescriptorPoolSize poolSizeUniformBuffer(
@@ -335,9 +320,11 @@ namespace OpenRCT2::Ui::Vulkan
             vk::BufferCreateFlags{}, initialInstanceBufferSize, vk::BufferUsageFlagBits::eVertexBuffer,
             vk::SharingMode::eExclusive, {});
 
-        CreateMultipleBuffers(
-            _alloc, _framesInFlight, bufferInfo, hostMappedAllocInfo, _instanceBuffers, _instanceDeviceMemory,
-            _instanceDeviceMemorySize, _instanceMappedMemory);
+        for (int i = 0; i < _framesInFlight; i++)
+        {
+            _instanceBuffers.emplace_back(_alloc, bufferInfo, hostMappedAllocInfo);
+            _instanceDeviceMemorySize.push_back(initialInstanceBufferSize);
+        }
     }
 
     void DrawSpritePipeline::CreateVertexBuffer()
@@ -348,10 +335,11 @@ namespace OpenRCT2::Ui::Vulkan
             vk::BufferCreateFlags{}, initialVertexBufferSize, vk::BufferUsageFlagBits::eVertexBuffer,
             vk::SharingMode::eExclusive, {});
 
-        CreateSingleBuffer(_alloc, bufferInfo, hostMappedAllocInfo, _vertexBuffer, _vertexDeviceMemory, _vertexMappedMemory);
+        _vertexBuffer = UniqueVmaBuffer(_alloc, bufferInfo, hostMappedAllocInfo);
 
         std::memcpy(
-            _vertexMappedMemory, rectVerticies.data(), rectVerticies.size() * sizeof(decltype(rectVerticies)::value_type));
+            _vertexBuffer.GetMappedPointer(), rectVerticies.data(),
+            rectVerticies.size() * sizeof(decltype(rectVerticies)::value_type));
     }
 
     void DrawSpritePipeline::CreateIndexBuffer()
@@ -362,30 +350,26 @@ namespace OpenRCT2::Ui::Vulkan
             vk::BufferCreateFlags{}, initialIndexBufferSize, vk::BufferUsageFlagBits::eIndexBuffer, vk::SharingMode::eExclusive,
             {});
 
-        CreateSingleBuffer(_alloc, bufferInfo, hostMappedAllocInfo, _indexBuffer, _indexDeviceMemory, _indexMappedMemory);
+        _indexBuffer = UniqueVmaBuffer(_alloc, bufferInfo, hostMappedAllocInfo);
 
-        std::memcpy(_indexMappedMemory, rectIndicies.data(), rectIndicies.size() * sizeof(decltype(rectIndicies)::value_type));
+        std::memcpy(
+            _indexBuffer.GetMappedPointer(), rectIndicies.data(),
+            rectIndicies.size() * sizeof(decltype(rectIndicies)::value_type));
     }
 
     void ResizeBufferIfNeeded(
-        uint32_t neededMem, VmaAllocator allocator, vk::Buffer& buffer, VmaAllocation& memory, uint64_t& memSize,
-        void*& memoryMapLocation, vk::BufferUsageFlags bufferUsageFlags, VmaAllocationCreateInfo vmaAllocCreateInfo)
+        uint32_t neededMem, VmaAllocator allocator, UniqueVmaBuffer& buffer, uint64_t& memSize,
+        vk::BufferUsageFlags bufferUsageFlags, VmaAllocationCreateInfo vmaAllocCreateInfo)
     {
         if (memSize < neededMem)
         {
-            vmaDestroyBuffer(allocator, buffer, memory);
+            buffer.Reset();
 
             vk::BufferCreateInfo bufferInfo(
                 vk::BufferCreateFlags{}, neededMem, bufferUsageFlags, vk::SharingMode::eExclusive, {});
 
-            VmaAllocationInfo allocationInfo;
-
-            if (vk::Result::eSuccess
-                == vmaCreateBuffer(allocator, bufferInfo, &vmaAllocCreateInfo, buffer, memory, &allocationInfo))
-            {
-                memSize = neededMem;
-                memoryMapLocation = allocationInfo.pMappedData;
-            }
+            buffer = UniqueVmaBuffer(allocator, bufferInfo, vmaAllocCreateInfo);
+            memSize = neededMem;
         }
     }
 
@@ -407,11 +391,10 @@ namespace OpenRCT2::Ui::Vulkan
             _inProgressSprites.size() * sizeof(std::remove_reference_t<decltype(_inProgressSprites)>::value_type));
 
         ResizeBufferIfNeeded(
-            neededInstanceMem, _alloc, _instanceBuffers[currentFrame], _instanceDeviceMemory[currentFrame],
-            _instanceDeviceMemorySize[currentFrame], _instanceMappedMemory[currentFrame],
+            neededInstanceMem, _alloc, _instanceBuffers[currentFrame], _instanceDeviceMemorySize[currentFrame],
             vk::BufferUsageFlagBits::eVertexBuffer, hostMappedAllocInfo);
 
-        std::memcpy(_instanceMappedMemory[currentFrame], _inProgressSprites.data(), neededInstanceMem);
+        std::memcpy(_instanceBuffers[currentFrame].GetMappedPointer(), _inProgressSprites.data(), neededInstanceMem);
 
         glm::uvec2 renderTargetSize{ renderTarget.width, renderTarget.height };
 

@@ -33,14 +33,6 @@ OpenRCT2::Ui::Vulkan::LinePipeline::LinePipeline(
     CreateBuffers();
 }
 
-OpenRCT2::Ui::Vulkan::LinePipeline::~LinePipeline()
-{
-    for (size_t i = 0; i < _linePointBuffer.size(); i++)
-    {
-        vmaDestroyBuffer(_alloc, _linePointBuffer[i], _linePointAllocation[i]);
-    }
-}
-
 void OpenRCT2::Ui::Vulkan::LinePipeline::Draw(
     const vk::CommandBuffer& commandBuffer, const RenderTarget& renderTarget, uint32_t currentFrame)
 {
@@ -57,7 +49,7 @@ void OpenRCT2::Ui::Vulkan::LinePipeline::Draw(
     if (_linePointSize[currentFrame] < neededByteCount)
     {
         // resize
-        vmaDestroyBuffer(_alloc, _linePointBuffer[currentFrame], _linePointAllocation[currentFrame]);
+        _linePointBuffer[currentFrame].Reset();
 
         vk::BufferCreateInfo bufferInfo(
             vk::BufferCreateFlags{}, neededByteCount, vk::BufferUsageFlagBits::eVertexBuffer, vk::SharingMode::eExclusive, {});
@@ -66,23 +58,11 @@ void OpenRCT2::Ui::Vulkan::LinePipeline::Draw(
         allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
         allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
-        vk::Buffer buffer;
-        VmaAllocation vmaAllocation;
-        VmaAllocationInfo allocationInfo;
-
-        auto result = vmaCreateBuffer(_alloc, bufferInfo, &allocInfo, buffer, vmaAllocation, &allocationInfo);
-        if (result != vk::Result::eSuccess)
-        {
-            throw std::runtime_error("Failed to reallocate buffer");
-        }
-
-        _linePointBuffer[currentFrame] = buffer;
-        _linePointAllocation[currentFrame] = vmaAllocation;
+        _linePointBuffer[currentFrame] = UniqueVmaBuffer(_alloc, bufferInfo, allocInfo);
         _linePointSize[currentFrame] = neededByteCount;
-        _linePointMemory[currentFrame] = allocationInfo.pMappedData;
     }
 
-    std::memcpy(_linePointMemory[currentFrame], points.data(), neededByteCount);
+    std::memcpy(_linePointBuffer[currentFrame].GetMappedPointer(), points.data(), neededByteCount);
 
     vk::Viewport viewport(0.0f, 0.0f, renderTarget.width, renderTarget.height, 0.0f, 1.0f);
     commandBuffer.setViewport(0, { viewport });
@@ -243,19 +223,7 @@ void OpenRCT2::Ui::Vulkan::LinePipeline::CreateBuffers()
         allocInfo.usage = VMA_MEMORY_USAGE_AUTO;
         allocInfo.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
-        vk::Buffer buffer;
-        VmaAllocation vmaAllocation;
-        VmaAllocationInfo allocationInfo;
-
-        auto result = vmaCreateBuffer(_alloc, bufferInfo, &allocInfo, buffer, vmaAllocation, &allocationInfo);
-        if (result != vk::Result::eSuccess)
-        {
-            throw std::runtime_error("Failed to allocate buffer for line pipeline");
-        }
-
-        _linePointBuffer.push_back(buffer);
-        _linePointAllocation.push_back(vmaAllocation);
+        _linePointBuffer.emplace_back(_alloc, bufferInfo, allocInfo);
         _linePointSize.push_back(initialSize);
-        _linePointMemory.push_back(allocationInfo.pMappedData);
     }
 }

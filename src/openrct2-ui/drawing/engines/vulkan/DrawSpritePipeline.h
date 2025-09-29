@@ -60,18 +60,12 @@ namespace OpenRCT2::Ui::Vulkan
         vk::UniqueDescriptorPool _uniformBufferDescriptorPool;
         std::vector<vk::DescriptorSet> _uniformBufferDescriptorSets;
 
-        std::vector<VmaAllocation> _instanceDeviceMemory;
-        std::vector<vk::Buffer> _instanceBuffers;
-        std::vector<void*> _instanceMappedMemory;
+        std::vector<UniqueVmaBuffer> _instanceBuffers;
         std::vector<vk::DeviceSize> _instanceDeviceMemorySize;
 
-        VmaAllocation _vertexDeviceMemory;
-        vk::Buffer _vertexBuffer;
-        void* _vertexMappedMemory;
+        UniqueVmaBuffer _vertexBuffer;
 
-        VmaAllocation _indexDeviceMemory;
-        vk::Buffer _indexBuffer;
-        void* _indexMappedMemory;
+        UniqueVmaBuffer _indexBuffer;
 
         std::vector<vk::UniqueDescriptorPool> _descriptorIndexPools;
         std::vector<vk::DescriptorSet> _descriptorIndexSets;
@@ -91,7 +85,7 @@ namespace OpenRCT2::Ui::Vulkan
         DrawSpritePipeline& operator=(DrawSpritePipeline&&) = delete;
         DrawSpritePipeline(DrawSpritePipeline&&) = delete;
 
-        ~DrawSpritePipeline();
+        ~DrawSpritePipeline() = default;
 
         void Draw(const vk::CommandBuffer& commandBuffer, const RenderTarget& renderTarget, uint32_t currentFrame);
 
