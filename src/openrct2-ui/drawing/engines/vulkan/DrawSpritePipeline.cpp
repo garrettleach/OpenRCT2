@@ -450,10 +450,11 @@ namespace OpenRCT2::Ui::Vulkan
 
         auto clip = CalcClip(rt, *_engine.GetDrawingPixelInfo());
 
-        int32_t left = x + g1Element->x_offset + clip.x - rt.x;
-        int32_t top = y + g1Element->y_offset + clip.y - rt.y;
-        int32_t right = left + g1Element->width;
-        int32_t bottom = top + g1Element->height;
+        int32_t left = rt.zoom_level.ApplyInversedTo(x + g1Element->x_offset - rt.WorldX()) + clip.x;
+        int32_t top = rt.zoom_level.ApplyInversedTo(y + g1Element->y_offset - rt.WorldY()) + clip.y;
+
+        int32_t right = rt.zoom_level.ApplyInversedTo(x + g1Element->x_offset - rt.WorldX() + g1Element->width) + clip.x;
+        int32_t bottom = rt.zoom_level.ApplyInversedTo(y + g1Element->y_offset - rt.WorldY() + g1Element->height) + clip.y;
 
         glm::ivec4 bounds{ left, top, right, bottom };
 
