@@ -64,7 +64,8 @@ OpenRCT2::Ui::Vulkan::UniqueVmaBuffer OpenRCT2::Ui::Vulkan::UploadToEmptyImage(
     VmaAllocator allocator, const vk::Device& device, vk::CommandBuffer& commandBuffer, uint8_t* data, vk::Extent2D extent,
     vk::Image image)
 {
-    auto stagingBuffer = OpenRCT2::Ui::Vulkan::CreateStagingBuffer(allocator, data, vk::DeviceSize(extent.width * extent.height));
+    auto stagingBuffer = OpenRCT2::Ui::Vulkan::CreateStagingBuffer(
+        allocator, data, vk::DeviceSize(extent.width * extent.height));
 
     OpenRCT2::Ui::Vulkan::TransitionImageToTransferDst(commandBuffer, image);
 
@@ -81,8 +82,7 @@ vk::ImageView OpenRCT2::Ui::Vulkan::AddUpload(
 {
     image = OpenRCT2::Ui::Vulkan::CreateImage(allocator, extent);
 
-    stagingBuffer = OpenRCT2::Ui::Vulkan::CreateStagingBuffer(
-        allocator, data, vk::DeviceSize(extent.width * extent.height));
+    stagingBuffer = OpenRCT2::Ui::Vulkan::CreateStagingBuffer(allocator, data, vk::DeviceSize(extent.width * extent.height));
 
     OpenRCT2::Ui::Vulkan::TransitionImageToTransferDst(commandBuffer, image);
 

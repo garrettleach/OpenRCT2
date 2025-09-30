@@ -15,7 +15,8 @@ namespace OpenRCT2::Ui::Vulkan
 
     void TransitionImageToTransferDst(vk::CommandBuffer& commandBuffer, const vk::Image& image);
 
-    void CopyBufferToImage(vk::CommandBuffer& commandBuffer, const vk::Buffer& buffer, const vk::Image& image, vk::Extent2D extent);
+    void CopyBufferToImage(
+        vk::CommandBuffer& commandBuffer, const vk::Buffer& buffer, const vk::Image& image, vk::Extent2D extent);
 
     void TransitionImageToFragmentReadOpt(vk::CommandBuffer& commandBuffer, const vk::Image& image);
 

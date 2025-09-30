@@ -290,7 +290,8 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateDescriptorPool()
     vk::DescriptorPoolSize poolSizeUniformBuffer(vk::DescriptorType::eUniformBuffer, static_cast<uint32_t>(_framesInFlight));
     vk::DescriptorPoolSize poolSizeStorageBuffer(vk::DescriptorType::eStorageBuffer, static_cast<uint32_t>(_framesInFlight));
     vk::DescriptorPoolSize poolSizeSampler(vk::DescriptorType::eSampler, static_cast<uint32_t>(_framesInFlight));
-    vk::DescriptorPoolSize poolSizeSampledImage(vk::DescriptorType::eCombinedImageSampler, static_cast<uint32_t>(_framesInFlight * 2));
+    vk::DescriptorPoolSize poolSizeSampledImage(
+        vk::DescriptorType::eCombinedImageSampler, static_cast<uint32_t>(_framesInFlight * 2));
     vk::DescriptorPoolSize poolSizeInputAttachments(
         vk::DescriptorType::eInputAttachment, static_cast<uint32_t>(_framesInFlight * 2));
 
@@ -356,8 +357,8 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateDescriptorSets()
         vk::WriteDescriptorSet writeFrameStorage(
             _frameDescriptorSets[i], 3, 0, vk::DescriptorType::eStorageBuffer, {}, { storageCreate });
 
-        std::vector<vk::WriteDescriptorSet> writeDescSet{ writeFilterPaletteImage, writeBlendPaletteImage,
-                                                          writeFrameUniform, writeFrameStorage };
+        std::vector<vk::WriteDescriptorSet> writeDescSet{ writeFilterPaletteImage, writeBlendPaletteImage, writeFrameUniform,
+                                                          writeFrameStorage };
 
         _device.updateDescriptorSets(writeDescSet, {});
     }

@@ -57,7 +57,8 @@ namespace OpenRCT2::Ui::Vulkan
     {
         commandBuffer.endDebugUtilsLabelEXT(_vulkanDynamicDispatch);
     }
-    void VulkanDebug::insertDebugUtilsLabel(const vk::CommandBuffer& commandBuffer, const char* labelName, array<float, 4> colour) const
+    void VulkanDebug::insertDebugUtilsLabel(
+        const vk::CommandBuffer& commandBuffer, const char* labelName, array<float, 4> colour) const
     {
         commandBuffer.insertDebugUtilsLabelEXT({ labelName, colour }, _vulkanDynamicDispatch);
     }

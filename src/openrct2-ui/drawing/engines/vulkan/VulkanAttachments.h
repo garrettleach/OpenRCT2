@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
-#include <vulkan/vulkan.hpp>
 #include <vma/vk_mem_alloc.h>
+#include <vulkan/vulkan.hpp>
 
 namespace OpenRCT2::Ui::Vulkan
 {
@@ -43,10 +43,11 @@ namespace OpenRCT2::Ui::Vulkan
         [[nodiscard]] std::vector<vk::ImageMemoryBarrier2> TransitionToBlitImageBarriers(uint32_t currentFrame);
 
         [[nodiscard]] void BlitToImage(
-            vk::CommandBuffer commandBuffer, uint32_t currentFrame, vk::Image dstImage, vk::ImageLayout dstImageLayout, const std::vector<vk::ImageBlit>& imageBlits, vk::Filter filter);
+            vk::CommandBuffer commandBuffer, uint32_t currentFrame, vk::Image dstImage, vk::ImageLayout dstImageLayout,
+            const std::vector<vk::ImageBlit>& imageBlits, vk::Filter filter);
 
     private:
         void CreateImages(vk::Extent2D extent);
         void CreateImageViews();
     };
-}
+} // namespace OpenRCT2::Ui::Vulkan

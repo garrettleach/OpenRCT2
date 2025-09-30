@@ -265,7 +265,8 @@ namespace OpenRCT2::Ui::Vulkan
                 nullptr, _spriteManager.GetPaletteImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
 
             vk::WriteDescriptorSet filterPaletteDescriptorWrite(
-                _uniformBufferDescriptorSets[i], 1, 0, vk::DescriptorType::eCombinedImageSampler, { filterPaletteImageInfo }, {}, {});
+                _uniformBufferDescriptorSets[i], 1, 0, vk::DescriptorType::eCombinedImageSampler, { filterPaletteImageInfo },
+                {}, {});
 
             _device.updateDescriptorSets({ filterPaletteDescriptorWrite }, {});
         }

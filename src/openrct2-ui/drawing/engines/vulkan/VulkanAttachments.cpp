@@ -1,4 +1,5 @@
 #include "VulkanAttachments.h"
+
 #include "VulkanUtils.h"
 
 namespace
@@ -73,23 +74,24 @@ std::vector<vk::ImageView> OpenRCT2::Ui::Vulkan::VulkanAttachments::GetColourIma
     return imageViews;
 }
 
-std::vector<vk::RenderingAttachmentInfo> OpenRCT2::Ui::Vulkan::VulkanAttachments::GetColourAttachmentInfos(uint32_t currentFrame)
+std::vector<vk::RenderingAttachmentInfo> OpenRCT2::Ui::Vulkan::VulkanAttachments::GetColourAttachmentInfos(
+    uint32_t currentFrame)
 {
     return { { *_intermediatePaletteImageViews[currentFrame],
-                             vk::ImageLayout::eRenderingLocalRead,
-                             vk::ResolveModeFlagBits::eNone,
-                             {},
-                             VULKAN_HPP_NAMESPACE::ImageLayout::eUndefined,
-                             vk::AttachmentLoadOp::eClear,
-                             vk::AttachmentStoreOp::eDontCare,
-                             vk::ClearColorValue(std::array<uint32_t, 4>{ 10, 0, 0, 0 }) },
+               vk::ImageLayout::eRenderingLocalRead,
+               vk::ResolveModeFlagBits::eNone,
+               {},
+               VULKAN_HPP_NAMESPACE::ImageLayout::eUndefined,
+               vk::AttachmentLoadOp::eClear,
+               vk::AttachmentStoreOp::eDontCare,
+               vk::ClearColorValue(std::array<uint32_t, 4>{ 10, 0, 0, 0 }) },
              { *_intermediateColourImageViews[currentFrame],
-                             vk::ImageLayout::eColorAttachmentOptimal,
-                             vk::ResolveModeFlagBits::eNone,
-                             {},
-                             vk::ImageLayout::eUndefined,
-                             vk::AttachmentLoadOp::eClear,
-                             vk::AttachmentStoreOp::eStore } };
+               vk::ImageLayout::eColorAttachmentOptimal,
+               vk::ResolveModeFlagBits::eNone,
+               {},
+               vk::ImageLayout::eUndefined,
+               vk::AttachmentLoadOp::eClear,
+               vk::AttachmentStoreOp::eStore } };
 }
 
 vk::RenderingAttachmentInfo OpenRCT2::Ui::Vulkan::VulkanAttachments::GetDepthAttachmentInfo(uint32_t currentFrame)

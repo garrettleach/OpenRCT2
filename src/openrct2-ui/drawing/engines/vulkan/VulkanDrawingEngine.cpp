@@ -162,7 +162,8 @@ namespace OpenRCT2::Ui::Vulkan
         deviceCreateInfo.get<vk::PhysicalDeviceVulkan12Features>().uniformBufferStandardLayout = true;
 
         DebugSettings::FilterPhysicalDeviceFeatures(deviceCreateInfo.get<vk::PhysicalDeviceFeatures2>().features);
-        DebugSettings::FilterPhysicalDeviceRobustness2FeaturesEXT(deviceCreateInfo.get<vk::PhysicalDeviceRobustness2FeaturesEXT>());
+        DebugSettings::FilterPhysicalDeviceRobustness2FeaturesEXT(
+            deviceCreateInfo.get<vk::PhysicalDeviceRobustness2FeaturesEXT>());
 
         _device = _physicalDevice.createDeviceUnique(deviceCreateInfo.get());
     }
@@ -283,8 +284,8 @@ namespace OpenRCT2::Ui::Vulkan
     void VulkanDrawingEngine::CreateIntermediateImages()
     {
         _attachments = std::make_unique<VulkanAttachments>(
-            *_device, vk::Extent2D(static_cast<uint32_t>(_mainRT.width), static_cast<uint32_t>(_mainRT.height)), _framesInFlight,
-            static_cast<VmaAllocator>(*_vmaAllocator));
+            *_device, vk::Extent2D(static_cast<uint32_t>(_mainRT.width), static_cast<uint32_t>(_mainRT.height)),
+            _framesInFlight, static_cast<VmaAllocator>(*_vmaAllocator));
     }
 
     void VulkanDrawingEngine::CreateGraphicsPipelines()
@@ -488,7 +489,8 @@ namespace OpenRCT2::Ui::Vulkan
 
         currentFramePrimaryCommandBuffer->endRendering();
 
-        std::vector<vk::ImageMemoryBarrier2> barriersColourToSwapchainBarriers = _attachments->TransitionToBlitImageBarriers(_currentFrame);
+        std::vector<vk::ImageMemoryBarrier2> barriersColourToSwapchainBarriers = _attachments->TransitionToBlitImageBarriers(
+            _currentFrame);
 
         barriersColourToSwapchainBarriers.emplace_back(
             vk::PipelineStageFlagBits2::eTopOfPipe | vk::PipelineStageFlagBits2::eColorAttachmentOutput,

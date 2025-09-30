@@ -9,7 +9,6 @@ namespace OpenRCT2::Ui::Vulkan
         vk::UniqueInstance _instance;
         vk::UniqueSurfaceKHR _surface;
 
-
     public:
         VulkanInstance(SDL_Window* window, uint32_t authoredVulkanApiVersion);
 

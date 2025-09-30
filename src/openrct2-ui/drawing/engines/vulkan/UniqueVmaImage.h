@@ -1,6 +1,6 @@
 #pragma once
-#include <vulkan/vulkan.hpp>
 #include <vma/vk_mem_alloc.h>
+#include <vulkan/vulkan.hpp>
 
 namespace OpenRCT2::Ui::Vulkan
 {
@@ -27,4 +27,4 @@ namespace OpenRCT2::Ui::Vulkan
 
         void Reset() noexcept;
     };
-}
+} // namespace OpenRCT2::Ui::Vulkan

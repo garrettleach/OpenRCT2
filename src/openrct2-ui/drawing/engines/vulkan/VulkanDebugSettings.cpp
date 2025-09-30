@@ -1,4 +1,5 @@
 #include "VulkanDebugSettings.h"
+
 #include "VulkanDebug.h"
 
 namespace OpenRCT2::Ui::Vulkan
@@ -250,7 +251,7 @@ namespace OpenRCT2::Ui::Vulkan
 
     std::vector<const char*> DebugSettings::GetDeviceDebugExtensions()
     {
-        if constexpr(enableValidationLayer && setValidationLayerSettings && prinft_value)
+        if constexpr (enableValidationLayer && setValidationLayerSettings && prinft_value)
         {
             return { vk::KHRShaderNonSemanticInfoExtensionName };
         }

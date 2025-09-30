@@ -65,8 +65,7 @@ namespace OpenRCT2::Ui::Vulkan
 
         vk::StructureChain<vk::InstanceCreateInfo, vk::DebugUtilsMessengerCreateInfoEXT, vk::LayerSettingsCreateInfoEXT>
             createInfo{ vk::InstanceCreateInfo{ vk::InstanceCreateFlags{}, &applicationInfo, enabledLayers, enabledExtensions },
-                        debugSettings.value_or({}),
-                        vk::LayerSettingsCreateInfoEXT{ validationLayerSettings } };
+                        debugSettings.value_or({}), vk::LayerSettingsCreateInfoEXT{ validationLayerSettings } };
 
         if (validationLayerSettings.size() == 0)
         {
@@ -86,8 +85,9 @@ namespace OpenRCT2::Ui::Vulkan
             throw runtime_error("Failed to create SDL Vulkan surface");
         }
 
-        _surface = std::move(vk::UniqueSurfaceKHR(
-            vk::SurfaceKHR(surfaceTemp), vk::detail::ObjectDestroy(*_instance, nullptr, VULKAN_HPP_DEFAULT_DISPATCHER)));
+        _surface = std::move(
+            vk::UniqueSurfaceKHR(
+                vk::SurfaceKHR(surfaceTemp), vk::detail::ObjectDestroy(*_instance, nullptr, VULKAN_HPP_DEFAULT_DISPATCHER)));
     }
 
     static bool MissingGraphicsQueue(vk::PhysicalDevice physicalDevice)
@@ -131,11 +131,12 @@ namespace OpenRCT2::Ui::Vulkan
         return extensionNames.size() > 0;
     }
 
-    static bool NoCompatibleSurfaceFormat(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, std::vector<vk::SurfaceFormatKHR> compatibleSurfaceFormats)
+    static bool NoCompatibleSurfaceFormat(
+        vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, std::vector<vk::SurfaceFormatKHR> compatibleSurfaceFormats)
     {
         auto availableFormats = physicalDevice.getSurfaceFormatsKHR(surface);
 
-        std::sort(compatibleSurfaceFormats.begin(),compatibleSurfaceFormats.end());
+        std::sort(compatibleSurfaceFormats.begin(), compatibleSurfaceFormats.end());
         std::sort(availableFormats.begin(), availableFormats.end());
 
         auto it = std::find_first_of(
@@ -144,7 +145,8 @@ namespace OpenRCT2::Ui::Vulkan
         return it == availableFormats.end();
     }
 
-    static bool NoCompatiblePresentationMode(vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, std::vector < vk::PresentModeKHR> compatiblePresentationModes)
+    static bool NoCompatiblePresentationMode(
+        vk::PhysicalDevice physicalDevice, vk::SurfaceKHR surface, std::vector<vk::PresentModeKHR> compatiblePresentationModes)
     {
         auto availablePresentaitonModes = physicalDevice.getSurfacePresentModesKHR(surface);
 
@@ -212,8 +214,9 @@ namespace OpenRCT2::Ui::Vulkan
                 [surface = *_surface](vk::PhysicalDevice pd) { return MissingCompatiblePresentationQueue(pd, surface); }),
             physicalDevices.end());
 
-        const vector<std::string> kRequiredExtensions{ vk::KHRSwapchainExtensionName, vk::KHRDynamicRenderingLocalReadExtensionName,
-                                                 vk::KHRRelaxedBlockLayoutExtensionName };
+        const vector<std::string> kRequiredExtensions{ vk::KHRSwapchainExtensionName,
+                                                       vk::KHRDynamicRenderingLocalReadExtensionName,
+                                                       vk::KHRRelaxedBlockLayoutExtensionName };
 
         physicalDevices.erase(
             std::remove_if(
@@ -239,7 +242,8 @@ namespace OpenRCT2::Ui::Vulkan
         physicalDevices.erase(
             std::remove_if(
                 physicalDevices.begin(), physicalDevices.end(),
-                [surface = *_surface, kPresentFormats](vk::PhysicalDevice pd) { return NoCompatiblePresentationMode(pd, surface, kPresentFormats);
+                [surface = *_surface, kPresentFormats](vk::PhysicalDevice pd) {
+                    return NoCompatiblePresentationMode(pd, surface, kPresentFormats);
                 }),
             physicalDevices.end());
 

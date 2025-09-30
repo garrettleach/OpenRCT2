@@ -81,13 +81,14 @@ namespace OpenRCT2::Ui::Vulkan
         void beginDebugUtilsLabel(
             const vk::Queue& queue, const char* labelName, std::array<float, 4> colour = {}) const override;
         void endDebugUtilsLabel(const vk::Queue& queue) const override;
-        void insertDebugUtilsLabel(const vk::Queue& queue, const char* labelName, std::array<float, 4> colour = {}) const override;
+        void insertDebugUtilsLabel(
+            const vk::Queue& queue, const char* labelName, std::array<float, 4> colour = {}) const override;
 
         void beginDebugUtilsLabel(
             const vk::CommandBuffer& commandBuffer, const char* labelName, std::array<float, 4> colour = {}) const override;
         void endDebugUtilsLabel(const vk::CommandBuffer& commandBuffer) const override;
-        void insertDebugUtilsLabel(const vk::CommandBuffer& commandBuffer, const char* labelName, std::array<float, 4> colour = {})
-            const override;
+        void insertDebugUtilsLabel(
+            const vk::CommandBuffer& commandBuffer, const char* labelName, std::array<float, 4> colour = {}) const override;
 
         void setObjectName(const vk::Device& device, const vk::DebugUtilsObjectNameInfoEXT& nameInfo) const override;
 
