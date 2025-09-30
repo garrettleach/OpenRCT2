@@ -479,11 +479,11 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::QueueFilterRect(
     // not sure why there is +1
     glm::ivec4 bounds{ left + clip.x - rt.x, top + clip.y - rt.y, right + clip.x - rt.x + 1, bottom + clip.y - rt.y + 1 };
 
-    _inProgressCommands.emplace_back(bounds, clip, ColourizeCommandFlags::ActionFilterRect, paletteIndex, index);
+    _inProgressCommands.emplace_back(bounds, clip, ColourizeCommandFlags::ActionFilterRect, (int8_t)rt.zoom_level, paletteIndex, index);
 }
 
 void OpenRCT2::Ui::Vulkan::ColourizePipeline::QueueBlendedSprite(
-    uint32_t index, glm::ivec4 bounds, glm::ivec4 clip, ImageId imageId)
+    RenderTarget& rt, uint32_t index, glm::ivec4 bounds, glm::ivec4 clip, ImageId imageId)
 {
     auto textureIndex = _spriteManager.QueueUpload(ImageId(imageId.GetIndex()), SpritePool::ColourizePipeline);
 
@@ -496,21 +496,22 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::QueueBlendedSprite(
             if (palette == FilterPaletteID::paletteWater)
             {
                 _inProgressCommands.emplace_back(
-                    bounds, clip, (uint32_t)ColourizeCommandFlags::ActionBlendSpriteWithExisting, (uint32_t)(paletteY), index,
+                    bounds, clip, (uint32_t)ColourizeCommandFlags::ActionBlendSpriteWithExisting, (int8_t)rt.zoom_level,
+                    (uint32_t)(paletteY), index,
                     textureIndex);
             }
             else
             {
                 _inProgressCommands.emplace_back(
-                    bounds, clip, (uint32_t)ColourizeCommandFlags::ActionBlendSpriteWithPalette, (uint32_t)paletteY, index,
-                    textureIndex);
+                    bounds, clip, (uint32_t)ColourizeCommandFlags::ActionBlendSpriteWithPalette, (int8_t)rt.zoom_level,
+                    (uint32_t)paletteY, index, textureIndex);
             }
         }
         else
         {
             _inProgressCommands.emplace_back(
-                bounds, clip, (uint32_t)ColourizeCommandFlags::ActionBlendSpriteWithPalette, (uint32_t)paletteY, index,
-                textureIndex);
+                bounds, clip, (uint32_t)ColourizeCommandFlags::ActionBlendSpriteWithPalette, (int8_t)rt.zoom_level,
+                (uint32_t)paletteY, index, textureIndex);
         }
     }
 }

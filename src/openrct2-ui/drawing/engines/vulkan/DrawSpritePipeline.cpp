@@ -484,13 +484,13 @@ namespace OpenRCT2::Ui::Vulkan
             palettes[0] = PaletteToY(palette);
             if (palette == FilterPaletteID::paletteWater)
             {
-                _engine.GetColourizePipeline().QueueBlendedSprite(QueuePlaceholder(), bounds, clip, imageId);
+                _engine.GetColourizePipeline().QueueBlendedSprite(rt, QueuePlaceholder(), bounds, clip, imageId);
                 return;
             }
         }
         else if (imageId.IsBlended())
         {
-            _engine.GetColourizePipeline().QueueBlendedSprite(QueuePlaceholder(), bounds, clip, imageId);
+            _engine.GetColourizePipeline().QueueBlendedSprite(rt, QueuePlaceholder(), bounds, clip, imageId);
             return;
         }
 

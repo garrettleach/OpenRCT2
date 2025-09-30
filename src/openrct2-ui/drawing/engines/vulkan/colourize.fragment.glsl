@@ -34,6 +34,7 @@ struct ColourizeCommand
     ivec4 bounds;
     ivec4 clip;
 	uint flags;
+    int zoom;
 	// filterId:
 	//   in FLAGS_ACTION_FILTERRECT: filter palette id
 	//   in FLAGS_ACTION_BLEND_WITH_PALETTE: value to blend previous colour with
@@ -83,6 +84,14 @@ void main() {
 				else if((commands[i].flags & FLAGS_ACTION_MASK) == FLAGS_ACTION_BLEND_WITH_EXISTING) // EXAMPLE: WATER
 				{
 					ivec2 uvTexture = ivec2(coords.x - commands[i].bounds.x, coords.y - commands[i].bounds.y);
+					if(commands[i].zoom > 0)
+					{
+						uvTexture = uvTexture << commands[i].zoom;
+					}
+					else if(commands[i].zoom < 0)
+					{
+						uvTexture = uvTexture >> -commands[i].zoom;
+					}
                     uint colourInSprite = texelFetch(usampler2D(textures[commands[i].textureIndex], singleSampler), uvTexture, 0).x;
 					
 					if(colourInSprite != 0)
@@ -102,6 +111,15 @@ void main() {
 					// FLAGS_ACTION_BLEND_WITH_PALETTE EXAMPLE: GLASS (texture is used only as a mask)
 				
 					ivec2 uvMaskTexture = ivec2(coords.x - commands[i].bounds.x, coords.y - commands[i].bounds.y);
+					if(commands[i].zoom > 0)
+					{
+						uvMaskTexture = uvMaskTexture << commands[i].zoom;
+					}
+					else if(commands[i].zoom < 0)
+					{
+						uvMaskTexture = uvMaskTexture >> -commands[i].zoom;
+					}
+					
                     uint maskValue = texelFetch(usampler2D(textures[commands[i].textureIndex], singleSampler), uvMaskTexture, 0).x;
 				
 					if(maskValue != 0)

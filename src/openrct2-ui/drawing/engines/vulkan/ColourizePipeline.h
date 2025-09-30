@@ -26,6 +26,7 @@ namespace OpenRCT2::Ui::Vulkan
             alignas(16) glm::ivec4 bounds;
             alignas(16) glm::ivec4 clip = { INT_MIN, INT_MIN, INT_MAX, INT_MAX };
             alignas(4) uint32_t flags;
+            alignas(4) int32_t zoom;
             alignas(4) uint32_t paletteIndex;
             alignas(4) uint32_t drawIndex;
             alignas(4) TextureIndex textureIndex; // blend-only
@@ -83,7 +84,7 @@ namespace OpenRCT2::Ui::Vulkan
             uint32_t index, RenderTarget& rt, FilterPaletteID palette, int32_t left, int32_t top, int32_t right,
             int32_t bottom);
 
-        void QueueBlendedSprite(uint32_t index, glm::ivec4 bounds, glm::ivec4 clip, ImageId imageId);
+        void QueueBlendedSprite(RenderTarget& rt, uint32_t index, glm::ivec4 bounds, glm::ivec4 clip, ImageId imageId);
 
     private:
         void CreateGraphicsPipeline();
