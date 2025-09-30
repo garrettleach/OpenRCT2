@@ -516,10 +516,14 @@ namespace OpenRCT2::Ui::Vulkan
 
         auto clip = CalcClip(rt, *_engine.GetDrawingPixelInfo());
 
-        int32_t left = x + g1MaskElement->x_offset + clip.x - rt.x;
-        int32_t top = y + g1MaskElement->y_offset + clip.y - rt.y;
-        int32_t right = left + g1MaskElement->width;
-        int32_t bottom = top + g1MaskElement->height;
+        int32_t left = rt.zoom_level.ApplyInversedTo(x + g1MaskElement->x_offset - rt.WorldX()) + clip.x;
+        int32_t top = rt.zoom_level.ApplyInversedTo(y + g1MaskElement->y_offset - rt.WorldY()) + clip.y;
+
+        int32_t right = rt.zoom_level.ApplyInversedTo(x + g1MaskElement->x_offset - rt.WorldX() + g1MaskElement->width)
+            + clip.x;
+        int32_t bottom = rt.zoom_level.ApplyInversedTo(y + g1MaskElement->y_offset - rt.WorldY() + g1MaskElement->height)
+            + clip.y;
+
 
         ImageId baseMaskImage = ImageId(maskImage.GetIndex());
 
