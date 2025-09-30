@@ -502,6 +502,7 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::QueueBlendedSprite(
             }
             else
             {
+                // example: glass
                 _inProgressCommands.emplace_back(
                     bounds, clip, (uint32_t)ColourizeCommandFlags::ActionBlendSpriteWithPalette, (int8_t)rt.zoom_level,
                     (uint32_t)paletteY, index, textureIndex);

@@ -125,7 +125,7 @@ void main() {
 					if(maskValue != 0)
 					{
 						ivec2 uvBlend = ivec2(colour, commands[i].filterId);
-						uint thisColour = texelFetch(usampler2D(blendPalette, singleSampler), uvBlend, 0).x;
+						uint thisColour = texelFetch(usampler2D(filterPalette, singleSampler), uvBlend, 0).x;
 						if(thisColour != 0)
 						{
 							colour = thisColour;
