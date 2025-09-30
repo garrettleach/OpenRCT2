@@ -525,7 +525,6 @@ namespace OpenRCT2::Ui::Vulkan
         int32_t bottom = rt.zoom_level.ApplyInversedTo(y + g1MaskElement->y_offset - rt.WorldY() + g1MaskElement->height)
             + clip.y;
 
-
         ImageId baseMaskImage = ImageId(maskImage.GetIndex());
 
         auto maskTextureIndex = _spriteManager.QueueUpload(baseMaskImage, maskImage, SpritePool::DrawSpritePipeline);

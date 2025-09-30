@@ -479,7 +479,8 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::QueueFilterRect(
     // not sure why there is +1
     glm::ivec4 bounds{ left + clip.x - rt.x, top + clip.y - rt.y, right + clip.x - rt.x + 1, bottom + clip.y - rt.y + 1 };
 
-    _inProgressCommands.emplace_back(bounds, clip, ColourizeCommandFlags::ActionFilterRect, (int8_t)rt.zoom_level, paletteIndex, index);
+    _inProgressCommands.emplace_back(
+        bounds, clip, ColourizeCommandFlags::ActionFilterRect, (int8_t)rt.zoom_level, paletteIndex, index);
 }
 
 void OpenRCT2::Ui::Vulkan::ColourizePipeline::QueueBlendedSprite(
@@ -497,8 +498,7 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::QueueBlendedSprite(
             {
                 _inProgressCommands.emplace_back(
                     bounds, clip, (uint32_t)ColourizeCommandFlags::ActionBlendSpriteWithExisting, (int8_t)rt.zoom_level,
-                    (uint32_t)(paletteY), index,
-                    textureIndex);
+                    (uint32_t)(paletteY), index, textureIndex);
             }
             else
             {
