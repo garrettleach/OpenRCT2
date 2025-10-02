@@ -300,6 +300,8 @@ namespace OpenRCT2::Ui::Vulkan
         _colourizePipeline = std::make_unique<ColourizePipeline>(
             *this, *_spriteManager, *_debug, *_device, _framesInFlight, *_vmaAllocator, _attachments->GetPaletteImageViews(),
             _attachments->GetDepthImageViews());
+
+        _world3DPipeline = std::make_unique<World3DPipeline>(*this, *_debug, *_device, _framesInFlight, *_vmaAllocator);
     }
 
     void VulkanDrawingEngine::CreateCommandBuffers()
@@ -486,6 +488,8 @@ namespace OpenRCT2::Ui::Vulkan
         currentFramePrimaryCommandBuffer->pipelineBarrier2(nextSubpassDependencyInfo);
 
         _colourizePipeline->Draw(*currentFramePrimaryCommandBuffer, _mainRT, _currentFrame);
+
+        _world3DPipeline->Draw(*currentFramePrimaryCommandBuffer, _mainRT, _currentFrame);
 
         currentFramePrimaryCommandBuffer->endRendering();
 

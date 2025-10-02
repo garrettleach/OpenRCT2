@@ -5,6 +5,7 @@
 #include "VulkanDebug.h"
 #include "VulkanInstance.h"
 #include "VulkanMemoryAllocator.h"
+#include "World3DPipeline.h"
 
 #include <SDL2/SDL.h>
 #include <glm/gtc/matrix_transform.hpp>
@@ -23,6 +24,7 @@ namespace OpenRCT2::Ui::Vulkan
     class DrawSpritePipeline;
     class LinePipeline;
     class ColourizePipeline;
+    class World3DPipeline;
 
     namespace detail
     {
@@ -69,6 +71,7 @@ namespace OpenRCT2::Ui::Vulkan
         std::unique_ptr<DrawSpritePipeline> _drawSpritePipeline;
         std::unique_ptr<ColourizePipeline> _colourizePipeline;
         std::unique_ptr<LinePipeline> _linePipeline;
+        std::unique_ptr<World3DPipeline> _world3DPipeline;
 
         vk::UniqueCommandPool _commandPool;
         std::vector<vk::UniqueCommandBuffer> _primaryCommandBuffers; //[0,_framesInFlight)
