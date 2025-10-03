@@ -50,8 +50,9 @@ namespace OpenRCT2::Ui::Vulkan
             };
         }
 
-        constexpr std::array<glm::ivec2, 4> rectVerticies = { glm::ivec2{ 1, 0 }, glm::ivec2{ 0, 0 }, glm::ivec2{ 1, 1 },
-                                                              glm::ivec2{ 0, 1 } };
+        constexpr std::array<OpenRCT2::Ui::Vulkan::DrawSpritePipeline::Vertex, 4> rectVerticies = {
+            { { glm::ivec2{ 1, 0 } }, { glm::ivec2{ 0, 0 } }, { glm::ivec2{ 1, 1 } }, { glm::ivec2{ 0, 1 } } }
+        };
 
         constexpr std::array<uint32_t, 6> rectIndicies = {
             0, 1, 2, 2, 1, 3,
