@@ -128,7 +128,7 @@ void OpenRCT2::Ui::Vulkan::World3DPipeline::Draw(
             if (surfaceElement == nullptr)
                 continue;
             
-            auto baseZ = surfaceElement->GetBaseZ();
+            auto baseZ = surfaceElement->BaseHeight;
             auto slope = surfaceElement->GetSlope();
 
             auto cornerHeights = GetSlopeRelativeCornerHeights(slope);
@@ -136,8 +136,8 @@ void OpenRCT2::Ui::Vulkan::World3DPipeline::Draw(
 
             heights[y + x * gameState.mapSize.y] = Square(
                 { y, x }, baseZ,
-                (centerOffset << 0) | (cornerHeights.top << 2) | (cornerHeights.right << 4) | (cornerHeights.bottom << 6)
-                    | (cornerHeights.left << 8));
+                (centerOffset << 1) | (cornerHeights.top << 5) | (cornerHeights.right << 9) | (cornerHeights.bottom << 13)
+                    | (cornerHeights.left << 17));
         }
     }
 

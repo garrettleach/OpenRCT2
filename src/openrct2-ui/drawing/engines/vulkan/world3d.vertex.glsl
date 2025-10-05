@@ -17,9 +17,9 @@ layout(location = 3) in vec2 vertexPos;
 layout(location = 0) out vec4 outColour;
 
 void main() {
-	uint cornerHeight = (cornerHeights>>(gl_VertexIndex<<1) & 0x3) * push.landHeightStep;
+	uint cornerHeight = (cornerHeights>>(gl_VertexIndex<<2) & 0x7);
 
-	gl_Position = push.transform * vec4(vec3((vec2(squarePos)+vertexPos), float(squareHeight + cornerHeight)/push.landHeightStep),1.0);
+	gl_Position = push.transform * vec4(vec3((vec2(squarePos)+vertexPos), float(squareHeight + cornerHeight)),1.0);
 
 	outColour = vec4(vertexPos.x,vertexPos.y,float(squareHeight)/255.0f,1.0f);
 }
