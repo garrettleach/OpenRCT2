@@ -11,7 +11,7 @@ namespace OpenRCT2::Ui::Vulkan
 {
     class VulkanDrawingEngine;
 
-    class World3DPipeline
+    class World3DEngine
     {
     public:
         struct Square
@@ -46,7 +46,7 @@ namespace OpenRCT2::Ui::Vulkan
         UniqueVmaBuffer _indexBuffer;
 
     public:
-        World3DPipeline(
+        World3DEngine(
             VulkanDrawingEngine& engine, const IVulkanDebug& vulkanDebug, const vk::Device device, const size_t framesInFlight,
             VmaAllocator alloc);
 

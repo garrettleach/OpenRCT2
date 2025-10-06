@@ -301,7 +301,7 @@ namespace OpenRCT2::Ui::Vulkan
             *this, *_spriteManager, *_debug, *_device, _framesInFlight, *_vmaAllocator, _attachments->GetPaletteImageViews(),
             _attachments->GetDepthImageViews());
 
-        _world3DPipeline = std::make_unique<World3DPipeline>(*this, *_debug, *_device, _framesInFlight, *_vmaAllocator);
+        _world3DPipeline = std::make_unique<World3DEngine>(*this, *_debug, *_device, _framesInFlight, *_vmaAllocator);
     }
 
     void VulkanDrawingEngine::CreateCommandBuffers()

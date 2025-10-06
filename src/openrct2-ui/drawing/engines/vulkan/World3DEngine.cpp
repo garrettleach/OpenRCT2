@@ -1,5 +1,5 @@
 #define GLM_FORCE_LEFT_HANDED
-#include "World3DPipeline.h"
+#include "World3DEngine.h"
 #include "SpirV.h"
 
 #include <glm/glm.hpp>
@@ -34,17 +34,17 @@ namespace
 
     vk::VertexInputBindingDescription GetInstanceBindingDescription()
     {
-        return { 0, sizeof(OpenRCT2::Ui::Vulkan::World3DPipeline::Square), vk::VertexInputRate::eInstance };
+        return { 0, sizeof(OpenRCT2::Ui::Vulkan::World3DEngine::Square), vk::VertexInputRate::eInstance };
     }
 
     std::array<vk::VertexInputAttributeDescription, 3> GetInstanceAttributeDescriptions()
     {
         return { vk::VertexInputAttributeDescription{ 0, 0, vk::Format::eR32G32Sint,
-                                                      offsetof(OpenRCT2::Ui::Vulkan::World3DPipeline::Square, pos) },
+                                                      offsetof(OpenRCT2::Ui::Vulkan::World3DEngine::Square, pos) },
                  vk::VertexInputAttributeDescription{ 1, 0, vk::Format::eR32Uint,
-                                                      offsetof(OpenRCT2::Ui::Vulkan::World3DPipeline::Square, height) },
+                                                      offsetof(OpenRCT2::Ui::Vulkan::World3DEngine::Square, height) },
                  vk::VertexInputAttributeDescription{ 2, 0, vk::Format::eR32Uint,
-                                                      offsetof(OpenRCT2::Ui::Vulkan::World3DPipeline::Square, cornerHeights) } };
+                                                      offsetof(OpenRCT2::Ui::Vulkan::World3DEngine::Square, cornerHeights) } };
     }
 
     vk::VertexInputBindingDescription GetVertexBindingDescription()
@@ -72,7 +72,7 @@ namespace
     };
 } // namespace
 
-OpenRCT2::Ui::Vulkan::World3DPipeline::World3DPipeline(
+OpenRCT2::Ui::Vulkan::World3DEngine::World3DEngine(
     VulkanDrawingEngine& engine, const IVulkanDebug& vulkanDebug, const vk::Device device, const size_t framesInFlight,
     VmaAllocator alloc)
     : _engine(engine)
@@ -85,6 +85,8 @@ OpenRCT2::Ui::Vulkan::World3DPipeline::World3DPipeline(
     , _pipelineLayout(CreatePipelineLayout(device, { *_descriptorSetLayout }))
     , _pipeline(CreatePipeline(device, *_descriptorSetLayout, *_pipelineLayout))
 {
+    // SDL_CreateWindow
+    // SDL_Vulkan_CreateSurface
     CreateDescriptorPool();
     CreateDescriptorSets();
     CreateInstanceBuffers();
@@ -107,7 +109,7 @@ static void ResizeBufferIfNeeded(
     }
 }
 
-void OpenRCT2::Ui::Vulkan::World3DPipeline::Draw(
+void OpenRCT2::Ui::Vulkan::World3DEngine::Draw(
     const vk::CommandBuffer& commandBuffer, const RenderTarget& renderTarget, uint32_t currentFrame)
 {
     auto& gameState = getGameState();
@@ -130,6 +132,7 @@ void OpenRCT2::Ui::Vulkan::World3DPipeline::Draw(
             
             auto baseZ = surfaceElement->BaseHeight;
             auto slope = surfaceElement->GetSlope();
+            auto waterHeight = surfaceElement->GetWaterHeight();
 
             auto cornerHeights = GetSlopeRelativeCornerHeights(slope);
             uint32_t centerOffset = (slope & kTileSlopeDiagonalFlag) ? 1 : 0;
@@ -182,7 +185,7 @@ void OpenRCT2::Ui::Vulkan::World3DPipeline::Draw(
         static_cast<uint32_t>(surfaceIndicies.size()), static_cast<uint32_t>(heights.size()), 0, 0, 0);
 }
 
-vk::UniqueDescriptorSetLayout OpenRCT2::Ui::Vulkan::World3DPipeline::CreateDescriptorSetLayout(
+vk::UniqueDescriptorSetLayout OpenRCT2::Ui::Vulkan::World3DEngine::CreateDescriptorSetLayout(
     const vk::Device& device, vk::Sampler sampler)
 {
     std::vector<vk::Sampler> singleImmutableSampler{ sampler };
@@ -197,7 +200,7 @@ vk::UniqueDescriptorSetLayout OpenRCT2::Ui::Vulkan::World3DPipeline::CreateDescr
     return device.createDescriptorSetLayoutUnique(layoutInfo);
 }
 
-vk::UniquePipelineLayout OpenRCT2::Ui::Vulkan::World3DPipeline::CreatePipelineLayout(
+vk::UniquePipelineLayout OpenRCT2::Ui::Vulkan::World3DEngine::CreatePipelineLayout(
     const vk::Device& device, const std::vector<vk::DescriptorSetLayout>& descriptorSetLayouts)
 {
     vk::PushConstantRange pushConst(vk::ShaderStageFlagBits::eVertex, 0, static_cast<uint32_t>(sizeof(PushConstant)));
@@ -207,7 +210,7 @@ vk::UniquePipelineLayout OpenRCT2::Ui::Vulkan::World3DPipeline::CreatePipelineLa
     return device.createPipelineLayoutUnique(pipelineLayoutInfo);
 }
 
-vk::UniquePipeline OpenRCT2::Ui::Vulkan::World3DPipeline::CreatePipeline(
+vk::UniquePipeline OpenRCT2::Ui::Vulkan::World3DEngine::CreatePipeline(
     const vk::Device& device, const vk::DescriptorSetLayout& descriptorSetLayout, const vk::PipelineLayout& pipelineLayout)
 {
     auto vertexShaderSpirV = ReadSpirVFile("world3d.vertex.spirv");
@@ -296,7 +299,7 @@ vk::UniquePipeline OpenRCT2::Ui::Vulkan::World3DPipeline::CreatePipeline(
     return std::move(pipeline.value);
 }
 
-void OpenRCT2::Ui::Vulkan::World3DPipeline::CreateDescriptorPool()
+void OpenRCT2::Ui::Vulkan::World3DEngine::CreateDescriptorPool()
 {
     vk::DescriptorPoolSize poolSizeUniformBuffer(
         vk::DescriptorType::eUniformBuffer, static_cast<uint32_t>(_framesInFlight * 2));
@@ -309,7 +312,7 @@ void OpenRCT2::Ui::Vulkan::World3DPipeline::CreateDescriptorPool()
     _descriptorPool = _device.createDescriptorPoolUnique(poolInfo);
 }
 
-void OpenRCT2::Ui::Vulkan::World3DPipeline::CreateDescriptorSets()
+void OpenRCT2::Ui::Vulkan::World3DEngine::CreateDescriptorSets()
 {
     std::vector<vk::DescriptorSetLayout> layouts(_framesInFlight, *_descriptorSetLayout);
 
@@ -323,7 +326,7 @@ void OpenRCT2::Ui::Vulkan::World3DPipeline::CreateDescriptorSets()
     }
 }
 
-void OpenRCT2::Ui::Vulkan::World3DPipeline::CreateInstanceBuffers()
+void OpenRCT2::Ui::Vulkan::World3DEngine::CreateInstanceBuffers()
 {
     vk::DeviceSize initialInstanceBufferSize = sizeof(Square) * 128 * 128;
 
@@ -338,7 +341,7 @@ void OpenRCT2::Ui::Vulkan::World3DPipeline::CreateInstanceBuffers()
     }
 }
 
-void OpenRCT2::Ui::Vulkan::World3DPipeline::CreateVertexBuffer()
+void OpenRCT2::Ui::Vulkan::World3DEngine::CreateVertexBuffer()
 {
     vk::DeviceSize initialVertexBufferSize = sizeof(Vertex) * 5 * 128 * 128;
 
@@ -353,7 +356,7 @@ void OpenRCT2::Ui::Vulkan::World3DPipeline::CreateVertexBuffer()
         surfaceVerticies.size() * sizeof(decltype(surfaceVerticies)::value_type));
 }
 
-void OpenRCT2::Ui::Vulkan::World3DPipeline::CreateIndexBuffer()
+void OpenRCT2::Ui::Vulkan::World3DEngine::CreateIndexBuffer()
 {
     vk::DeviceSize initialIndexBufferSize = sizeof(decltype(surfaceIndicies)::value_type) * surfaceIndicies.size();
 
