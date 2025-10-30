@@ -193,19 +193,14 @@ namespace OpenRCT2::Ui::Vulkan
 
         std::vector<vk::Format> colourAttachmentFormats{ vk::Format::eR8Uint, vk::Format::eB8G8R8A8Unorm };
 
-        std::vector<uint32_t> colourAttachmentInputIndicies{ 0, VK_ATTACHMENT_UNUSED };
-
         vk::StructureChain<
-            vk::GraphicsPipelineCreateInfo, vk::PipelineRenderingCreateInfo, vk::RenderingInputAttachmentIndexInfo>
+            vk::GraphicsPipelineCreateInfo, vk::PipelineRenderingCreateInfo>
             graphicsPipelineCreate{ { vk::PipelineCreateFlags{}, shaderStages, &pipelineVertexInputStateCreateInfo,
                                       &pipelineInputAssemblyStateCreate, nullptr, &pipelineViewportStateCreate,
                                       &pipelineRasterizationStateCreate, &pipelineMultisampleStateCreate,
                                       &pipelineDepthStateCreate, &pipelineColorBlendStateCreate, &pipelineDynamicStateCreate,
                                       pipelineLayout, nullptr, 0 },
-                                    { {}, colourAttachmentFormats, vk::Format::eD32Sfloat },
-                                    {
-                                        colourAttachmentInputIndicies,
-                                    } };
+                                    { {}, colourAttachmentFormats, vk::Format::eD32Sfloat } };
 
         auto pipeline = device.createGraphicsPipelineUnique(nullptr, graphicsPipelineCreate.get());
 
