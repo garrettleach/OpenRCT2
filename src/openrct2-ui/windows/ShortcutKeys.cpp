@@ -15,9 +15,12 @@
 #include <openrct2-ui/interface/Widget.h>
 #include <openrct2/SpriteIds.h>
 #include <openrct2/drawing/Drawing.h>
+#include <openrct2/drawing/Rectangle.h>
 #include <openrct2/localisation/Formatter.h>
 #include <openrct2/localisation/StringIds.h>
 #include <openrct2/ui/WindowManager.h>
+
+using namespace OpenRCT2::Drawing;
 
 namespace OpenRCT2::Ui::Windows
 {
@@ -41,9 +44,9 @@ namespace OpenRCT2::Ui::Windows
     // clang-format off
     static constexpr auto _shortcutWidgets = makeWidgets(
         makeWindowShim(kWindowTitle, kWindowSize),
-        makeWidget({0,                      43}, {350, 287}, WidgetType::resize, WindowColour::secondary                                                        ),
-        makeWidget({4,                      47}, {412, 215}, WidgetType::scroll, WindowColour::primary, SCROLL_VERTICAL,           STR_SHORTCUT_LIST_TIP        ),
-        makeWidget({4, kWindowSize.height - 15}, {150,  12}, WidgetType::button, WindowColour::primary, STR_SHORTCUT_ACTION_RESET, STR_SHORTCUT_ACTION_RESET_TIP)
+        makeWidget({0,                      43}, {350, 287}, WidgetType::resize, WindowColour::secondary                                                          ),
+        makeWidget({4,                      47}, {412, 215}, WidgetType::scroll, WindowColour::secondary, SCROLL_VERTICAL,           STR_SHORTCUT_LIST_TIP        ),
+        makeWidget({4, kWindowSize.height - 15}, {150,  12}, WidgetType::button, WindowColour::secondary, STR_SHORTCUT_ACTION_RESET, STR_SHORTCUT_ACTION_RESET_TIP)
     );
     // clang-format on
 
@@ -73,7 +76,7 @@ namespace OpenRCT2::Ui::Windows
         static ChangeShortcutWindow* Open(std::string_view shortcutId)
         {
             auto& shortcutManager = GetShortcutManager();
-            auto registeredShortcut = shortcutManager.GetShortcut(shortcutId);
+            auto registeredShortcut = shortcutManager.getShortcut(shortcutId);
             if (registeredShortcut != nullptr)
             {
                 auto* windowMgr = GetWindowManager();
@@ -83,9 +86,9 @@ namespace OpenRCT2::Ui::Windows
                 if (w != nullptr)
                 {
                     w->_shortcutId = shortcutId;
-                    w->_shortcutLocalisedName = registeredShortcut->LocalisedName;
-                    w->_shortcutCustomName = registeredShortcut->CustomName;
-                    shortcutManager.SetPendingShortcutChange(registeredShortcut->Id);
+                    w->_shortcutLocalisedName = registeredShortcut->localisedName;
+                    w->_shortcutCustomName = registeredShortcut->customName;
+                    shortcutManager.setPendingShortcutChange(registeredShortcut->id);
                     return w;
                 }
             }
@@ -101,7 +104,7 @@ namespace OpenRCT2::Ui::Windows
         void onClose() override
         {
             auto& shortcutManager = GetShortcutManager();
-            shortcutManager.SetPendingShortcutChange({});
+            shortcutManager.setPendingShortcutChange({});
             NotifyShortcutKeysWindow();
         }
 
@@ -143,11 +146,11 @@ namespace OpenRCT2::Ui::Windows
         void Remove()
         {
             auto& shortcutManager = GetShortcutManager();
-            auto* shortcut = shortcutManager.GetShortcut(_shortcutId);
+            auto* shortcut = shortcutManager.getShortcut(_shortcutId);
             if (shortcut != nullptr)
             {
-                shortcut->Current.clear();
-                shortcutManager.SaveUserBindings();
+                shortcut->current.clear();
+                shortcutManager.saveUserBindings();
             }
             close();
         }
@@ -297,7 +300,7 @@ namespace OpenRCT2::Ui::Windows
         void onScrollDraw(int32_t scrollIndex, RenderTarget& rt) override
         {
             auto rtCoords = ScreenCoordsXY{ rt.x, rt.y };
-            GfxFillRect(
+            Rectangle::fill(
                 rt, { rtCoords, rtCoords + ScreenCoordsXY{ rt.width - 1, rt.height - 1 } },
                 ColourMapA[colours[1].colour].mid_light);
 
@@ -346,13 +349,13 @@ namespace OpenRCT2::Ui::Windows
             auto& shortcutManager = GetShortcutManager();
             for (const auto& item : _list)
             {
-                auto shortcut = shortcutManager.GetShortcut(item.ShortcutId);
+                auto shortcut = shortcutManager.getShortcut(item.ShortcutId);
                 if (shortcut != nullptr)
                 {
-                    shortcut->Current = shortcut->Default;
+                    shortcut->current = shortcut->standard;
                 }
             }
-            shortcutManager.SaveUserBindings();
+            shortcutManager.saveUserBindings();
             RefreshBindings();
         }
 
@@ -360,7 +363,7 @@ namespace OpenRCT2::Ui::Windows
         bool IsInCurrentTab(const RegisteredShortcut& shortcut)
         {
             auto groupFilter = _tabs[_currentTabIndex].IdGroup;
-            auto group = shortcut.GetTopLevelGroup();
+            auto group = shortcut.getTopLevelGroup();
             if (groupFilter.empty())
             {
                 // Check it doesn't belong in any other tab
@@ -385,7 +388,7 @@ namespace OpenRCT2::Ui::Windows
             // Get shortcuts and sort by group
             auto shortcuts = GetShortcutsForCurrentTab();
             std::stable_sort(shortcuts.begin(), shortcuts.end(), [](const RegisteredShortcut* a, const RegisteredShortcut* b) {
-                return a->OrderIndex < b->OrderIndex;
+                return a->orderIndex < b->orderIndex;
             });
 
             // Create list items with a separator between each group
@@ -395,11 +398,11 @@ namespace OpenRCT2::Ui::Windows
             {
                 if (group.empty())
                 {
-                    group = shortcut->GetGroup();
+                    group = shortcut->getGroup();
                 }
                 else
                 {
-                    auto groupName = shortcut->GetGroup();
+                    auto groupName = shortcut->getGroup();
                     if (group != groupName)
                     {
                         // Add separator
@@ -409,10 +412,10 @@ namespace OpenRCT2::Ui::Windows
                 }
 
                 ShortcutStringPair ssp;
-                ssp.ShortcutId = shortcut->Id;
-                ssp.StringId = shortcut->LocalisedName;
-                ssp.CustomString = shortcut->CustomName;
-                ssp.Binding = shortcut->GetDisplayString();
+                ssp.ShortcutId = shortcut->id;
+                ssp.StringId = shortcut->localisedName;
+                ssp.CustomString = shortcut->customName;
+                ssp.Binding = shortcut->getDisplayString();
                 _list.push_back(std::move(ssp));
             }
 
@@ -423,7 +426,7 @@ namespace OpenRCT2::Ui::Windows
         {
             std::vector<const RegisteredShortcut*> result;
             auto& shortcutManager = GetShortcutManager();
-            for (const auto& shortcut : shortcutManager.Shortcuts)
+            for (const auto& shortcut : shortcutManager.shortcuts)
             {
                 if (IsInCurrentTab(shortcut.second))
                 {
@@ -501,8 +504,8 @@ namespace OpenRCT2::Ui::Windows
         void DrawSeparator(RenderTarget& rt, int32_t y, int32_t scrollWidth)
         {
             const int32_t top = y + (kScrollableRowHeight / 2) - 1;
-            GfxFillRect(rt, { { 0, top }, { scrollWidth, top } }, ColourMapA[colours[0].colour].mid_dark);
-            GfxFillRect(rt, { { 0, top + 1 }, { scrollWidth, top + 1 } }, ColourMapA[colours[0].colour].lightest);
+            Rectangle::fill(rt, { { 0, top }, { scrollWidth, top } }, ColourMapA[colours[1].colour].mid_dark);
+            Rectangle::fill(rt, { { 0, top + 1 }, { scrollWidth, top + 1 } }, ColourMapA[colours[1].colour].lightest);
         }
 
         void DrawItem(RenderTarget& rt, int32_t y, int32_t scrollWidth, const ShortcutStringPair& shortcut, bool isHighlighted)
@@ -511,7 +514,8 @@ namespace OpenRCT2::Ui::Windows
             if (isHighlighted)
             {
                 format = STR_WINDOW_COLOUR_2_STRINGID;
-                GfxFilterRect(rt, { 0, y - 1, scrollWidth, y + (kScrollableRowHeight - 2) }, FilterPaletteID::paletteDarken1);
+                Rectangle::filter(
+                    rt, { 0, y - 1, scrollWidth, y + (kScrollableRowHeight - 2) }, FilterPaletteID::paletteDarken1);
             }
 
             auto bindingOffset = (scrollWidth * 2) / 3;

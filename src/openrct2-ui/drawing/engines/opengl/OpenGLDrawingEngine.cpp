@@ -366,7 +366,7 @@ public:
 
     void PaintWindows() override
     {
-        if (ClimateHasWeatherEffect())
+        if (ClimateHasWeatherEffect() || gPaintForceRedraw)
         {
             WindowUpdateAllViewports();
             // OpenGL doesn't support restoring pixels, always redraw.
@@ -613,7 +613,7 @@ private:
         }
         if (GetContext()->GetUiContext().GetScaleQuality() == ScaleQuality::SmoothNearestNeighbour)
         {
-            uint32_t scale = std::ceil(Config::Get().general.WindowScale);
+            uint32_t scale = std::ceil(Config::Get().general.windowScale);
             _smoothScaleFramebuffer = std::make_unique<OpenGLFramebuffer>(_width * scale, _height * scale, false, false);
         }
     }

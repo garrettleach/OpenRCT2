@@ -181,7 +181,7 @@ namespace OpenRCT2
             catch (const std::exception& e)
             {
                 auto msg = String::stdFormat("Unable to load image '%s': %s", s.c_str(), e.what());
-                context->LogWarning(ObjectError::BadImageTable, msg.c_str());
+                context->LogWarning(ObjectError::badImageTable, msg.c_str());
                 result.push_back(std::make_unique<RequiredImage>());
             }
         }
@@ -216,7 +216,7 @@ namespace OpenRCT2
         catch (const std::exception& e)
         {
             auto msg = String::stdFormat("Unable to load image '%s': %s", path.c_str(), e.what());
-            context->LogWarning(ObjectError::BadImageTable, msg.c_str());
+            context->LogWarning(ObjectError::badImageTable, msg.c_str());
             result.push_back(std::make_unique<RequiredImage>());
         }
         return result;
@@ -263,7 +263,7 @@ namespace OpenRCT2
                 if (placeHoldersAdded > 0)
                 {
                     std::string msg = "Adding " + std::to_string(placeHoldersAdded) + " placeholders";
-                    context->LogWarning(ObjectError::InvalidProperty, msg.c_str());
+                    context->LogWarning(ObjectError::invalidProperty, msg.c_str());
                 }
             }
             else
@@ -275,7 +275,7 @@ namespace OpenRCT2
         else
         {
             auto msg = String::stdFormat("Unable to load Gx '%s'", path.c_str());
-            context->LogWarning(ObjectError::BadImageTable, msg.c_str());
+            context->LogWarning(ObjectError::badImageTable, msg.c_str());
             for (size_t i = 0; i < range.size(); i++)
             {
                 result.push_back(std::make_unique<RequiredImage>());
@@ -328,13 +328,13 @@ namespace OpenRCT2
             if (placeHoldersAdded > 0)
             {
                 std::string msg = "Adding " + std::to_string(placeHoldersAdded) + " placeholders";
-                context->LogWarning(ObjectError::InvalidProperty, msg.c_str());
+                context->LogWarning(ObjectError::invalidProperty, msg.c_str());
             }
         }
         else
         {
             std::string msg = "Unable to open '" + name + "'";
-            context->LogWarning(ObjectError::InvalidProperty, msg.c_str());
+            context->LogWarning(ObjectError::invalidProperty, msg.c_str());
             for (size_t i = 0; i < range.size(); i++)
             {
                 result.push_back(std::make_unique<RequiredImage>());
@@ -353,12 +353,12 @@ namespace OpenRCT2
             auto parts = String::split(s, "..");
             if (parts.size() == 1)
             {
-                result.push_back(std::stoi(parts[0]));
+                result.push_back(String::parse<int32_t>(parts[0]));
             }
             else
             {
-                auto left = std::stoi(parts[0]);
-                auto right = std::stoi(parts[1]);
+                auto left = String::parse<int32_t>(parts[0]);
+                auto right = String::parse<int32_t>(parts[1]);
                 if (left <= right)
                 {
                     for (auto i = left; i <= right; i++)
@@ -445,7 +445,7 @@ namespace OpenRCT2
             uint64_t remainingBytes = stream->GetLength() - stream->GetPosition() - headerTableSize;
             if (remainingBytes > imageDataSize)
             {
-                context->LogVerbose(ObjectError::BadImageTable, "Image table size longer than expected.");
+                context->LogVerbose(ObjectError::badImageTable, "Image table size longer than expected.");
                 imageDataSize = static_cast<uint32_t>(remainingBytes);
             }
 
@@ -453,7 +453,7 @@ namespace OpenRCT2
             auto data = std::make_unique<uint8_t[]>(dataSize);
             if (data == nullptr)
             {
-                context->LogError(ObjectError::BadImageTable, "Image table too large.");
+                context->LogError(ObjectError::badImageTable, "Image table too large.");
                 throw std::runtime_error("Image table too large.");
             }
 
@@ -485,7 +485,7 @@ namespace OpenRCT2
             if (unreadBytes > 0)
             {
                 std::fill_n(data.get() + readBytes, unreadBytes, 0);
-                context->LogWarning(ObjectError::BadImageTable, "Image table size shorter than expected.");
+                context->LogWarning(ObjectError::badImageTable, "Image table size shorter than expected.");
             }
 
             _data = std::move(data);
@@ -493,7 +493,7 @@ namespace OpenRCT2
         }
         catch (const std::exception&)
         {
-            context->LogError(ObjectError::BadImageTable, "Bad image table.");
+            context->LogError(ObjectError::badImageTable, "Bad image table.");
             throw;
         }
     }

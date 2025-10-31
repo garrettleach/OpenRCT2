@@ -26,12 +26,12 @@ namespace OpenRCT2
             auto parts = String::split(s, "..");
             if (parts.size() == 1)
             {
-                result = Range<int32_t>(std::stoi(parts[0]));
+                result = Range<int32_t>(String::parse<int32_t>(parts[0]));
             }
             else
             {
-                auto left = std::stoi(parts[0]);
-                auto right = std::stoi(parts[1]);
+                auto left = String::parse<int32_t>(parts[0]);
+                auto right = String::parse<int32_t>(parts[1]);
                 if (left <= right)
                 {
                     result = Range<int32_t>(left, right);
@@ -74,34 +74,34 @@ namespace OpenRCT2
         auto& env = GetContext()->GetPlatformEnvironment();
         if (String::startsWith(base, "$LGX:"))
         {
-            info.Kind = SourceKind::Gx;
+            info.Kind = SourceKind::gx;
             info.Path = fileName;
         }
         else if (String::startsWith(base, "$G1"))
         {
             auto dataPath = env.GetDirectoryPath(DirBase::rct2, DirId::data);
-            info.Kind = SourceKind::G1;
+            info.Kind = SourceKind::g1;
             // info.Path = env->FindFile(DirBase::rct2, DirId::data, "g1.dat");
         }
         else if (String::startsWith(base, "$CSG"))
         {
             auto dataPath = env.GetDirectoryPath(DirBase::rct2, DirId::data);
-            info.Kind = SourceKind::Csg;
+            info.Kind = SourceKind::csg;
             // info.Path = env->FindFile(DirBase::rct2, DirId::data, "g1.dat");
         }
         else if (String::startsWith(base, "$RCT1:DATA/"))
         {
-            info.Kind = SourceKind::Data;
+            info.Kind = SourceKind::data;
             info.Path = env.FindFile(DirBase::rct1, DirId::data, fileName);
         }
         else if (String::startsWith(base, "$RCT2:DATA/"))
         {
-            info.Kind = SourceKind::Data;
+            info.Kind = SourceKind::data;
             info.Path = env.FindFile(DirBase::rct2, DirId::data, fileName);
         }
         else if (String::startsWith(base, "$RCT2:OBJDATA/"))
         {
-            info.Kind = SourceKind::ObjData;
+            info.Kind = SourceKind::objData;
             info.Path = env.FindFile(DirBase::rct2, DirId::objects, fileName);
         }
         else if (!String::startsWith(base, "$"))
