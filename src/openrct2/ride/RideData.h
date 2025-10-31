@@ -433,6 +433,12 @@ enum class RtdFlag : uint8_t
     allowReversedTrains,
 
     requireExplicitListingInMusicObjects,
+
+    hasRoofOverWholeRide,
+
+    runningSpeedAffectsReliability,
+    poweredLaunchAffectsReliability,
+    reverseInclineLaunchAffectsReliability,
 };
 
 /**
@@ -450,6 +456,10 @@ enum class RtdSpecialType
     toilet,
     cashMachine,
     firstAid,
+    enterprise,
+    motionSimulator,
+    spaceRings,
+    boatHire,
 };
 
 // Set on ride types that have a main colour, additional colour and support colour.
@@ -623,13 +633,13 @@ constexpr RideTypeDescriptor kDummyRTD =
     .AvailableBreakdowns = 0,
     .Heights = { 12, 64, 0, 0, },
     .MaxMass = 255,
-    .LiftData = { OpenRCT2::Audio::SoundId::Null, 5, 5 },
+    .LiftData = { OpenRCT2::Audio::SoundId::null, 5, 5 },
     .RatingsMultipliers = { 0, 0, 0 },
     .UpkeepCosts = { 50, 1, 0, 0, 0, 0 },
     .BuildCosts = { 0.00_GBP, 0.00_GBP, 1 },
     .DefaultPrices = { 20, 20 },
     .DefaultMusic = kMusicObjectGentle,
-    .PhotoItem = ShopItem::Photo,
+    .PhotoItem = ShopItem::photo,
     .BonusValue = 0,
     .ColourPresets = kDefaultFlatRideColourPreset,
     .ColourPreview = { kSpriteIdNull, kSpriteIdNull },

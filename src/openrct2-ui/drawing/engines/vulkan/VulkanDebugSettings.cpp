@@ -142,9 +142,6 @@ namespace OpenRCT2::Ui::Vulkan
                 settings.emplace_back(
                     khronosValidationLayerName, "syncval_shader_accesses_heuristic", vk::LayerSettingTypeEXT::eBool32, 1,
                     &validate_sync_shaderaccess_value);
-                settings.emplace_back(
-                    khronosValidationLayerName, "syncval_reporting", vk::LayerSettingTypeEXT::eBool32, 1,
-                    &validate_sync_reporting_extraproperties_value);
             }
 
             settings.emplace_back(

@@ -195,7 +195,7 @@ namespace OpenRCT2
     ObjectSourceGame Object::GetFirstSourceGame() const
     {
         if (_sourceGames.size() == 0)
-            return ObjectSourceGame::Custom;
+            return ObjectSourceGame::custom;
 
         return _sourceGames[0];
     }
@@ -207,12 +207,12 @@ namespace OpenRCT2
 
     std::string Object::GetName() const
     {
-        return GetString(ObjectStringID::NAME);
+        return GetString(ObjectStringID::name);
     }
 
     std::string Object::GetName(int32_t language) const
     {
-        return GetString(language, ObjectStringID::NAME);
+        return GetString(language, ObjectStringID::name);
     }
 
     ImageIndex Object::LoadImages()
@@ -433,7 +433,7 @@ namespace OpenRCT2
             size_t highestIndex = std::min(nums.size(), VersionNumFields);
             for (size_t i = 0; i < highestIndex; i++)
             {
-                auto value = stoll(nums.at(i));
+                auto value = String::parse<int64_t>(nums.at(i));
                 constexpr auto maxValue = std::numeric_limits<uint16_t>().max();
                 if (value > maxValue)
                 {

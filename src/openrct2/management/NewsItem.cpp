@@ -132,7 +132,7 @@ static void TickCurrent()
     if (ticks == 1 && (gLegacyScene == LegacyScene::playing))
     {
         // Play sound
-        OpenRCT2::Audio::Play(OpenRCT2::Audio::SoundId::NewsItem, 0, ContextGetWidth() / 2);
+        OpenRCT2::Audio::Play(OpenRCT2::Audio::SoundId::newsItem, 0, ContextGetWidth() / 2);
     }
 }
 
@@ -238,7 +238,7 @@ std::optional<CoordsXYZ> News::GetSubjectLocation(News::ItemType type, int32_t s
             if (subjectLoc->x != kLocationNull)
                 break;
 
-            if (peep->State != PeepState::OnRide && peep->State != PeepState::EnteringRide)
+            if (peep->State != PeepState::onRide && peep->State != PeepState::enteringRide)
             {
                 subjectLoc = std::nullopt;
                 break;
@@ -397,8 +397,8 @@ void News::OpenSubject(News::ItemType type, int32_t subject)
             break;
         case News::ItemType::research:
         {
-            auto item = ResearchItem(subject, ResearchCategory::Transport, 0);
-            if (item.type == Research::EntryType::Ride)
+            auto item = ResearchItem(subject, ResearchCategory::transport, 0);
+            if (item.type == Research::EntryType::ride)
             {
                 auto intent = Intent(INTENT_ACTION_NEW_RIDE_OF_TYPE);
                 intent.PutExtra(INTENT_EXTRA_RIDE_TYPE, item.baseRideType);

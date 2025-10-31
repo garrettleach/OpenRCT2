@@ -50,8 +50,9 @@ namespace OpenRCT2::Ui::Vulkan
             };
         }
 
-        constexpr std::array<glm::ivec2, 4> rectVerticies = { glm::ivec2{ 1, 0 }, glm::ivec2{ 0, 0 }, glm::ivec2{ 1, 1 },
-                                                              glm::ivec2{ 0, 1 } };
+        constexpr std::array<OpenRCT2::Ui::Vulkan::DrawSpritePipeline::Vertex, 4> rectVerticies = {
+            { { glm::ivec2{ 1, 0 } }, { glm::ivec2{ 0, 0 } }, { glm::ivec2{ 1, 1 } }, { glm::ivec2{ 0, 1 } } }
+        };
 
         constexpr std::array<uint32_t, 6> rectIndicies = {
             0, 1, 2, 2, 1, 3,
@@ -192,19 +193,14 @@ namespace OpenRCT2::Ui::Vulkan
 
         std::vector<vk::Format> colourAttachmentFormats{ vk::Format::eR8Uint, vk::Format::eB8G8R8A8Unorm };
 
-        std::vector<uint32_t> colourAttachmentInputIndicies{ 0, VK_ATTACHMENT_UNUSED };
-
         vk::StructureChain<
-            vk::GraphicsPipelineCreateInfo, vk::PipelineRenderingCreateInfo, vk::RenderingInputAttachmentIndexInfo>
+            vk::GraphicsPipelineCreateInfo, vk::PipelineRenderingCreateInfo>
             graphicsPipelineCreate{ { vk::PipelineCreateFlags{}, shaderStages, &pipelineVertexInputStateCreateInfo,
                                       &pipelineInputAssemblyStateCreate, nullptr, &pipelineViewportStateCreate,
                                       &pipelineRasterizationStateCreate, &pipelineMultisampleStateCreate,
                                       &pipelineDepthStateCreate, &pipelineColorBlendStateCreate, &pipelineDynamicStateCreate,
                                       pipelineLayout, nullptr, 0 },
-                                    { {}, colourAttachmentFormats, vk::Format::eD32Sfloat },
-                                    {
-                                        colourAttachmentInputIndicies,
-                                    } };
+                                    { {}, colourAttachmentFormats, vk::Format::eD32Sfloat } };
 
         auto pipeline = device.createGraphicsPipelineUnique(nullptr, graphicsPipelineCreate.get());
 

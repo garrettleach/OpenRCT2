@@ -28,6 +28,7 @@
 #include "../drawing/X8DrawingEngine.h"
 #include "../localisation/Formatter.h"
 #include "../paint/Painter.h"
+#include "../paint/tile_element/Paint.TileElement.h"
 #include "../platform/Platform.h"
 #include "../world/Climate.h"
 #include "../world/Map.h"
@@ -91,7 +92,7 @@ void ScreenshotCheck()
 
             if (!screenshotPath.empty())
             {
-                OpenRCT2::Audio::Play(OpenRCT2::Audio::SoundId::WindowOpen, 100, ContextGetWidth() / 2);
+                OpenRCT2::Audio::Play(OpenRCT2::Audio::SoundId::windowOpen, 100, ContextGetWidth() / 2);
 
                 // Show user that screenshot saved successfully
                 const auto filename = Path::GetFileName(screenshotPath);
@@ -350,7 +351,7 @@ void ScreenshotGiant()
         {
             viewport.flags = vp->flags;
         }
-        if (Config::Get().general.TransparentScreenshot)
+        if (Config::Get().general.transparentScreenshot)
         {
             viewport.flags |= VIEWPORT_FLAG_TRANSPARENT_BACKGROUND;
         }
@@ -395,30 +396,30 @@ static void ApplyOptions(const ScreenshotOptions* options, Viewport& viewport)
 
     if (options->mowed_grass)
     {
-        CheatsSet(CheatType::SetGrassLength, GRASS_LENGTH_MOWED);
+        CheatsSet(CheatType::setGrassLength, GRASS_LENGTH_MOWED);
     }
 
     if (options->clear_grass || options->tidy_up_park)
     {
-        CheatsSet(CheatType::SetGrassLength, GRASS_LENGTH_CLEAR_0);
+        CheatsSet(CheatType::setGrassLength, GRASS_LENGTH_CLEAR_0);
     }
 
     if (options->water_plants || options->tidy_up_park)
     {
-        CheatsSet(CheatType::WaterPlants);
+        CheatsSet(CheatType::waterPlants);
     }
 
     if (options->fix_vandalism || options->tidy_up_park)
     {
-        CheatsSet(CheatType::FixVandalism);
+        CheatsSet(CheatType::fixVandalism);
     }
 
     if (options->remove_litter || options->tidy_up_park)
     {
-        CheatsSet(CheatType::RemoveLitter);
+        CheatsSet(CheatType::removeLitter);
     }
 
-    if (options->transparent || Config::Get().general.TransparentScreenshot)
+    if (options->transparent || Config::Get().general.transparentScreenshot)
     {
         viewport.flags |= VIEWPORT_FLAG_TRANSPARENT_BACKGROUND;
     }
@@ -426,6 +427,11 @@ static void ApplyOptions(const ScreenshotOptions* options, Viewport& viewport)
     if (options->draw_bounding_boxes)
     {
         gPaintBoundingBoxes = true;
+    }
+
+    if (options->drawSegmentHeights)
+    {
+        gShowSupportSegmentHeights = true;
     }
 }
 

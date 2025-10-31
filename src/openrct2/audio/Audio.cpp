@@ -68,7 +68,7 @@ namespace OpenRCT2::Audio
             return false;
         if (gGameSoundsOff)
             return false;
-        if (!Config::Get().sound.SoundEnabled)
+        if (!Config::Get().sound.soundEnabled)
             return false;
         if (gOpenRCT2Headless)
             return false;
@@ -78,19 +78,19 @@ namespace OpenRCT2::Audio
     void Init()
     {
         auto& audioContext = GetContext()->GetAudioContext();
-        if (Config::Get().sound.Device.empty())
+        if (Config::Get().sound.device.empty())
         {
             audioContext.SetOutputDevice("");
             _currentAudioDevice = 0;
         }
         else
         {
-            audioContext.SetOutputDevice(Config::Get().sound.Device);
+            audioContext.SetOutputDevice(Config::Get().sound.device);
 
             PopulateDevices();
             for (int32_t i = 0; i < GetDeviceCount(); i++)
             {
-                if (_audioDevices[i] == Config::Get().sound.Device)
+                if (_audioDevices[i] == Config::Get().sound.device)
                 {
                     _currentAudioDevice = i;
                 }
@@ -188,10 +188,10 @@ namespace OpenRCT2::Audio
         auto& objManager = GetContext()->GetObjectManager();
         AudioObject* audioObject{};
         uint32_t sampleIndex = EnumValue(id);
-        if (id >= SoundId::LiftRMC)
+        if (id >= SoundId::liftRMC)
         {
             audioObject = objManager.GetLoadedObject<AudioObject>(_soundsAdditionalAudioObjectEntryIndex);
-            sampleIndex -= EnumValue(SoundId::LiftRMC);
+            sampleIndex -= EnumValue(SoundId::liftRMC);
         }
         else
         {
@@ -305,7 +305,7 @@ namespace OpenRCT2::Audio
         }
 
         // Load title sequence audio object
-        auto descriptor = GetTitleMusicDescriptor(Config::Get().sound.TitleMusic);
+        auto descriptor = GetTitleMusicDescriptor(Config::Get().sound.titleMusic);
         auto& objManager = GetContext()->GetObjectManager();
         auto* audioObject = static_cast<AudioObject*>(objManager.LoadObject(descriptor));
         if (audioObject != nullptr)
@@ -404,8 +404,8 @@ namespace OpenRCT2::Audio
 
     void ToggleAllSounds()
     {
-        Config::Get().sound.MasterSoundEnabled = !Config::Get().sound.MasterSoundEnabled;
-        if (Config::Get().sound.MasterSoundEnabled)
+        Config::Get().sound.masterSoundEnabled = !Config::Get().sound.masterSoundEnabled;
+        if (Config::Get().sound.masterSoundEnabled)
         {
             Resume();
         }
@@ -440,13 +440,13 @@ namespace OpenRCT2::Audio
             if (vehicleSound.id != kSoundIdNull)
             {
                 vehicleSound.id = kSoundIdNull;
-                if (vehicleSound.TrackSound.Id != SoundId::Null)
+                if (vehicleSound.trackSound.id != SoundId::null)
                 {
-                    vehicleSound.TrackSound.Channel->Stop();
+                    vehicleSound.trackSound.channel->Stop();
                 }
-                if (vehicleSound.OtherSound.Id != SoundId::Null)
+                if (vehicleSound.otherSound.id != SoundId::null)
                 {
-                    vehicleSound.OtherSound.Channel->Stop();
+                    vehicleSound.otherSound.channel->Stop();
                 }
             }
         }

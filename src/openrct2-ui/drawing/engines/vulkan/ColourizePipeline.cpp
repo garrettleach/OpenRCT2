@@ -167,15 +167,12 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::CreateGraphicsPipeline()
 
     std::vector<uint32_t> colourAttachmentInputIndicies{ 0, 1 };
 
-    uint32_t depthAttachmentInputIndex = 2;
-
-    vk::StructureChain<vk::GraphicsPipelineCreateInfo, vk::PipelineRenderingCreateInfo, vk::RenderingInputAttachmentIndexInfo>
+    vk::StructureChain<vk::GraphicsPipelineCreateInfo, vk::PipelineRenderingCreateInfo>
         graphicsPipelineCreate{ { vk::PipelineCreateFlags{}, shaderStages, &vertexInput, &inputAssembly, nullptr,
                                   &pipelineViewportStateCreate, &pipelineRasterizationStateCreate,
                                   &pipelineMultisampleStateCreate, &pipelineDepthStencilAttachmentCreate,
                                   &pipelineColorBlendAttachmentCreate, &dynamicStateCreate, *_pipelineLayout, nullptr, 1 },
-                                { 0, colorAttachmentFormats, vk::Format::eD32Sfloat, vk::Format::eUndefined },
-                                { colourAttachmentInputIndicies, &depthAttachmentInputIndex } };
+                                { 0, colorAttachmentFormats, vk::Format::eD32Sfloat, vk::Format::eUndefined } };
 
     auto pipelineReturn = _device.createGraphicsPipelineUnique(nullptr, graphicsPipelineCreate.get());
 
