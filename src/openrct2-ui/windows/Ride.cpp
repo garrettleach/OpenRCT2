@@ -1582,7 +1582,7 @@ namespace OpenRCT2::Ui::Windows
                 const auto& viewWidget = widgets[WIDX_VIEWPORT];
 
                 auto screenPos = windowPos + ScreenCoordsXY{ viewWidget.left + 1, viewWidget.top + 1 };
-                int32_t viewWidth = viewWidget.width() - 1;
+                int32_t viewWidth = viewWidget.width() - 2;
                 int32_t viewHeight = viewWidget.height() - 1;
 
                 ViewportCreate(*this, screenPos, viewWidth, viewHeight, focus.value());
@@ -2086,7 +2086,7 @@ namespace OpenRCT2::Ui::Windows
             Widget* dropdownWidget = widget - 1;
             WindowDropdownShowTextCustomWidth(
                 { windowPos.x + dropdownWidget->left, windowPos.y + dropdownWidget->top }, dropdownWidget->height() + 1,
-                colours[1], 0, Dropdown::Flag::StayOpen, numItems, dropdownWidget->width());
+                colours[1], 0, Dropdown::Flag::StayOpen, numItems, dropdownWidget->width() - 1);
 
             // Find the current vehicle type in the ordered list.
             int32_t pos = 0;
@@ -2609,15 +2609,15 @@ namespace OpenRCT2::Ui::Windows
             auto* widget = &widgets[WIDX_VIEW];
             DrawTextBasic(
                 rt, { windowPos.x + (widget->left + widget->right - 11) / 2, windowPos.y + widget->top },
-                STR_WINDOW_COLOUR_2_STRINGID, ft, { TextAlignment::CENTRE });
+                STR_WINDOW_COLOUR_2_STRINGID, ft, { TextAlignment::centre });
 
             // Status
             ft = Formatter();
             widget = &widgets[WIDX_STATUS];
             StringId rideStatus = GetStatus(ft);
             DrawTextEllipsised(
-                rt, windowPos + ScreenCoordsXY{ (widget->left + widget->right) / 2, widget->top }, widget->width(), rideStatus,
-                ft, { TextAlignment::CENTRE });
+                rt, windowPos + ScreenCoordsXY{ (widget->left + widget->right) / 2, widget->top }, widget->width() - 1,
+                rideStatus, ft, { TextAlignment::centre });
         }
 
 #pragma endregion
@@ -2875,7 +2875,7 @@ namespace OpenRCT2::Ui::Windows
             // Description
             auto ft = Formatter();
             ft.Add<StringId>(rideEntry->naming.Description);
-            screenCoords.y += DrawTextWrapped(rt, screenCoords, 300, STR_BLACK_STRING, ft, { TextAlignment::LEFT });
+            screenCoords.y += DrawTextWrapped(rt, screenCoords, 300, STR_BLACK_STRING, ft, { TextAlignment::left });
             screenCoords.y += 2;
 
             // Capacity
@@ -2898,7 +2898,7 @@ namespace OpenRCT2::Ui::Windows
             // Intensity Factor
             if (rideEntry->intensity_multiplier != 0)
             {
-                int32_t lineHeight = FontGetLineHeight(FontStyle::Medium);
+                int32_t lineHeight = FontGetLineHeight(FontStyle::medium);
                 if (lineHeight != 10)
                     screenCoords.x += 150;
                 else
@@ -2957,7 +2957,7 @@ namespace OpenRCT2::Ui::Windows
             Rectangle::fill(rt, { { rt.x, rt.y }, { rt.x + rt.width, rt.y + rt.height } }, PaletteIndex::pi12);
 
             Widget* widget = &widgets[WIDX_VEHICLE_TRAINS_PREVIEW];
-            int32_t startX = std::max(2, (widget->width() - ((ride->numTrains - 1) * 36)) / 2 - 25);
+            int32_t startX = std::max(2, (widget->width() - 1 - ((ride->numTrains - 1) * 36)) / 2 - 25);
             int32_t startY = widget->height() - 4;
 
             bool isReversed = ride->hasLifecycleFlag(RIDE_LIFECYCLE_REVERSED_TRAINS);
@@ -4120,7 +4120,7 @@ namespace OpenRCT2::Ui::Windows
                 {
                     if (stringId == STR_CALLING_MECHANIC || stringId == STR_NO_MECHANICS_ARE_HIRED_MESSAGE)
                     {
-                        DrawTextWrapped(rt, screenCoords, 280, stringId, {}, { TextAlignment::LEFT });
+                        DrawTextWrapped(rt, screenCoords, 280, stringId, {}, { TextAlignment::left });
                     }
                     else
                     {
@@ -4129,7 +4129,7 @@ namespace OpenRCT2::Ui::Windows
                         {
                             ft = Formatter();
                             staff->FormatNameTo(ft);
-                            DrawTextWrapped(rt, screenCoords, 280, stringId, ft, { TextAlignment::LEFT });
+                            DrawTextWrapped(rt, screenCoords, 280, stringId, ft, { TextAlignment::left });
                         }
                     }
                 }
@@ -4890,7 +4890,7 @@ namespace OpenRCT2::Ui::Windows
                 if (ClipDrawPixelInfo(
                         clippedDpi, rt,
                         windowPos + ScreenCoordsXY{ entrancePreviewWidget.left + 1, entrancePreviewWidget.top + 1 },
-                        entrancePreviewWidget.width(), entrancePreviewWidget.height()))
+                        entrancePreviewWidget.width() - 1, entrancePreviewWidget.height()))
                 {
                     GfxClear(clippedDpi, PaletteIndex::pi12);
 
@@ -5137,7 +5137,7 @@ namespace OpenRCT2::Ui::Windows
             // Figure out minimum size
             ScreenSize size{};
             size.height = widgets[WIDX_MUSIC_DATA].height() - 2;
-            size.width = widgets[WIDX_MUSIC_DATA].width() - 2;
+            size.width = widgets[WIDX_MUSIC_DATA].width() - 3;
 
             auto ride = GetRide(rideId);
             if (ride == nullptr)
@@ -5155,8 +5155,8 @@ namespace OpenRCT2::Ui::Windows
                 if (track->Name.empty())
                     continue;
 
-                auto nameWidth = GfxGetStringWidth(track->Name.c_str(), FontStyle::Small);
-                auto composerWidth = GfxGetStringWidth(track->Composer.c_str(), FontStyle::Small);
+                auto nameWidth = GfxGetStringWidth(track->Name.c_str(), FontStyle::small);
+                auto composerWidth = GfxGetStringWidth(track->Composer.c_str(), FontStyle::small);
                 newWidth = std::max(newWidth, nameWidth + composerWidth + 24);
             }
 
@@ -5241,7 +5241,7 @@ namespace OpenRCT2::Ui::Windows
 
             // 'Tracks' caption
             auto trackLabelPos = windowPos + ScreenCoordsXY{ widgets[WIDX_MUSIC_DATA].left, widgets[WIDX_MUSIC_DATA].top - 13 };
-            DrawTextWrapped(rt, trackLabelPos, width, STR_MUSIC_OBJECT_TRACK_HEADER, {}, { TextAlignment::LEFT });
+            DrawTextWrapped(rt, trackLabelPos, width, STR_MUSIC_OBJECT_TRACK_HEADER, {}, { TextAlignment::left });
 
             // Do we have a preview image to draw?
             auto musicObj = ride->getMusicObject();
@@ -5251,7 +5251,7 @@ namespace OpenRCT2::Ui::Windows
 
             // Figure out where the image should go
             const auto& previewWidget = widgets[WIDX_MUSIC_IMAGE];
-            int32_t clipWidth = previewWidget.width() - 1;
+            int32_t clipWidth = previewWidget.width() - 2;
             int32_t clipHeight = previewWidget.height() - 1;
 
             // Draw the preview image
@@ -5307,7 +5307,7 @@ namespace OpenRCT2::Ui::Windows
                                                         : STR_MUSIC_OBJECT_TRACK_LIST_ITEM_WITH_COMPOSER;
 
                 // Draw the track
-                DrawTextBasic(rt, { 0, y }, stringId, ft, { FontStyle::Small });
+                DrawTextBasic(rt, { 0, y }, stringId, ft, { FontStyle::small });
                 y += kScrollableRowHeight;
             }
         }
@@ -5614,9 +5614,9 @@ namespace OpenRCT2::Ui::Windows
             {
                 Widget* widget = &widgets[WIDX_PAGE_BACKGROUND];
 
-                ScreenCoordsXY widgetCoords(windowPos.x + widget->width() / 2, windowPos.y + widget->top + 40);
+                ScreenCoordsXY widgetCoords(windowPos.x + widget->midX(), windowPos.y + widget->top + 40);
                 DrawTextWrapped(
-                    rt, widgetCoords, width - 8, STR_CLICK_ITEMS_OF_SCENERY_TO_SELECT, {}, { TextAlignment::CENTRE });
+                    rt, widgetCoords, width - 8, STR_CLICK_ITEMS_OF_SCENERY_TO_SELECT, {}, { TextAlignment::centre });
 
                 widgetCoords.x = windowPos.x + 4;
                 widgetCoords.y = windowPos.y + widgets[WIDX_SELECT_NEARBY_SCENERY].bottom + 17;
@@ -5937,11 +5937,11 @@ namespace OpenRCT2::Ui::Windows
                 {
                     RideMeasurement* measurement{};
                     std::tie(measurement, std::ignore) = ride->getMeasurement();
-                    x = measurement == nullptr ? 0 : measurement->current_item - ((widget->width() / 4) * 3);
+                    x = measurement == nullptr ? 0 : measurement->current_item - (((widget->width() - 1) / 4) * 3);
                 }
             }
 
-            scrolls[0].contentOffsetX = std::clamp(x, 0, scrolls[0].contentWidth - (widget->width() - 2));
+            scrolls[0].contentOffsetX = std::clamp(x, 0, scrolls[0].contentWidth - (widget->width() - 3));
             widgetScrollUpdateThumbs(*this, WIDX_GRAPH);
         }
 
@@ -5951,7 +5951,7 @@ namespace OpenRCT2::Ui::Windows
 
             ScreenSize size{};
             // Set minimum size
-            size.width = widgets[WIDX_GRAPH].width() - 2;
+            size.width = widgets[WIDX_GRAPH].width() - 3;
 
             // Get measurement size
             auto ride = GetRide(rideId);
@@ -6072,8 +6072,8 @@ namespace OpenRCT2::Ui::Windows
             {
                 // No measurement message
                 ScreenCoordsXY stringCoords(widget->width() / 2, widget->height() / 2 - 5);
-                int32_t txtWidth = widget->width() - 2;
-                DrawTextWrapped(rt, stringCoords, txtWidth, message.str, message.args, { TextAlignment::CENTRE });
+                int32_t txtWidth = widget->width() - 3;
+                DrawTextWrapped(rt, stringCoords, txtWidth, message.str, message.args, { TextAlignment::centre });
                 return;
             }
 
@@ -6124,7 +6124,7 @@ namespace OpenRCT2::Ui::Windows
                 auto ft = Formatter();
                 ft.Add<int16_t>(scaled_yUnit);
 
-                DrawTextBasic(rt, { scrolls[0].contentOffsetX + 1, y - 4 }, stringID, ft, { FontStyle::Small });
+                DrawTextBasic(rt, { scrolls[0].contentOffsetX + 1, y - 4 }, stringID, ft, { FontStyle::small });
             }
 
             // Time marks
@@ -6134,7 +6134,7 @@ namespace OpenRCT2::Ui::Windows
                 auto ft = Formatter();
                 ft.Add<int32_t>(time);
                 if (x + 80 >= rt.x)
-                    DrawTextBasic(rt, { x + 2, 1 }, STR_RIDE_STATS_TIME, ft, { FontStyle::Small });
+                    DrawTextBasic(rt, { x + 2, 1 }, STR_RIDE_STATS_TIME, ft, { FontStyle::small });
                 time += 5;
             }
 
@@ -6879,7 +6879,7 @@ namespace OpenRCT2::Ui::Windows
                 stringId = queueTime == 1 ? STR_QUEUE_TIME_MINUTE : STR_QUEUE_TIME_MINUTES;
                 ft = Formatter();
                 ft.Add<int32_t>(queueTime);
-                screenCoords.y += DrawTextWrapped(rt, screenCoords, 308, stringId, ft, { TextAlignment::LEFT });
+                screenCoords.y += DrawTextWrapped(rt, screenCoords, 308, stringId, ft, { TextAlignment::left });
                 screenCoords.y += 5;
             }
 
