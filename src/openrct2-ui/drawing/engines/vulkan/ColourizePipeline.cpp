@@ -387,7 +387,7 @@ void OpenRCT2::Ui::Vulkan::ColourizePipeline::Draw(
         + offsetof(UniformValues, colourPalette);
     std::memcpy(colorPalette, _palette.data(), _palette.size() * sizeof(decltype(_palette)::value_type));
 
-    PushConstants pushConsts(static_cast<uint32_t>(_inProgressCommands.size()), Config::Get().general.WindowScale);
+    PushConstants pushConsts(static_cast<uint32_t>(_inProgressCommands.size()), Config::Get().general.windowScale);
     commandBuffer.pushConstants(*_pipelineLayout, vk::ShaderStageFlagBits::eFragment, 0, sizeof(pushConsts), &pushConsts);
 
     uint32_t bufferSizeNeeded = static_cast<uint32_t>(

@@ -811,7 +811,7 @@ private:
         {
             flags |= SDL_WINDOW_OPENGL;
         }
-        else if (Config::Get().general.DrawingEngine == DrawingEngine::Vulkan)
+        else if (Config::Get().general.drawingEngine == DrawingEngine::Vulkan)
         {
             flags |= SDL_WINDOW_VULKAN;
         }
