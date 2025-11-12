@@ -18,6 +18,7 @@
 namespace OpenRCT2::Ui::Vulkan
 {
     class VulkanDrawingContext;
+    class VulkanWeatherDrawer;
 
     class SpriteManager;
     class DrawSpritePipeline;
@@ -40,6 +41,7 @@ namespace OpenRCT2::Ui::Vulkan
         IUiContext& _uiContext;
         SDL_Window* _window;
         std::unique_ptr<VulkanDrawingContext> _drawingContext;
+        std::unique_ptr<VulkanWeatherDrawer> _weatherDrawer;
 
         RenderTarget _mainRT = {};
 

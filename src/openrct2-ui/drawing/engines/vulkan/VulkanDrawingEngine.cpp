@@ -10,6 +10,7 @@
     #include "VulkanDebugSettings.h"
     #include "VulkanDrawingContext.h"
     #include "VulkanUtils.h"
+    #include "VulkanWeatherDrawer.h"
 
     #include <SDL2/SDL_vulkan.h>
     #include <algorithm>
@@ -49,6 +50,7 @@ namespace OpenRCT2::Ui::Vulkan
         : _uiContext(uiContext)
         , _window(static_cast<SDL_Window*>(_uiContext.GetWindow()))
         , _drawingContext(std::make_unique<VulkanDrawingContext>(*this))
+        , _weatherDrawer(std::make_unique<VulkanWeatherDrawer>(*this))
     {
         _mainRT.DrawingEngine = this;
         SDL_Vulkan_GetDrawableSize(_window, &_mainRT.width, &_mainRT.height);
@@ -582,6 +584,7 @@ namespace OpenRCT2::Ui::Vulkan
 
     void VulkanDrawingEngine::PaintWeather()
     {
+        DrawWeather(_mainRT, _weatherDrawer.get());
     }
 
     void VulkanDrawingEngine::CopyRect(int32_t x, int32_t y, int32_t width, int32_t height, int32_t dx, int32_t dy)

@@ -81,6 +81,7 @@
     <ClInclude Include="drawing\engines\vulkan\VulkanInstance.h" />
     <ClInclude Include="drawing\engines\vulkan\VulkanMemoryAllocator.h" />
     <ClInclude Include="drawing\engines\vulkan\VulkanUtils.h" />
+    <ClInclude Include="drawing\engines\vulkan\VulkanWeatherDrawer.h" />
     <ClInclude Include="input\InputManager.h" />
     <ClInclude Include="input\MouseInput.h" />
     <ClInclude Include="input\ShortcutIds.h" />
@@ -165,6 +166,7 @@
     <ClCompile Include="drawing\engines\vulkan\VulkanInstance.cpp" />
     <ClCompile Include="drawing\engines\vulkan\VulkanMemoryAllocator.cpp" />
     <ClCompile Include="drawing\engines\vulkan\VulkanUtils.cpp" />
+    <ClCompile Include="drawing\engines\vulkan\VulkanWeatherDrawer.cpp" />
     <ClCompile Include="input\InputManager.cpp" />
     <ClCompile Include="input\Shortcuts.cpp" />
     <ClCompile Include="input\MouseInput.cpp" />

@@ -153,11 +153,10 @@ public:
 
     virtual void Draw(
         RenderTarget& rt, int32_t x, int32_t y, int32_t width, int32_t height, int32_t xStart, int32_t yStart,
-        const uint8_t* weatherpattern) override
+        const WeatherPatternData& weatherpattern) override
     {
-        const uint8_t* pattern = weatherpattern;
-        auto patternXSpace = *pattern++;
-        auto patternYSpace = *pattern++;
+        auto patternXSpace = weatherpattern.SizeX;
+        auto patternYSpace = weatherpattern.SizeY;
 
         uint8_t patternStartXOffset = xStart % patternXSpace;
         uint8_t patternStartYOffset = yStart % patternYSpace;
@@ -167,7 +166,7 @@ public:
 
         for (; height != 0; height--)
         {
-            auto patternX = pattern[patternYPos * 2];
+            auto patternX = weatherpattern.Data[patternYPos].PatternX;
             if (patternX != 0xFF)
             {
                 uint32_t finalPixelOffset = width + pixelOffset;
@@ -175,7 +174,7 @@ public:
                 uint32_t xPixelOffset = pixelOffset;
                 xPixelOffset += (static_cast<uint8_t>(patternX - patternStartXOffset)) % patternXSpace;
 
-                auto patternPixel = pattern[patternYPos * 2 + 1];
+                auto patternPixel = weatherpattern.Data[patternYPos].Colour;
                 for (; xPixelOffset < finalPixelOffset; xPixelOffset += patternXSpace)
                 {
                     int32_t pixelX = xPixelOffset % rt.width;
